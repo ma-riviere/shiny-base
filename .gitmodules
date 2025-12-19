@@ -1,0 +1,3 @@
+[submodule "r-utils"]
+	path = r-utils
+	url = https://github.com/ma-riviere/r-utils

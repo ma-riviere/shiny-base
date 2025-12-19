@@ -1,0 +1,220 @@
+{
+    "languages": [
+        "en",
+        "fr"
+    ],
+    "translation": [
+        {
+            "en": "Shiny Base",
+            "fr": "Shiny Base"
+        },
+        {
+            "en": "Home",
+            "fr": "Accueil"
+        },
+        {
+            "en": "Dataset",
+            "fr": "Jeu de données"
+        },
+        {
+            "en": "Logout",
+            "fr": "Déconnexion"
+        },
+        {
+            "en": "Profile",
+            "fr": "Profil"
+        },
+        {
+            "en": "Nickname",
+            "fr": "Pseudonyme"
+        },
+        {
+            "en": "Email",
+            "fr": "E-mail"
+        },
+        {
+            "en": "Save",
+            "fr": "Enregistrer"
+        },
+        {
+            "en": "Cancel",
+            "fr": "Annuler"
+        },
+        {
+            "en": "Delete",
+            "fr": "Supprimer"
+        },
+        {
+            "en": "Confirm Delete",
+            "fr": "Confirmer la suppression"
+        },
+        {
+            "en": "Are you sure you want to delete this dataset?",
+            "fr": "Êtes-vous sûr de vouloir supprimer ce jeu de données?"
+        },
+        {
+            "en": "Your uploaded datasets.",
+            "fr": "Vos jeux de données téléchargés."
+        },
+        {
+            "en": "Datasets",
+            "fr": "Jeux de données"
+        },
+        {
+            "en": "Your Datasets",
+            "fr": "Vos jeux de données"
+        },
+        {
+            "en": "Upload Dataset",
+            "fr": "Téléverser un jeu de données"
+        },
+        {
+            "en": "No datasets yet. Upload your first dataset!",
+            "fr": "Aucun jeu de données. Téléversez votre premier jeu de données!"
+        },
+        {
+            "en": "Dataset Name",
+            "fr": "Nom du jeu de données"
+        },
+        {
+            "en": "Enter a name for your dataset",
+            "fr": "Entrez un nom pour votre jeu de données"
+        },
+        {
+            "en": "CSV File",
+            "fr": "Fichier CSV"
+        },
+        {
+            "en": "Browse",
+            "fr": "Parcourir"
+        },
+        {
+            "en": "No file selected",
+            "fr": "Aucun fichier sélectionné"
+        },
+        {
+            "en": "Drag and drop a CSV file here, or click to browse",
+            "fr": "Glissez-déposez un fichier CSV ici, ou cliquez pour parcourir"
+        },
+        {
+            "en": "Max 10MB, 100,000 rows",
+            "fr": "Max 10Mo, 100 000 lignes"
+        },
+        {
+            "en": "Upload",
+            "fr": "Téléverser"
+        },
+        {
+            "en": "Dataset uploaded successfully",
+            "fr": "Jeu de données téléchargé avec succès"
+        },
+        {
+            "en": "Dataset deleted successfully",
+            "fr": "Jeu de données supprimé avec succès"
+        },
+        {
+            "en": "Profile updated successfully",
+            "fr": "Profil mis à jour avec succès"
+        },
+        {
+            "en": "Error updating profile:",
+            "fr": "Erreur lors de la mise à jour du profil:"
+        },
+        {
+            "en": "Error deleting dataset:",
+            "fr": "Erreur lors de la suppression du jeu de données:"
+        },
+        {
+            "en": "Error saving dataset:",
+            "fr": "Erreur lors de l'enregistrement du jeu de données:"
+        },
+        {
+            "en": "Error parsing dataset:",
+            "fr": "Erreur lors de l'analyse du jeu de données:"
+        },
+        {
+            "en": "Please enter a dataset name",
+            "fr": "Veuillez entrer un nom pour le jeu de données"
+        },
+        {
+            "en": "Please select a valid CSV file",
+            "fr": "Veuillez sélectionner un fichier CSV valide"
+        },
+        {
+            "en": "Dataset Explorer",
+            "fr": "Explorateur de jeu de données"
+        },
+        {
+            "en": "Select a dataset to explore",
+            "fr": "Sélectionnez un jeu de données à explorer"
+        },
+        {
+            "en": "Explore your uploaded dataset",
+            "fr": "Explorez votre jeu de données téléchargé"
+        },
+        {
+            "en": "Rows",
+            "fr": "Lignes"
+        },
+        {
+            "en": "Columns",
+            "fr": "Colonnes"
+        },
+        {
+            "en": "Data Preview",
+            "fr": "Aperçu des données"
+        },
+        {
+            "en": "Column Summary",
+            "fr": "Résumé des colonnes"
+        },
+        {
+            "en": "No dataset selected",
+            "fr": "Aucun jeu de données sélectionné"
+        },
+        {
+            "en": "Go to Home and click on a dataset to view it here",
+            "fr": "Allez à l'accueil et cliquez sur un jeu de données pour le voir ici"
+        },
+        {
+            "en": "Go to Home",
+            "fr": "Aller à l'accueil"
+        },
+        {
+            "en": "Select Dataset",
+            "fr": "Sélectionner un jeu de données"
+        },
+        {
+            "en": "Save State",
+            "fr": "Sauvegarder l'état"
+        },
+        {
+            "en": "Change language",
+            "fr": "Changer de langue"
+        },
+        {
+            "en": "English",
+            "fr": "Anglais"
+        },
+        {
+            "en": "French",
+            "fr": "Français"
+        },
+        {
+            "en": "Preferred Language",
+            "fr": "Langue préférée"
+        },
+        {
+            "en": "Filters",
+            "fr": "Filtres"
+        },
+        {
+            "en": "Filter by row count",
+            "fr": "Filtrer par nombre de lignes"
+        },
+        {
+            "en": "No datasets match the current filter",
+            "fr": "Aucun jeu de données ne correspond au filtre actuel"
+        }
+    ]
+}
