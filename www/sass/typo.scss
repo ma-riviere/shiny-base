@@ -1,0 +1,64 @@
+// Typography
+// Note: Google Fonts should be loaded via <link rel="preconnect"> in HTML head for better performance
+
+body {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.25;
+    color: $gray-900;
+}
+
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.5rem; }
+h3 { font-size: 1.25rem; }
+h4 { font-size: 1.125rem; }
+h5 { font-size: 1rem; }
+h6 { font-size: 0.875rem; }
+
+p {
+    margin-top: 0;
+    margin-bottom: $spacing-md;
+}
+
+a {
+    color: $primary;
+    text-decoration: none;
+    &:hover {
+        color: $primary-dark;
+        text-decoration: underline;
+    }
+}
+
+code, pre {
+    font-family: $font-family-mono;
+    font-size: 0.875rem;
+}
+
+code {
+    padding: 0.125rem 0.25rem;
+    background-color: $gray-100;
+    border-radius: $border-radius;
+}
+
+pre {
+    padding: $spacing-md;
+    background-color: $gray-100;
+    border-radius: $border-radius;
+    overflow-x: auto;
+}
+
+.fs-small {
+    font-size: 0.875rem;
+}
+
+.fs-xsmall {
+    font-size: 0.75rem;
+}
+
+.fs-large {
+    font-size: 1.125rem;
+}

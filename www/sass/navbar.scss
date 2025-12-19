@@ -1,0 +1,195 @@
+/* Navbar Styles */
+.navbar {
+    background-color: $white;
+    box-shadow: $shadow-sm;
+    padding: $spacing-sm $spacing-md;
+    border-bottom: 1px solid $border-color;
+
+    .navbar-brand {
+        font-weight: 700;
+        color: $gray-800;
+        font-size: 1.25rem;
+
+        &:hover {
+            color: $primary;
+        }
+    }
+
+    .navbar-nav {
+        gap: $spacing-xs;
+        align-items: center;
+
+        .nav-item {
+            .nav-link {
+                color: $gray-600;
+                font-weight: 500;
+                padding: $spacing-sm $spacing-md;
+                border-radius: $border-radius;
+                transition: all $transition-fast;
+                border: 1px solid transparent;
+
+                &:hover {
+                    color: $primary;
+                    background-color: $gray-50;
+                }
+
+                &.active {
+                    color: $white;
+                    background-color: $primary;
+                    font-weight: 600;
+                    box-shadow: $shadow-sm;
+                }
+            }
+
+            // Fix for Shiny inputs in navbar to ensure alignment
+            .shiny-input-container {
+                margin-bottom: 0;
+            }
+        }
+    }
+
+    /* Right side controls (Language selector & User menu) */
+    .navbar-nav:last-child {
+        .nav-item {
+            display: flex;
+            align-items: center;
+        }
+    }
+}
+
+/* Language selector - ensure emoji flags render correctly */
+.navbar .selectize-input,
+.navbar .selectize-dropdown {
+    font-family: 'Noto Color Emoji', $font-family-base;
+}
+
+/* Language dropdown */
+.language-dropdown {
+    .language-dropdown-toggle {
+        background: transparent;
+        border: 1px solid $border-color;
+        border-radius: $border-radius;
+        padding: $spacing-xs $spacing-sm;
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+        color: $gray-700;
+        transition: $transition-fast;
+        cursor: pointer;
+        &:hover,
+        &[aria-expanded="true"] {
+            background-color: $gray-50;
+            border-color: $gray-300;
+        }
+        &::after {
+            // Bootstrap dropdown caret
+            margin-left: $spacing-xs;
+        }
+    }
+    .language-flag {
+        width: 20px;
+        height: 14px;
+        object-fit: cover;
+        border-radius: 2px;
+        box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
+    }
+    .language-code {
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+    .dropdown-menu {
+        min-width: 140px;
+        border: none;
+        box-shadow: $shadow-md;
+        border-radius: $border-radius;
+        padding: $spacing-xs;
+        margin-top: $spacing-xs;
+        .dropdown-item {
+            border-radius: $border-radius;
+            padding: $spacing-xs $spacing-sm;
+            color: $gray-700;
+            display: flex;
+            align-items: center;
+            gap: $spacing-sm;
+            &:hover {
+                background-color: $gray-50;
+                color: $primary;
+            }
+            &.active {
+                background-color: $primary;
+                color: $white;
+            }
+        }
+    }
+}
+
+/* Custom styling for the user nav menu to match modern aesthetics */
+.navbar-nav .nav-item.dropdown {
+    .nav-link.dropdown-toggle {
+        background: transparent;
+        border: 1px solid $border-color;
+        border-radius: 20px;
+        /* Pill shape */
+        padding: $spacing-sm $spacing-md;
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        color: $gray-700;
+        transition: $transition-fast;
+
+        &:hover,
+        &[aria-expanded="true"] {
+            background-color: $gray-50;
+            border-color: $gray-300;
+        }
+
+        .user-nickname {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .dropdown-hamburger {
+            font-size: 1.1rem;
+            color: $gray-500;
+        }
+
+        &::after {
+            display: none;
+        }
+    }
+
+    .dropdown-menu {
+        border: none;
+        box-shadow: $shadow-md;
+        border-radius: $border-radius-lg;
+        padding: $spacing-sm;
+        margin-top: $spacing-sm;
+
+        .dropdown-item {
+            border-radius: $border-radius;
+            padding: $spacing-sm $spacing-md;
+            color: $gray-700;
+            display: flex;
+            align-items: center;
+            gap: $spacing-sm;
+
+            &:hover {
+                background-color: $gray-50;
+                color: $primary;
+            }
+
+            &.active {
+                background-color: $primary-light;
+                color: $white;
+            }
+
+            &.logout-item {
+                color: $danger;
+
+                &:hover {
+                    background-color: rgba($danger, 0.1);
+                }
+            }
+        }
+    }
+}

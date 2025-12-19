@@ -1,0 +1,9 @@
+name: shiny-base
+remote_url: !expr Sys.getenv("APP_URL")
+auth0_config:
+  api_url: !expr paste0("https://", Sys.getenv("AUTH0_USER"), ".eu.auth0.com")
+  audience: !expr paste0('https://', Sys.getenv("AUTH0_USER"), '.eu.auth0.com/api/v2/')
+  scope: openid profile email
+  credentials:
+    key: !expr Sys.getenv("AUTH0_CLIENT_ID")
+    secret: !expr Sys.getenv("AUTH0_CLIENT_SECRET")
