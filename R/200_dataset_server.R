@@ -1,4 +1,8 @@
-dataset_server <- function(id, selected_dataset_id = reactive(NULL), nav_select_callback = NULL) {
+dataset_server <- function(
+    id,
+    selected_dataset_id = reactive(NULL),
+    nav_select_callback = NULL
+) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
@@ -49,6 +53,18 @@ dataset_server <- function(id, selected_dataset_id = reactive(NULL), nav_select_
 
         has_data <- reactive({
             !purrr::is_empty(values$data)
+        })
+
+        # Open upload modal
+        observeEvent(input$open_upload, {
+            trigger("show_upload_modal")
+        })
+
+        # Navigate to home after upload completes (to see the new dataset in the list)
+        on("refresh_datasets", {
+            if (!is.null(nav_select_callback)) {
+                nav_select_callback("home")
+            }
         })
 
         # ------ OUTPUT --------------------------------------------------------
@@ -105,11 +121,6 @@ dataset_server <- function(id, selected_dataset_id = reactive(NULL), nav_select_
             )
         })
 
-        output$data_summary <- renderPrint({
-            req(has_data())
-            summary(values$data)
-        })
-
         output$empty_state <- renderUI({
             if (has_data()) {
                 return(NULL)
@@ -127,17 +138,28 @@ dataset_server <- function(id, selected_dataset_id = reactive(NULL), nav_select_
                     p(
                         tags$small(
                             class = "text-muted i18n",
-                            `data-key` = "Go to Home and click on a dataset to view it here",
-                            tr("Go to Home and click on a dataset to view it here")
+                            `data-key` = "Upload a new dataset or go to Home to select one",
+                            tr("Upload a new dataset or go to Home to select one")
                         )
                     ),
-                    actionButton(
-                        ns("go_home"),
-                        tagList(
-                            bsicons::bs_icon("house"),
-                            tags$span(class = "i18n", `data-key` = "Go to Home", tr("Go to Home"))
+                    div(
+                        class = "empty-state-actions",
+                        actionButton(
+                            ns("open_upload"),
+                            tagList(
+                                bsicons::bs_icon("upload"),
+                                tags$span(class = "i18n", `data-key` = "Upload Dataset", tr("Upload Dataset"))
+                            ),
+                            class = "btn-primary"
                         ),
-                        class = "btn-primary"
+                        actionButton(
+                            ns("go_home"),
+                            tagList(
+                                bsicons::bs_icon("house"),
+                                tags$span(class = "i18n", `data-key` = "Go to Home", tr("Go to Home"))
+                            ),
+                            class = "btn-outline-secondary"
+                        )
                     )
                 )
             )

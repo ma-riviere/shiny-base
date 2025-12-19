@@ -9,7 +9,7 @@ ui <- function(request) {
         fillable = TRUE,
         navbar_options = bslib::navbar_options(
             position = "static-top",
-            collapsible = FALSE,
+            collapsible = TRUE,
             underline = FALSE
         ),
         sidebar = sidebar_ui("sidebar"),
@@ -27,7 +27,8 @@ ui <- function(request) {
                     )
                 ),
                 tags$link(rel = "stylesheet", type = "text/css", href = "css/main.min.css"),
-                tags$script(src = sprintf("js/auth0-helpers.js?v=%s", as.integer(Sys.time())))
+                tags$script(src = sprintf("js/helpers-auth0.js?v=%s", as.integer(Sys.time()))),
+                tags$script(src = sprintf("js/helpers-modal.js?v=%s", as.integer(Sys.time())))
             ),
             shinyjs::useShinyjs(),
             shiny.i18n::usei18n(i18n)

@@ -1,0 +1,47 @@
+// Utility classes
+.text-muted {
+    color: $gray-500;
+}
+
+.text-primary {
+    color: $primary;
+}
+
+// Empty state
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: $spacing-xl * 2;
+    text-align: center;
+    color: $gray-500;
+
+    >svg {
+        margin-bottom: $spacing-md;
+        opacity: 0.5;
+    }
+
+    p {
+        margin: 0 0 $spacing-sm 0;
+    }
+}
+
+.empty-state-actions {
+    display: flex;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+}
+
+.empty-state-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $gray-50;
+    z-index: 10;
+}

@@ -1,0 +1,168 @@
+// Profile modal
+.profile-modal-content {
+    display: flex;
+    gap: $spacing-lg;
+
+    .profile-picture-section {
+        flex-shrink: 0;
+    }
+
+    .profile-picture {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid $border-color;
+    }
+
+    .profile-info-section {
+        flex: 1;
+    }
+}
+
+// Ensure emoji flags render correctly in modals (e.g. language selector)
+.modal {
+
+    .selectize-input,
+    .selectize-dropdown {
+        font-family: 'Noto Color Emoji', $font-family-base;
+    }
+
+    // Stack footer buttons on mobile
+    .modal-footer {
+        @media (max-width: $breakpoint-sm) {
+            flex-direction: column;
+            gap: $spacing-sm;
+
+            >* {
+                width: 100%;
+                margin: 0 !important;
+            }
+        }
+    }
+}
+
+// Upload modal - dipsaus-style fancy file input (pure CSS dropzone)
+.upload-modal-content {
+    .fancy-file-input {
+        margin-bottom: $spacing-md;
+
+        .shiny-input-container {
+            width: 100%;
+            position: relative;
+            margin-bottom: 0;
+        }
+
+        // The input-group becomes the dropzone area
+        .shiny-input-container>.input-group {
+            width: 100%;
+            min-height: 150px;
+            position: relative;
+            border: 2px dashed $border-color;
+            border-radius: $border-radius-lg;
+            transition: all $transition-fast;
+
+            &:hover {
+                border-color: $primary;
+                background: rgba($primary, 0.02);
+            }
+        }
+
+        // Center the Browse button
+        .shiny-input-container>.input-group>label.input-group-btn {
+            position: absolute;
+            display: block;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: auto;
+            z-index: 4;
+        }
+
+        // Style the button
+        .shiny-input-container>.input-group>label.input-group-btn>.btn-file {
+            margin: 0;
+            border-radius: $border-radius !important; // Override Shiny's .btn-file right-radius: 0
+            background: $primary;
+            color: $white;
+            border: none;
+            padding: $spacing-sm $spacing-lg;
+
+            &:hover {
+                background: darken($primary, 10%);
+            }
+        }
+
+        // The text input becomes the dropzone visual area
+        .shiny-input-container>.input-group>input.form-control {
+            display: block;
+            height: 100%;
+            position: absolute;
+            width: 100%;
+            z-index: 2;
+            text-align: center;
+            word-wrap: break-word;
+            white-space: break-spaces;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            border: none;
+            background: transparent;
+            padding: $spacing-xl $spacing-md;
+            padding-top: 95px; // Space for centered button + gap
+
+            @media (max-width: $breakpoint-sm) {
+                padding-left: $spacing-sm;
+                padding-right: $spacing-sm;
+                font-size: 0.8rem; // Reduce font size slightly to fit placeholder
+            }
+
+            color: $gray-600;
+            pointer-events: none; // Let clicks pass through to input-group
+        }
+
+        // Progress bar at the bottom
+        .shiny-input-container>.progress.shiny-file-input-progress {
+            position: absolute;
+            min-height: 3px;
+            width: 100%;
+            margin: 0;
+            bottom: 0;
+            left: 0;
+            border-bottom-left-radius: $border-radius-lg;
+            border-bottom-right-radius: $border-radius-lg;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+            z-index: 5;
+        }
+
+        // After-content hint text
+        &::after {
+            content: attr(data-after-content);
+            display: block;
+            margin-top: $spacing-xs;
+            color: $gray-500;
+            font-size: 0.75rem;
+        }
+    }
+
+    .selected-file-info {
+        margin-top: $spacing-sm;
+        padding: $spacing-sm $spacing-md;
+        background: rgba($primary, 0.1);
+        border-radius: $border-radius;
+        font-size: 0.875rem;
+        color: $primary;
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+
+        svg {
+            flex-shrink: 0;
+        }
+
+        .filename {
+            font-weight: 500;
+            word-break: break-all;
+        }
+    }
+}

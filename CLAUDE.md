@@ -6,6 +6,8 @@ To authentify in Auth0:
 - ma.riviere987@gmail.com
 - auth0test&15
 
+When you are unsure about a shiny-related (or adjacent) issue, consult/brainstorm with the Shiny notebookLM (skill). It's a domain expert with access to up-to-date documentation, code examples, books, tutorials, and more.
+
 ## Navigation
 
 The app uses `bslib::page_navbar()` for navigation with a shared sidebar across all pages.
@@ -41,19 +43,68 @@ The standard `auth0` package is incompatible with Shiny's server-side bookmarkin
 5. **Token Exchange**: `auth0_server2` exchanges the auth code for tokens and populates
    `session$userData$auth0_info`.
 
-6. **URL Cleanup**: `www/js/auth0-helpers.js` removes `code`, `state`, and `_state_id_` from
+6. **URL Cleanup**: `www/js/helpers-auth0.js` removes `code`, `state`, and `_state_id_` from
    the URL after Shiny connects.
 
 ### Key components
 
 - `auth0_ui2`: Encodes `_state_id_` in Auth0's state param, redirects to add `_state_id_` after callback
 - `auth0_server2`: Handles token exchange and logout
-- `www/js/auth0-helpers.js`: Cleans up URL params after Auth0 callback
+- `www/js/helpers-auth0.js`: Cleans up URL params and detects fresh login vs page refresh
+
+### Email verification gate
+
+Modules are only instantiated after verifying `session$userData$auth0_info$email_verified`.
+Unverified users see a modal prompting them to verify their email.
 
 ### Excluded inputs
 
-Some inputs must be excluded from bookmarking via `setBookmarkExclude()` in `server.R`:
-- `sidebar-toggle`: Action buttons with `shinyActionButtonValue` class cause restoration errors
+Some inputs must be excluded from bookmarking via `setBookmarkExclude()` in `server.R`.
+
+**Always exclude:**
+
+1. **Action buttons that trigger side effects**: Any `observeEvent(input$btn, ...)` that triggers
+   modals, API calls, file uploads, database writes, or navigation. Shiny restores button click
+   counts, causing the handler to fire immediately on restore.
+
+2. **File inputs**: Restored metadata references temp files that no longer exist.
+
+3. **Inputs inside modals**: Modal content is transient and shouldn't persist. Restoring these
+   inputs is pointless (modal isn't open) and can cause errors.
+
+4. **Confirmation/delete buttons**: Especially dangerous - restoring a delete confirmation could
+   trigger data loss.
+
+**Safe to bookmark (don't exclude):**
+
+- Dropdowns, sliders, text inputs that filter/display data (no side effects)
+- Navigation state (`input$nav` - handled automatically by bslib)
+- Toggle switches that control UI visibility
+
+**Testing new inputs**: Save a bookmark after interacting with the input, then restore. If
+unwanted behavior occurs (modal opens, action fires, error thrown), add to `setBookmarkExclude()`.
+
+### Bookmark on disconnect
+
+When a user disconnects (closes tab, loses internet, etc.), `session$onSessionEnded()` saves
+the current input state as a bookmark. This happens server-side after the WebSocket closes,
+so the user cannot be notified, but the state is persisted for their next session.
+
+- Implementation: `save_bookmark_on_disconnect()` in `R/helpers_bookmarks.R`
+- Uses `isolate(reactiveValuesToList(input))` since no reactive context is available
+- Manually creates `shiny_bookmarks/{id}/input.rds` (same format as native bookmarking)
+- Registers bookmark in DB for the restore-on-login flow
+- Does NOT delete previous bookmarks (unlike explicit saves) to avoid race conditions
+
+**Important**: State IDs must be alphanumeric only (a-zA-Z0-9). Shiny's `RestoreContext`
+validates with `grepl("[^a-zA-Z0-9]", id)` and rejects any special characters including
+hyphens.
+
+### Bookmark restoration offer
+
+On fresh login (not page refresh), the app checks for a recent bookmark (<30 min old) and
+offers to restore it via a toast notification. This uses `input$session_status` set by
+`www/js/helpers-auth0.js` based on sessionStorage.
 
 ### Pitfalls and failed approaches
 
@@ -72,7 +123,77 @@ Some inputs must be excluded from bookmarking via `setBookmarkExclude()` in `ser
    **Solution**: Redirect in the UI layer (before server runs) to add `_state_id_` while
    keeping the original `code` and `state` params.
 
+## Event Triggers
+
+`R/helpers_triggers.R` provides a lightweight event system for cross-module communication,
+inspired by the `gargoyle` package. Triggers are stored in `session$userData` and act as
+**broadcast events** - any module can fire them, and all listeners react.
+
+### API
+
+```r
+init("refresh_datasets", "show_upload_modal")  # Call once in server.R
+trigger("refresh_datasets")                     # Fire from any module
+watch("refresh_datasets")                       # Create reactive dependency in observe/reactive
+on("show_upload_modal", { showModal(...) })     # React to trigger (wrapper around observeEvent)
+```
+
+### Key principle: triggers are broadcasts
+
+Unlike reactive parameters (which are point-to-point), triggers broadcast to **all** listeners.
+If two modules both call `on("show_upload_modal", ...)`, both will fire when triggered.
+
+### Best practices
+
+1. **App-wide events with single handler**: Use for events where exactly one module should react.
+   - `refresh_datasets` - sidebar refreshes dropdown
+   - `show_upload_modal` - single upload module shows modal
+
+2. **Shared modules belong at app level**: If multiple pages need the same functionality (e.g.,
+   upload modal), instantiate the module once in `server.R`, not in each page module.
+
+3. **Scoped naming for multiple instances**: If you need independent instances of the same
+   behavior, use scoped trigger names:
+   - `show_modal_home`, `show_modal_dataset` (instead of generic `show_modal`)
+
+4. **Use reactive params for tight coupling**: When a parent module needs to control exactly
+   one child, reactive parameters may still be cleaner than global triggers.
+
+### Debugging
+
+Enable verbose logging to see trigger activity:
+```r
+options(triggers.verbose = TRUE)
+```
+
+## Database
+
+The app uses a PostgreSQL database with connection pooling (`pool` package).
+- Connection setup in `R/helpers_database.R`
+- Pool created in `global.R`, closed via `onStop()` callback
+- Bookmark tracking: stores user bookmarks in DB, cleans up old ones on save
+
+## i18n (Internationalization)
+
+Uses `shiny.i18n` for translations. Language resolution hierarchy:
+1. Auth0 `user_metadata.language` (source of truth for authenticated users)
+2. Cookie (`user_language`, 1-year expiry)
+3. Browser language preference
+4. App default (`DEFAULT_LANGUAGE` in global.R)
+
+## SASS/CSS
+
+- Entry point: `www/sass/main.scss`
+- Partials: `_buttons.scss`, `_cards.scss`, `_layout.scss`, `_modals.scss`, `_tables.scss`, `_utils.scss`
+- Variables: `www/sass/variables.scss`
+- Output: `www/css/main.min.css` (compressed)
+- Compilation: `R/sass.R` (run manually when SASS changes)
+
 ## Development Notes
+
+### Disabling Auth0
+
+Set `options(auth0_disable = TRUE)` before running the app. Automatically set in test mode.
 
 ### Static asset caching
 
@@ -80,7 +201,7 @@ Browser caching can cause stale JS/CSS files during development. The `ui.R` uses
 query param for cache-busting:
 
 ```r
-tags$script(src = sprintf("js/auth0-helpers.js?v=%s", as.integer(Sys.time())))
+tags$script(src = sprintf("js/helpers-auth0.js?v=%s", as.integer(Sys.time())))
 ```
 
 This ensures fresh assets on each app restart. For production, consider using a fixed version
