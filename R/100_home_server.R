@@ -2,30 +2,15 @@ home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_selec
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
-        values <- reactiveValues(
-            user = NULL,
-            datasets = NULL,
-            refresh_trigger = 0
-        )
+        values <- reactiveValues(datasets = NULL)
 
         # ------ REACTIVE ------------------------------------------------------
 
-        # Get or create user on module init
-        observe({
-            auth_info <- session$userData$auth0_info
-            if (!purrr::is_empty(auth_info)) {
-                auth0_sub <- purrr::pluck(auth_info, "sub")
-                if (!purrr::is_empty(auth0_sub)) {
-                    values$user <- db_get_or_create_user(pool, auth0_sub)
-                }
-            }
-        })
-
         # Fetch datasets when user is loaded or refresh is triggered
         observe({
-            values$refresh_trigger
-            req(values$user)
-            user_id <- purrr::pluck(values$user, "id")
+            watch("refresh_datasets")
+            user_id <- purrr::pluck(session$userData$user, "id")
+            req(user_id)
             values$datasets <- db_get_user_datasets(pool, user_id)
         })
 
@@ -43,10 +28,9 @@ home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_selec
             datasets[datasets$row_count >= filter_range[1] & datasets$row_count <= filter_range[2], ]
         })
 
-        # Open upload modal - trigger upload module to show modal
+        # Open upload modal
         observeEvent(input$open_upload, {
-            # Signal to upload module to open
-            values$show_upload_modal <- Sys.time()
+            trigger("show_upload_modal")
         })
 
         # Handle dataset click - navigate to dataset page
@@ -94,7 +78,7 @@ home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_selec
                 {
                     db_delete_dataset(pool, values$pending_delete_id)
                     values$pending_delete_id <- NULL
-                    values$refresh_trigger <- values$refresh_trigger + 1
+                    trigger("refresh_datasets")
                     removeModal()
 
                     shinyWidgets::show_toast(
@@ -113,20 +97,6 @@ home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_selec
                     )
                 }
             )
-        })
-
-        # ------ MODULE --------------------------------------------------------
-
-        # Upload modal submodule
-        upload_result <- upload_dataset_server(
-            "upload",
-            user_id = reactive(purrr::pluck(values$user, "id")),
-            show_modal_trigger = reactive(values$show_upload_modal)
-        )
-
-        # Refresh datasets when upload completes
-        observeEvent(upload_result$uploaded(), {
-            values$refresh_trigger <- values$refresh_trigger + 1
         })
 
         # ------ OUTPUT --------------------------------------------------------

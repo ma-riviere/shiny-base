@@ -51,8 +51,6 @@ home_ui <- function(id) {
                     uiOutput(ns("dataset_list"))
                 )
             )
-        ),
-        # Upload modal
-        upload_dataset_ui(ns("upload"))
+        )
     )
 }

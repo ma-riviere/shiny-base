@@ -1,0 +1,64 @@
+// Tables
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+
+    th,
+    td {
+        padding: $spacing-sm $spacing-md;
+        text-align: left;
+        border-bottom: 1px solid $border-color;
+    }
+
+    th {
+        font-weight: 600;
+        color: $gray-700;
+        background: $gray-50;
+    }
+
+    tbody tr:hover {
+        background: $gray-50;
+    }
+}
+
+// Dataset explorer page
+.page-dataset {
+    position: relative;
+
+    .table-container {
+        max-height: 600px;
+        overflow: auto;
+    }
+}
+
+// DT table styling - minimal/neutral pagination
+.dataTables_wrapper {
+    .dataTables_filter input {
+        padding: $spacing-xs $spacing-sm;
+        border: 1px solid $border-color;
+        border-radius: $border-radius;
+
+        &:focus {
+            outline: none;
+            border-color: $primary;
+        }
+    }
+
+    .dataTables_info {
+        font-size: 0.875rem;
+        color: $gray-500;
+    }
+
+    // Neutral pagination buttons (no background color)
+    .pagination .page-item .page-link {
+        background-color: transparent !important;
+        border: none !important;
+        color: inherit !important;
+    }
+
+    .pagination .page-item.active .page-link {
+        font-weight: bold !important;
+        text-decoration: underline !important;
+    }
+}

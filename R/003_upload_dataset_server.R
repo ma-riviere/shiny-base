@@ -1,4 +1,4 @@
-upload_dataset_server <- function(id, user_id = reactive(NULL), show_modal_trigger = reactive(NULL)) {
+upload_dataset_server <- function(id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
@@ -7,7 +7,6 @@ upload_dataset_server <- function(id, user_id = reactive(NULL), show_modal_trigg
         MAX_ROWS <- 100000
 
         values <- reactiveValues(
-            uploaded = NULL,
             error = NULL,
             status = NULL
         )
@@ -15,65 +14,8 @@ upload_dataset_server <- function(id, user_id = reactive(NULL), show_modal_trigg
         # ------ REACTIVE ------------------------------------------------------
 
         # Show modal when triggered
-        observeEvent(show_modal_trigger(), {
-            req(show_modal_trigger())
-
-            showModal(modalDialog(
-                title = tr("Upload Dataset"),
-                size = "m",
-                easyClose = TRUE,
-                footer = tagList(
-                    shinyjs::disabled(
-                        actionButton(
-                            ns("upload_btn"),
-                            tr("Upload"),
-                            class = "btn-primary i18n",
-                            `data-key` = "Upload"
-                        )
-                    ),
-                    modalButton(tr("Cancel"))
-                ),
-                div(
-                    class = "upload-modal-content",
-                    # Dataset name input
-                    div(
-                        class = "mb-3",
-                        textInput(
-                            ns("dataset_name"),
-                            label = tagList(
-                                tags$span(class = "i18n", `data-key` = "Dataset Name", tr("Dataset Name"))
-                            ),
-                            value = "",
-                            placeholder = tr("Enter a name for your dataset")
-                        )
-                    ),
-                    # File upload area - uses dipsaus-style CSS dropzone
-                    div(
-                        class = "mb-3",
-                        tags$label(
-                            class = "form-label i18n",
-                            `data-key` = "CSV File",
-                            tr("CSV File")
-                        ),
-                        # Wrapper div that CSS will style as dropzone
-                        div(
-                            class = "fancy-file-input",
-                            `data-after-content` = tr("Drag & drop, or click Browse (max 10MB)"),
-                            fileInput(
-                                ns("file"),
-                                label = NULL,
-                                accept = c(".csv", "text/csv"),
-                                buttonLabel = tr("Browse"),
-                                placeholder = tr("No file selected")
-                            )
-                        ),
-                        # Selected file display
-                        uiOutput(ns("selected_file_ui"))
-                    ),
-                    # Upload status/error
-                    uiOutput(ns("upload_status"))
-                )
-            ))
+        on("show_upload_modal", {
+            showModal(upload_dataset_modal_ui(ns))
         })
 
         # Enable/disable upload button based on file selection
@@ -144,7 +86,8 @@ upload_dataset_server <- function(id, user_id = reactive(NULL), show_modal_trigg
 
         # Handle upload button click
         observeEvent(input$upload_btn, {
-            req(user_id())
+            user_id <- purrr::pluck(session$userData$user, "id")
+            req(user_id)
 
             dataset_name <- trimws(input$dataset_name)
             data <- parsed_data()
@@ -164,17 +107,11 @@ upload_dataset_server <- function(id, user_id = reactive(NULL), show_modal_trigg
             # Save to database
             tryCatch(
                 {
-                    dataset_id <- db_create_dataset(pool, user_id(), dataset_name, data)
-
-                    # Clear error/status
+                    db_create_dataset(pool, user_id, dataset_name, data)
                     values$error <- NULL
                     values$status <- NULL
-
-                    # Close modal
                     removeModal()
-
-                    # Notify parent to refresh
-                    values$uploaded <- Sys.time()
+                    trigger("refresh_datasets")
 
                     shinyWidgets::show_toast(
                         title = tr("Dataset uploaded successfully"),
@@ -216,10 +153,5 @@ upload_dataset_server <- function(id, user_id = reactive(NULL), show_modal_trigg
                 )
             }
         })
-
-        # Return values for parent module
-        return(list(
-            uploaded = reactive(values$uploaded)
-        ))
     })
 }

@@ -81,6 +81,10 @@
             "fr": "Entrez un nom pour votre jeu de données"
         },
         {
+            "en": "Drag & drop, or click Browse (max 10MB)",
+            "fr": "Glissez-déposez, ou cliquez sur Parcourir (max 10Mo)"
+        },
+        {
             "en": "CSV File",
             "fr": "Fichier CSV"
         },
@@ -173,8 +177,8 @@
             "fr": "Aucun jeu de données sélectionné"
         },
         {
-            "en": "Go to Home and click on a dataset to view it here",
-            "fr": "Allez à l'accueil et cliquez sur un jeu de données pour le voir ici"
+            "en": "Upload a new dataset or go to Home to select one",
+            "fr": "Téléversez un nouveau jeu de données ou allez à l'accueil pour en sélectionner un"
         },
         {
             "en": "Go to Home",

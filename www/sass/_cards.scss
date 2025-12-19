@@ -1,0 +1,148 @@
+// Cards
+.card {
+    background: $white;
+    border-radius: $border-radius-lg;
+    border: 1px solid $border-color;
+    padding: $spacing-lg;
+    box-shadow: $shadow-sm;
+
+    h3 {
+        margin: 0 0 $spacing-md 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: $gray-800;
+        text-transform: none;
+    }
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    justify-content: center; // Center the content group in the card
+    gap: $spacing-md;
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba($primary, 0.1);
+        color: $primary;
+        border-radius: $border-radius;
+        font-size: 1.25rem;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center; // Center Value and Label relative to each other
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: $gray-900;
+        line-height: 1.2;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: $gray-500;
+    }
+}
+
+// Dataset list (home page)
+.datasets-card {
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap; // Allow wrapping on small screens
+        gap: $spacing-sm;
+        margin-bottom: $spacing-md;
+        padding-bottom: $spacing-md;
+        border-bottom: 1px solid $border-color;
+
+        h3 {
+            margin: 0;
+        }
+
+        // Full width button on mobile
+        .btn-primary {
+            @media (max-width: $breakpoint-sm) {
+                width: 100%;
+            }
+        }
+    }
+
+    .card-body {
+        min-height: 200px;
+    }
+}
+
+.dataset-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: $spacing-md;
+    margin-bottom: $spacing-sm;
+    background: $gray-50;
+    border: 1px solid $border-color;
+    border-radius: $border-radius;
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    // Stack on mobile
+    @media (max-width: $breakpoint-sm) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: $spacing-md;
+
+        .dataset-actions {
+            width: 100%;
+            justify-content: flex-end;
+        }
+    }
+
+    &:hover {
+        background: $white;
+        border-color: $primary;
+        box-shadow: $shadow-sm;
+    }
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    .dataset-info {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-xs;
+    }
+
+    .dataset-name {
+        font-weight: 600;
+        color: $gray-800;
+    }
+
+    .dataset-meta {
+        font-size: 0.875rem;
+        color: $gray-500;
+    }
+
+    .dataset-actions {
+        display: flex;
+        gap: $spacing-xs;
+    }
+
+    .btn-delete-dataset {
+        padding: $spacing-xs;
+        opacity: 0.6;
+        transition: opacity $transition-fast;
+
+        &:hover {
+            opacity: 1;
+        }
+    }
+}

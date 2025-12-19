@@ -10,8 +10,54 @@
         color: $gray-800;
         font-size: 1.25rem;
 
+        @media (max-width: $breakpoint-md) {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
         &:hover {
             color: $primary;
+        }
+    }
+
+    // Hamburger menu button (bslib uses .navbar-toggle with .icon-bar spans)
+    .navbar-toggle {
+        border-color: $border-color;
+        padding: $spacing-sm;
+        overflow: visible;
+
+        &:focus {
+            box-shadow: none;
+        }
+
+        &:hover {
+            background-color: $gray-50;
+        }
+
+        .icon-bar {
+            background-color: $gray-700 !important;
+            background-image: none !important;
+            display: block !important;
+            width: 22px !important;
+            height: 2px !important;
+            border-radius: 1px;
+
+            &+.icon-bar {
+                margin-top: 5px;
+            }
+        }
+    }
+
+    // Collapsed menu on mobile
+    .navbar-collapse {
+        background-color: $white;
+        border-radius: $border-radius;
+        margin-top: $spacing-sm;
+
+        @media (max-width: $breakpoint-md) {
+            padding: $spacing-sm;
+            box-shadow: $shadow-sm;
         }
     }
 
@@ -76,16 +122,19 @@
         color: $gray-700;
         transition: $transition-fast;
         cursor: pointer;
+
         &:hover,
         &[aria-expanded="true"] {
             background-color: $gray-50;
             border-color: $gray-300;
         }
+
         &::after {
             // Bootstrap dropdown caret
             margin-left: $spacing-xs;
         }
     }
+
     .language-flag {
         width: 20px;
         height: 14px;
@@ -93,10 +142,12 @@
         border-radius: 2px;
         box-shadow: 0 0 1px rgba(0, 0, 0, 0.2);
     }
+
     .language-code {
         font-weight: 500;
         font-size: 0.85rem;
     }
+
     .dropdown-menu {
         min-width: 140px;
         border: none;
@@ -104,6 +155,7 @@
         border-radius: $border-radius;
         padding: $spacing-xs;
         margin-top: $spacing-xs;
+
         .dropdown-item {
             border-radius: $border-radius;
             padding: $spacing-xs $spacing-sm;
@@ -111,10 +163,12 @@
             display: flex;
             align-items: center;
             gap: $spacing-sm;
+
             &:hover {
                 background-color: $gray-50;
                 color: $primary;
             }
+
             &.active {
                 background-color: $primary;
                 color: $white;

@@ -1,11 +1,29 @@
 server <- function(input, output, session) {
     session$allowReconnect(TRUE)
 
-    # Exclude inputs that cause restoration issues (action buttons with shinyActionButtonValue class)
+    # Exclude inputs that cause restoration issues:
+    # - Action buttons with shinyActionButtonValue class
+    # - Upload modal inputs (file, button, name) to prevent re-upload on bookmark restore
+    # - Buttons that trigger modals (open_upload in home and dataset pages)
     shiny::setBookmarkExclude(c(
         "._auth0logout_",
-        "sidebar-toggle"
+        "sidebar-toggle",
+        "upload-file",
+        "upload-upload_btn",
+        "upload-dataset_name",
+        "home-open_upload",
+        "dataset-open_upload"
     ))
+
+    # ------ BOOKMARK ON DISCONNECT -----------------------------------------------
+    # Save bookmark state when user disconnects (closes tab, loses connection, etc.)
+    # This runs after the WebSocket is closed, so we can't notify the user,
+    # but the state is saved for restoration on their next session.
+    if (!isTRUE(getOption("auth0_disable"))) {
+        session$onSessionEnded(function() {
+            save_bookmark_on_disconnect(pool, session, input)
+        })
+    }
 
     # ------ BOOKMARK TRACKING ----------------------------------------------------
     # Register bookmarks in DB and clean up previous ones for this user.
@@ -35,8 +53,25 @@ server <- function(input, output, session) {
     # When auth0_disable is TRUE, skip the gate entirely.
 
     init_modules <- function() {
+        # Initialize event triggers for cross-module communication
+        init("refresh_datasets", "show_upload_modal")
+
+        # Store user in session$userData for cross-module access
+        observe({
+            auth_info <- session$userData$auth0_info
+            if (purrr::is_empty(auth_info)) {
+                return()
+            }
+            auth0_sub <- purrr::pluck(auth_info, "sub")
+            if (purrr::is_empty(auth0_sub)) {
+                return()
+            }
+            session$userData$user <- db_get_or_create_user(pool, auth0_sub)
+        })
+
         navbar_server("navbar")
         sidebar_module <- sidebar_server("sidebar", active_page = reactive(input$nav))
+        upload_dataset_server("upload")
         home_server(
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
@@ -52,8 +87,11 @@ server <- function(input, output, session) {
     if (isTRUE(getOption("auth0_disable"))) {
         init_modules()
         # Resolve language without Auth0 (cookie -> browser -> default)
-        resolved_lang <- resolve_language(NULL, session)
-        apply_language(resolved_lang, session)
+        observe({
+            resolved_lang <- resolve_language(NULL, session)
+            apply_language(resolved_lang, session)
+        }) |>
+            bindEvent(TRUE, once = TRUE)
     } else {
         observe({
             req(session$userData$auth0_info)

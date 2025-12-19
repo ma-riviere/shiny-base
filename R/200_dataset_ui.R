@@ -58,14 +58,6 @@ dataset_ui <- function(id) {
                 )
             )
         ),
-        div(
-            class = "content-section",
-            div(
-                class = "card",
-                h3(class = "i18n", `data-key` = "Column Summary", tr("Column Summary")),
-                verbatimTextOutput(ns("data_summary"))
-            )
-        ),
         # Empty state when no dataset selected
         uiOutput(ns("empty_state"))
     )
