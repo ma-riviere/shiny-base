@@ -8,6 +8,8 @@
 .ansible/
 .claude/
 shiny_bookmarks/
+logs/
+data/shinylogs/
 TODO.md
 tests.qmd
 server-info.txt

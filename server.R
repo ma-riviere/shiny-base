@@ -1,6 +1,16 @@
 server <- function(input, output, session) {
     session$allowReconnect(TRUE)
 
+    # ------ ERROR HANDLING -------------------------------------------------------
+    setup_error_handlers(session)
+
+    # ------ USAGE TRACKING -------------------------------------------------------
+    shinylogs::track_usage(
+        storage_mode = shinylogs::store_json(
+            path = getOption("shinylogs_dir", "data/shinylogs")
+        )
+    )
+
     # Exclude inputs that cause restoration issues:
     # - Action buttons with shinyActionButtonValue class
     # - Upload modal inputs (file, button, name) to prevent re-upload on bookmark restore
@@ -35,7 +45,7 @@ server <- function(input, output, session) {
 
         auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
         if (purrr::is_empty(auth0_sub)) {
-            cat("[bookmarks] No auth0_sub available, skipping tracking\n", file = stderr())
+            log_debug("[BOOKMARKS] No auth0_sub available, skipping tracking")
             return()
         }
 
@@ -129,18 +139,12 @@ server <- function(input, output, session) {
             if (!purrr::is_empty(user_id)) {
                 tryCatch(
                     {
-                        auth0_mgmt <- auth0r::Auth0Management$new()
                         user_metadata <- auth0_mgmt$get_user_metadata(user_id)
                         # Store in session for profile modal
                         session$userData$auth0_info$user_metadata <- user_metadata
                     },
                     error = \(e) {
-                        cat(
-                            "[server] Error fetching user_metadata:",
-                            e$message,
-                            "\n",
-                            file = stderr()
-                        )
+                        log_warn("[SERVER] Error fetching user_metadata: {e$message}")
                     }
                 )
             }

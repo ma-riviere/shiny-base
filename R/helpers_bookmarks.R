@@ -40,7 +40,7 @@ bookmark_cleanup <- function(pool) {
     if (nrow(expired) > 0) {
         delete_bookmark_folders(expired$state_id)
         db_delete_bookmarks(pool, expired$state_id)
-        cat("[bookmarks] Cleaned", nrow(expired), "expired bookmarks\n", file = stderr())
+        log_info("[BOOKMARKS] Cleaned {nrow(expired)} expired bookmarks")
     }
 
     # 2. Delete orphaned folders (exist on disk but not in DB)
@@ -50,7 +50,7 @@ bookmark_cleanup <- function(pool) {
     orphans <- setdiff(disk_folders, db_bookmarks$state_id)
     if (length(orphans) > 0) {
         delete_bookmark_folders(orphans)
-        cat("[bookmarks] Cleaned", length(orphans), "orphaned folders\n", file = stderr())
+        log_info("[BOOKMARKS] Cleaned {length(orphans)} orphaned folders")
     }
 }
 
@@ -71,7 +71,7 @@ save_bookmark_on_disconnect <- function(pool, session, input) {
 save_bookmark_on_disconnect_impl <- function(pool, session, input) {
     auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
     if (purrr::is_empty(auth0_sub)) {
-        cat("[bookmarks] onSessionEnded: No auth0_sub, skipping\n", file = stderr())
+        log_debug("[BOOKMARKS] onSessionEnded: No auth0_sub, skipping")
         return(NULL)
     }
 
@@ -101,7 +101,7 @@ save_bookmark_on_disconnect_impl <- function(pool, session, input) {
             saveRDS(input_state, file = file.path(bookmark_path, "input.rds"))
         },
         error = \(e) {
-            cat("[bookmarks] onSessionEnded: Failed to save input.rds:", e$message, "\n", file = stderr())
+            log_error("[BOOKMARKS] onSessionEnded: Failed to save input.rds: {e$message}")
             return(NULL)
         }
     )
@@ -121,7 +121,7 @@ save_bookmark_on_disconnect_impl <- function(pool, session, input) {
         )
     })
 
-    cat("[bookmarks] onSessionEnded: Saved bookmark", state_id, "for user", user$id, "\n", file = stderr())
+    log_info("[BOOKMARKS] onSessionEnded: Saved bookmark {state_id} for user {user$id}")
     return(state_id)
 }
 
@@ -132,17 +132,8 @@ register_user_bookmark <- function(pool, user_id, state_id) {
     delete_bookmark_folders(old_state_ids)
 
     if (length(old_state_ids) > 0) {
-        cat(
-            "[bookmarks] User",
-            user_id,
-            "- replaced",
-            length(old_state_ids),
-            "old bookmark(s) with",
-            state_id,
-            "\n",
-            file = stderr()
-        )
+        log_info("[BOOKMARKS] User {user_id} - replaced {length(old_state_ids)} old bookmark(s) with {state_id}")
     } else {
-        cat("[bookmarks] User", user_id, "- created bookmark", state_id, "\n", file = stderr())
+        log_info("[BOOKMARKS] User {user_id} - created bookmark {state_id}")
     }
 }

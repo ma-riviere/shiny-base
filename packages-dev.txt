@@ -9,11 +9,15 @@ bslib
 bsicons
 sass
 shinyjs
+shinyvalidate
+shinylogs
+memoise
 ggplot2
 curso-r/auth0
 ma-riviere/auth0r
 shiny.i18n
 cookies
+blastula
 shinyWidgets
 yyjsonr
 shinytest2
@@ -31,3 +35,4 @@ pool
 DBI
 R6
 httr2
+logger

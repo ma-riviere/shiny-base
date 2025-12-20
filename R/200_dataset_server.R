@@ -171,5 +171,20 @@ dataset_server <- function(
                 nav_select_callback("home")
             }
         })
+
+        # Download dataset as CSV
+        output$download_csv <- downloadHandler(
+            filename = function() {
+                dataset_name <- purrr::pluck(values$dataset, "name") %||% "dataset"
+                # Sanitize filename
+                safe_name <- gsub("[^a-zA-Z0-9_-]", "_", dataset_name)
+                paste0(safe_name, "_", format(Sys.Date(), "%Y%m%d"), ".csv")
+            },
+            content = function(file) {
+                req(has_data())
+                write.csv(values$data, file, row.names = FALSE)
+                log_info("Dataset '{purrr::pluck(values$dataset, 'name')}' downloaded")
+            }
+        )
     })
 }

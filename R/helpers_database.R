@@ -31,47 +31,68 @@ db_get_or_create_user <- function(pool, auth0_sub) {
 # ------ DATASET CRUD ----------------------------------------------------------
 
 # Get all datasets for a user (metadata only, no data column)
-db_get_user_datasets <- function(pool, user_id) {
+# Supports pagination with limit and offset parameters.
+#
+# @param pool Database connection pool
+# @param user_id User ID to filter by
+# @param limit Maximum number of records to return (default: NULL = all)
+# @param offset Number of records to skip (default: 0)
+# @return Data frame with dataset metadata (id, user_id, name, row_count, col_count, created_at)
+db_get_user_datasets <- function(pool, user_id, limit = NULL, offset = 0) {
+    # Build query with optional pagination
+    base_query <- "SELECT id, user_id, name, data, created_at
+                   FROM datasets
+                   WHERE user_id = {user_id}
+                   ORDER BY created_at DESC"
+
+    if (!is.null(limit)) {
+        base_query <- paste(base_query, "LIMIT {limit} OFFSET {offset}")
+    }
+
     datasets <- db_with_con(pool, \(con) {
-        DBI::dbGetQuery(
-            con,
-            glue::glue_sql(
-                "SELECT id, user_id, name, data, created_at
-                 FROM datasets
-                 WHERE user_id = {user_id}
-                 ORDER BY created_at DESC",
-                .con = con
-            )
-        )
+        DBI::dbGetQuery(con, glue::glue_sql(base_query, .con = con))
     })
 
     if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
         return(datasets)
     }
 
-    # Calculate row_count and col_count from JSON data
-    datasets$row_count <- vapply(
+    # Calculate row_count and col_count from JSON data (single parse per dataset)
+    stats <- vapply(
         datasets$data,
         \(json_str) {
             data_parsed <- yyjsonr::read_json_str(json_str)
-            if (is.data.frame(data_parsed)) nrow(data_parsed) else length(data_parsed)
+            if (is.data.frame(data_parsed)) {
+                c(row = nrow(data_parsed), col = ncol(data_parsed))
+            } else {
+                c(row = length(data_parsed), col = 1L)
+            }
         },
-        integer(1)
+        integer(2)
     )
 
-    datasets$col_count <- vapply(
-        datasets$data,
-        \(json_str) {
-            data_parsed <- yyjsonr::read_json_str(json_str)
-            if (is.data.frame(data_parsed)) ncol(data_parsed) else 1L
-        },
-        integer(1)
-    )
+    datasets$row_count <- stats["row", ]
+    datasets$col_count <- stats["col", ]
 
     # Remove data column before returning
     datasets$data <- NULL
 
     return(datasets)
+}
+
+# Get total count of datasets for a user (for pagination)
+#
+# @param pool Database connection pool
+# @param user_id User ID to filter by
+# @return Integer count
+db_get_user_datasets_count <- function(pool, user_id) {
+    db_with_con(pool, \(con) {
+        result <- DBI::dbGetQuery(
+            con,
+            glue::glue_sql("SELECT COUNT(*) as count FROM datasets WHERE user_id = {user_id}", .con = con)
+        )
+        as.integer(result$count)
+    })
 }
 
 # Get a single dataset with full data

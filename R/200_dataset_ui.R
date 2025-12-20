@@ -46,6 +46,15 @@ dataset_ui <- function(id) {
                 )
             )
         ),
+        # Data actions (download, etc.)
+        div(
+            class = "content-actions mb-3",
+            downloadButton(
+                ns("download_csv"),
+                label = tags$span(class = "i18n", `data-key` = "Download", tr("Download")),
+                class = "btn-outline-primary"
+            )
+        ),
         # Data preview and summary
         div(
             class = "content-section",
