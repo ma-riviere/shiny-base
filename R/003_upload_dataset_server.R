@@ -11,6 +11,16 @@ upload_dataset_server <- function(id) {
             status = NULL
         )
 
+        # ------ VALIDATION ---------------------------------------------------
+
+        iv <- shinyvalidate::InputValidator$new()
+        iv$add_rule("dataset_name", sv_required(message = tr("Dataset name is required")))
+        iv$add_rule("dataset_name", sv_dataset_name())
+        iv$add_rule("file", sv_file_required(message = tr("Please select a CSV file")))
+        iv$add_rule("file", sv_file_extension(c("csv"), message = tr("Only CSV files are allowed")))
+        iv$add_rule("file", sv_file_size(MAX_FILE_SIZE_MB))
+        iv$enable()
+
         # ------ REACTIVE ------------------------------------------------------
 
         # Show modal when triggered
@@ -18,9 +28,9 @@ upload_dataset_server <- function(id) {
             showModal(upload_dataset_modal_ui(ns))
         })
 
-        # Enable/disable upload button based on file selection
+        # Enable/disable upload button based on validation state
         observe({
-            shinyjs::toggleState("upload_btn", condition = !is.null(input$file))
+            shinyjs::toggleState("upload_btn", condition = iv$is_valid())
         })
 
         # Auto-fill dataset name from filename when file is selected
@@ -36,25 +46,13 @@ upload_dataset_server <- function(id) {
             }
         })
 
-        # Validate and parse uploaded file
+        # Parse uploaded file and validate row count
         parsed_data <- reactive({
             req(input$file)
+            req(iv$is_valid())
 
-            file_info <- input$file
-            file_path <- file_info$datapath
-            file_size_mb <- file_info$size / (1024 * 1024)
+            file_path <- input$file$datapath
 
-            # Check file size
-            if (file_size_mb > MAX_FILE_SIZE_MB) {
-                values$error <- sprintf(
-                    tr("File too large. Maximum size is %dMB, your file is %.1fMB"),
-                    MAX_FILE_SIZE_MB,
-                    file_size_mb
-                )
-                return(NULL)
-            }
-
-            # Try to parse CSV
             tryCatch(
                 {
                     data <- read.csv(file_path, stringsAsFactors = FALSE)
@@ -86,21 +84,20 @@ upload_dataset_server <- function(id) {
 
         # Handle upload button click
         observeEvent(input$upload_btn, {
+            # Validation is handled by shinyvalidate, but double-check
+            if (!iv$is_valid()) {
+                return()
+            }
+
             user_id <- purrr::pluck(session$userData$user, "id")
             req(user_id)
 
             dataset_name <- trimws(input$dataset_name)
             data <- parsed_data()
 
-            # Validate dataset name
-            if (purrr::is_empty(dataset_name) || dataset_name == "") {
-                values$error <- tr("Please enter a dataset name")
-                return()
-            }
-
-            # Validate data
+            # Check if data was parsed successfully
             if (purrr::is_empty(data)) {
-                values$error <- tr("Please select a valid CSV file")
+                # Error message already set by parsed_data()
                 return()
             }
 
@@ -112,6 +109,7 @@ upload_dataset_server <- function(id) {
                     values$status <- NULL
                     removeModal()
                     trigger("refresh_datasets")
+                    log_info("Dataset '{dataset_name}' uploaded by user {user_id}")
 
                     shinyWidgets::show_toast(
                         title = tr("Dataset uploaded successfully"),
@@ -122,6 +120,7 @@ upload_dataset_server <- function(id) {
                 },
                 error = \(e) {
                     values$error <- paste(tr("Error saving dataset:"), e$message)
+                    log_error("Failed to save dataset: {e$message}")
                 }
             )
         })

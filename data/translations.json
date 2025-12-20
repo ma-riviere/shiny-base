@@ -54,7 +54,7 @@
         },
         {
             "en": "Your uploaded datasets.",
-            "fr": "Vos jeux de données téléchargés."
+            "fr": "Vos jeux de données téléversés."
         },
         {
             "en": "Datasets",
@@ -110,7 +110,7 @@
         },
         {
             "en": "Dataset uploaded successfully",
-            "fr": "Jeu de données téléchargé avec succès"
+            "fr": "Jeu de données téléversé avec succès"
         },
         {
             "en": "Dataset deleted successfully",
@@ -154,7 +154,7 @@
         },
         {
             "en": "Explore your uploaded dataset",
-            "fr": "Explorez votre jeu de données téléchargé"
+            "fr": "Explorez votre jeu de données téléversé"
         },
         {
             "en": "Rows",
@@ -219,6 +219,10 @@
         {
             "en": "No datasets match the current filter",
             "fr": "Aucun jeu de données ne correspond au filtre actuel"
+        },
+        {
+            "en": "Download",
+            "fr": "Télécharger"
         }
     ]
 }

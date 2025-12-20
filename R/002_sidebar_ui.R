@@ -3,7 +3,8 @@ sidebar_ui <- function(id) {
     bslib::sidebar(
         id = ns("sidebar"),
         width = 280,
-        open = "desktop",
+        # Collapse by default on mobile, open on desktop
+        open = list(desktop = "open", mobile = "closed"),
         # Home page filter section
         div(
             id = ns("home_filter_section"),

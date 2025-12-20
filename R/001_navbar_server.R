@@ -139,8 +139,6 @@ navbar_server <- function(
 
                 tryCatch(
                     {
-                        auth0_mgmt <- auth0r::Auth0Management$new()
-
                         # Update nickname
                         auth0_mgmt$update_user(user_id, nickname = new_nickname)
 

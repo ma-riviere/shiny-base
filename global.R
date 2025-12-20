@@ -5,6 +5,8 @@ suppressPackageStartupMessages({
 
 # ------ CONFIG ----------------------------------------------------------------
 
+is_prod <- Sys.getenv("ENV") == "prod"
+
 options(
     # Database
     db_schema_path = "database/schema.sql",
@@ -18,15 +20,36 @@ options(
     i18n_file_path = "data/translations.json",
     language_cookie_name = "user_language",
     language_cookie_expiration = 525600, # 1 year in minutes
-    default_language = "en"
+    default_language = "en",
+
+    # Logging (see R/shiny-utils/logging.R)
+    log_dir = Sys.getenv("LOGS_DIR", "logs"),
+    log_console_threshold = if (is_prod) logger::INFO else logger::DEBUG,
+    log_file_threshold = logger::DEBUG,
+    log_json_format = is_prod,
+
+    # Email (see R/shiny-utils/error_handling.R for error email usage)
+    email_to = Sys.getenv("EMAIL_TO"),
+    email_from = Sys.getenv("EMAIL_FROM", "noreply@app.local"),
+    smtp_host = Sys.getenv("SMTP_HOST"),
+    smtp_port = as.integer(Sys.getenv("SMTP_PORT", "587")),
+    smtp_user = Sys.getenv("SMTP_USER"),
+    smtp_key_envvar = "SMTP_KEY",
+
+    # Error handling (see R/shiny-utils/error_handling.R)
+    error_email_enabled = is_prod && nzchar(Sys.getenv("EMAIL_TO")),
+
+    # Shinylogs
+    shinylogs_dir = Sys.getenv("SHINYLOGS_DIR", "data/shinylogs"),
+
+    # Caching (see R/shiny-utils/caching.R)
+    cache_dir = "cache",
+
+    # Debug
+    shiny.autoreload = if (is_prod) FALSE else TRUE
 )
 
 enableBookmarking(store = "server")
-
-if (Sys.getenv("ENV") == "dev") {
-    # Add 'watcher' to dev packages
-    options(shiny.autoreload = TRUE)
-}
 
 # ------ SUB-DIRS --------------------------------------------------------------
 # Sourcing R files from all sub-directories in R/
@@ -42,6 +65,11 @@ if (isTRUE(getOption("shiny.testmode"))) {
 }
 
 auth0_info <- auth0::auth0_info()
+auth0_mgmt <- if (!isTRUE(getOption("auth0_disable"))) {
+    auth0r::Auth0Management$new()
+} else {
+    NULL
+}
 
 # ------ TRANSLATIONS ----------------------------------------------------------
 
@@ -54,7 +82,10 @@ source("R/helpers_database.R", local = TRUE)
 
 pool <- db_connect()
 
-onStop(db_disconnect(pool))
+onStop(function() {
+    clear_disk_cache(getOption("cache_dir", "cache"))
+    db_disconnect(pool)
+})
 
 # ------ BOOKMARKS -------------------------------------------------------------
 # The database/pool needs to be active to be able to call bookmark_cleanup
@@ -62,3 +93,18 @@ onStop(db_disconnect(pool))
 source("R/helpers_bookmarks.R", local = TRUE)
 
 bookmark_cleanup(pool)
+
+# ------ LOGGING ---------------------------------------------------------------
+
+init_logging()
+setup_global_error_handlers()
+
+log_info("Application started (ENV={Sys.getenv('ENV', 'dev')})")
+
+# ------ SHINYLOGS -------------------------------------------------------------
+# Ensure shinylogs directory exists
+
+shinylogs_dir <- getOption("shinylogs_dir")
+if (!dir.exists(shinylogs_dir)) {
+    dir.create(shinylogs_dir, recursive = TRUE)
+}

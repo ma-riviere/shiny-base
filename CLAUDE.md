@@ -282,6 +282,56 @@ Enable verbose logging to see trigger activity:
 options(triggers.verbose = TRUE)
 ```
 
+## Email
+
+The app uses `blastula` for sending emails via SMTP (configured for Brevo).
+
+### Configuration
+
+Environment variables (in `.Renviron`):
+- `EMAIL_TO`: Default recipient email address
+- `EMAIL_FROM`: Sender email address
+- `SMTP_HOST`: SMTP server (e.g., `smtp-relay.brevo.com`)
+- `SMTP_PORT`: SMTP port (default: 587)
+- `SMTP_USER`: SMTP username/login
+- `SMTP_KEY`: SMTP API key/password
+
+Options (set in `global.R`):
+- `email_to`, `email_from`, `smtp_host`, `smtp_port`, `smtp_user`: Read from env vars
+- `smtp_key_envvar`: Name of env var holding SMTP key (default: `"SMTP_KEY"`)
+- `error_email_enabled`: Whether to send emails on unhandled errors (default: prod only)
+
+### Error notification emails
+
+`R/shiny-utils/error_handling.R` provides automatic error notification:
+- `send_error_email(error_msg, session)`: Sends error details with context (user, R version, stack trace)
+- `setup_error_handlers(session)`: Registers session-level error handlers (call in `server.R`)
+- `setup_global_error_handlers()`: Sets up global error handling (called in `global.R`)
+
+Error emails are only sent in production (`ENV=prod`) when `EMAIL_TO` is configured.
+
+### Sending custom emails
+
+```r
+email <- blastula::compose_email(
+    body = blastula::md("Your **markdown** content here")
+)
+
+blastula::smtp_send(
+    email = email,
+    to = "recipient@example.com",
+    from = getOption("email_from"),
+    subject = "Subject line",
+    credentials = blastula::creds_envvar(
+        user = getOption("smtp_user"),
+        pass_envvar = getOption("smtp_key_envvar"),
+        host = getOption("smtp_host"),
+        port = getOption("smtp_port"),
+        use_ssl = TRUE
+    )
+)
+```
+
 ## Database
 
 The app uses a PostgreSQL database with connection pooling (`pool` package).
