@@ -11,6 +11,7 @@ sass
 shinyjs
 ggplot2
 curso-r/auth0
+ma-riviere/auth0r
 shiny.i18n
 cookies
 shinyWidgets

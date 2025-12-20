@@ -399,6 +399,38 @@
       "RemoteRef": "master",
       "RemoteSha": "d638bb9291048c37bc3fcd597d94c954efee29c6"
     },
+    "auth0r": {
+      "Package": "auth0r",
+      "Version": "0.1.0",
+      "Source": "GitHub",
+      "Title": "R Interface to Auth0 APIs",
+      "Authors@R": "person(\"Marc-Aurèle\", \"Rivière\", role = c(\"aut\", \"cre\"), email = \"marc.aurele.riviere@gmail.com\")",
+      "Description": "R6 classes for interacting with Auth0 Management API and Authentication API. Provides tools for user management, token handling, and OAuth2 flows.",
+      "License": "MIT + file LICENSE",
+      "Encoding": "UTF-8",
+      "Roxygen": "list(markdown = TRUE)",
+      "RoxygenNote": "7.3.3",
+      "Imports": [
+        "R6",
+        "httr2",
+        "purrr",
+        "cli",
+        "rlang"
+      ],
+      "Suggests": [
+        "testthat (>= 3.0.0)",
+        "withr"
+      ],
+      "Config/testthat/edition": "3",
+      "Author": "Marc-Aurèle Rivière [aut, cre]",
+      "Maintainer": "Marc-Aurèle Rivière <marc.aurele.riviere@gmail.com>",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "ma-riviere",
+      "RemoteRepo": "auth0r",
+      "RemoteRef": "main",
+      "RemoteSha": "7581c22cfe1b20e7b465b5e31eabed66b4170d8b"
+    },
     "backports": {
       "Package": "backports",
       "Version": "1.5.0",
