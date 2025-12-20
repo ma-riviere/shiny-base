@@ -50,12 +50,14 @@ i18n$set_translation_language("en")
 
 # ------ DATABASE --------------------------------------------------------------
 
+source("R/helpers_database.R", local = TRUE)
+
 pool <- db_connect()
 
 onStop(db_disconnect(pool))
 
 # ------ BOOKMARKS -------------------------------------------------------------
-# The database need to be active to be able to call bookmark_cleanup
+# The database/pool needs to be active to be able to call bookmark_cleanup
 
 source("R/helpers_bookmarks.R", local = TRUE)
 
