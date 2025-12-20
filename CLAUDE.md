@@ -15,13 +15,129 @@ The app uses `bslib::page_navbar()` for navigation with a shared sidebar across 
 - The active tab is tracked via `input$nav` (automatically bookmarked by Shiny)
 - Use `bslib::nav_select("nav", "page_value", session = session)` to programmatically switch tabs
 
+### Cross-Module Navigation Patterns
+
+When a child module needs to trigger navigation (e.g., clicking a dataset row navigates to
+the dataset page), there are three approaches. Choose based on app complexity.
+
+#### Pattern Comparison
+
+| Approach | Coupling | Debugging | Scalability | Use When |
+|----------|----------|-----------|-------------|----------|
+| Callback | Medium | Easy | Low (prop-drilling) | Small apps, shallow hierarchy |
+| Triggers | Low | Hard (hidden logic) | High | Large apps, sibling communication |
+| Reactive Return | High | Easy (explicit graph) | Medium | Need testability with `testServer()` |
+
+#### 1. Callback Function (Current Pattern)
+
+Parent defines a navigation helper and passes it to child modules.
+
+```r
+# server.R
+home_server(
+    "home",
+    nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
+)
+
+# R/100_home_server.R
+home_server <- function(id, nav_select_callback = NULL) {
+    moduleServer(id, function(input, output, session) {
+        observeEvent(input$dataset_click, {
+            if (!is.null(nav_select_callback)) {
+                nav_select_callback("dataset")
+            }
+        })
+    })
+}
+```
+
+**Pros:** Child stays decoupled from parent's navbar ID. Simple, explicit.
+
+**Cons:** "Prop drilling" - deeply nested modules require passing callback through every layer.
+
+#### 2. Triggers (gargoyle-style)
+
+Uses the event system from `R/shiny-utils/triggers.R`. Navigation becomes a broadcast event.
+
+```r
+# server.R
+init("nav_to_dataset", "nav_to_home")
+on("nav_to_dataset", { nav_select("nav", "dataset") })
+on("nav_to_home", { nav_select("nav", "home") })
+
+# R/100_home_server.R (no callback parameter needed)
+observeEvent(input$dataset_click, {
+    trigger("nav_to_dataset")
+})
+```
+
+**Pros:** Completely decouples modules. Sibling modules can trigger navigation without any
+direct link. No prop drilling regardless of nesting depth.
+
+**Cons:** "Escapes the reactive graph" - navigation logic is hidden from Shiny's dependency
+tracking. Harder to reason about data flow. Multiple listeners react to same trigger.
+
+#### 3. Reactive Return Values
+
+Child module returns an `eventReactive` signaling the target tab. Parent observes and navigates.
+
+```r
+# R/100_home_server.R
+home_server <- function(id) {
+    moduleServer(id, function(input, output, session) {
+        nav_target <- eventReactive(input$dataset_click, { "dataset" })
+        return(list(nav_to = nav_target))
+    })
+}
+
+# server.R
+home_module <- home_server("home")
+observeEvent(home_module$nav_to(), {
+    req(home_module$nav_to())
+    nav_select("nav", home_module$nav_to())
+})
+```
+
+**Pros:** Most "Shiny-native". Explicit reactive graph. Testable with `testServer()`.
+
+**Cons:** More verbose. Each module needs return value handling in parent. Managing multiple
+navigation targets requires returning a list of reactives.
+
+#### When to Switch Patterns
+
+**Keep callbacks** (current) when:
+- App has < 5 modules at 1-2 levels of nesting
+- No need for `testServer()` on navigation logic
+- Navigation is always parent-child (not sibling-to-sibling)
+
+**Switch to triggers** when:
+- App grows to 10+ modules
+- Sibling modules need to trigger each other's navigation
+- Deep nesting makes prop drilling painful
+- You accept the trade-off of hidden control flow
+
+**Switch to reactive returns** when:
+- You need to test navigation logic with `testServer()`
+- You want the reactive graph to be fully explicit
+- You're willing to add boilerplate in parent for each module
+
+#### Migration Path
+
+If starting with callbacks and app grows complex:
+
+1. First, consider if triggers are appropriate for the specific navigation needs
+2. Define scoped trigger names: `nav_to_home`, `nav_to_dataset` (not generic `navigate`)
+3. Register handlers once in `server.R`, not in modules
+4. Remove callback parameters from module signatures
+5. Replace `nav_select_callback("dataset")` with `trigger("nav_to_dataset")`
+
 ## Auth0 + Bookmarking Integration
 
 The standard `auth0` package is incompatible with Shiny's server-side bookmarking because:
 1. Auth0 rejects redirect URIs containing query params (like `?_state_id_=xxx`)
 2. The `auth0:::has_auth_code()` function requires exact state match
 
-`R/helpers_auth0.R` provides custom wrappers (`auth0_ui2`, `auth0_server2`) that solve this.
+`R/shiny-utils/auth0.R` provides custom wrappers (`auth0_ui2`, `auth0_server2`) that solve this.
 
 ### How it works
 
@@ -125,7 +241,7 @@ offers to restore it via a toast notification. This uses `input$session_status` 
 
 ## Event Triggers
 
-`R/helpers_triggers.R` provides a lightweight event system for cross-module communication,
+`R/shiny-utils/triggers.R` provides a lightweight event system for cross-module communication,
 inspired by the `gargoyle` package. Triggers are stored in `session$userData` and act as
 **broadcast events** - any module can fire them, and all listeners react.
 
@@ -169,7 +285,7 @@ options(triggers.verbose = TRUE)
 ## Database
 
 The app uses a PostgreSQL database with connection pooling (`pool` package).
-- Connection setup in `R/helpers_database.R`
+- Connection setup in `R/shiny-utils/database.R`, CRUD functions in `R/helpers_database.R`
 - Pool created in `global.R`, closed via `onStop()` callback
 - Bookmark tracking: stores user bookmarks in DB, cleans up old ones on save
 
@@ -177,9 +293,9 @@ The app uses a PostgreSQL database with connection pooling (`pool` package).
 
 Uses `shiny.i18n` for translations. Language resolution hierarchy:
 1. Auth0 `user_metadata.language` (source of truth for authenticated users)
-2. Cookie (`user_language`, 1-year expiry)
+2. Cookie (name from `getOption("language_cookie_name")`, 1-year expiry)
 3. Browser language preference
-4. App default (`DEFAULT_LANGUAGE` in global.R)
+4. App default (from `getOption("default_language")`)
 
 ## SASS/CSS
 
@@ -187,7 +303,7 @@ Uses `shiny.i18n` for translations. Language resolution hierarchy:
 - Partials: `_buttons.scss`, `_cards.scss`, `_layout.scss`, `_modals.scss`, `_tables.scss`, `_utils.scss`
 - Variables: `www/sass/variables.scss`
 - Output: `www/css/main.min.css` (compressed)
-- Compilation: `R/sass.R` (run manually when SASS changes)
+- Compilation: `R/shiny-utils/sass.R` (run manually when SASS changes)
 
 ## Development Notes
 

@@ -5,11 +5,14 @@
 # - Delete bookmarks older than expiry time
 # - Clean orphaned bookmark folders (not in DB)
 #
-# Config constants (BOOKMARK_DIR, BOOKMARK_EXPIRY_MINUTES) are defined in global.R
+# Config options (set in global.R):
+# - bookmark_dir: Directory for bookmark storage (default: "shiny_bookmarks")
+# - bookmark_expiry_minutes: Bookmark TTL in minutes (default: 30)
 
 # Delete bookmark folder from filesystem
 delete_bookmark_folder <- function(state_id) {
-    folder_path <- file.path(BOOKMARK_DIR, state_id)
+    bookmark_dir <- getOption("bookmark_dir", "shiny_bookmarks")
+    folder_path <- file.path(bookmark_dir, state_id)
     if (dir.exists(folder_path)) {
         unlink(folder_path, recursive = TRUE)
         # cat("[bookmarks] Deleted folder:", state_id, "\n", file = stderr())
@@ -26,12 +29,14 @@ delete_bookmark_folders <- function(state_ids) {
 # Run bookmark cleanup: expired + orphaned folders.
 # Should be called on app startup.
 bookmark_cleanup <- function(pool) {
-    if (!dir.exists(BOOKMARK_DIR)) {
+    bookmark_dir <- getOption("bookmark_dir", "shiny_bookmarks")
+    if (!dir.exists(bookmark_dir)) {
         return(invisible(NULL))
     }
 
     # 1. Delete expired bookmarks
-    expired <- db_get_expired_bookmarks(pool, BOOKMARK_EXPIRY_MINUTES)
+    expiry_minutes <- getOption("bookmark_expiry_minutes", 30)
+    expired <- db_get_expired_bookmarks(pool, expiry_minutes)
     if (nrow(expired) > 0) {
         delete_bookmark_folders(expired$state_id)
         db_delete_bookmarks(pool, expired$state_id)
@@ -40,7 +45,7 @@ bookmark_cleanup <- function(pool) {
 
     # 2. Delete orphaned folders (exist on disk but not in DB)
     db_bookmarks <- db_get_all_bookmarks(pool)
-    disk_folders <- list.dirs(BOOKMARK_DIR, full.names = FALSE, recursive = FALSE)
+    disk_folders <- list.dirs(bookmark_dir, full.names = FALSE, recursive = FALSE)
 
     orphans <- setdiff(disk_folders, db_bookmarks$state_id)
     if (length(orphans) > 0) {
@@ -77,7 +82,8 @@ save_bookmark_on_disconnect_impl <- function(pool, session, input) {
     )
 
     # Create bookmark directory
-    bookmark_path <- file.path(BOOKMARK_DIR, state_id)
+    bookmark_dir <- getOption("bookmark_dir", "shiny_bookmarks")
+    bookmark_path <- file.path(bookmark_dir, state_id)
     if (!dir.exists(bookmark_path)) {
         dir.create(bookmark_path, recursive = TRUE)
     }

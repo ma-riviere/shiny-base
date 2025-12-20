@@ -139,16 +139,16 @@ navbar_server <- function(
 
                 tryCatch(
                     {
-                        auth0_api <- Auth0API$new()
+                        auth0_mgmt <- auth0r::Auth0Management$new()
 
                         # Update nickname
-                        auth0_api$update_user_nickname(user_id, new_nickname)
+                        auth0_mgmt$update_user(user_id, nickname = new_nickname)
 
                         # Update language preference in user_metadata
                         if (!purrr::is_empty(new_language)) {
                             current_metadata <- purrr::pluck(auth_info, "user_metadata") %||% list()
                             current_metadata$language <- new_language
-                            auth0_api$update_user_metadata(user_id, current_metadata)
+                            auth0_mgmt$update_user_metadata(user_id, current_metadata)
 
                             # Update local session data
                             session$userData$auth0_info$user_metadata <- current_metadata

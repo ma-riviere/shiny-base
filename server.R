@@ -129,8 +129,8 @@ server <- function(input, output, session) {
             if (!purrr::is_empty(user_id)) {
                 tryCatch(
                     {
-                        auth0_api <- Auth0API$new()
-                        user_metadata <- auth0_api$get_user_metadata(user_id)
+                        auth0_mgmt <- auth0r::Auth0Management$new()
+                        user_metadata <- auth0_mgmt$get_user_metadata(user_id)
                         # Store in session for profile modal
                         session$userData$auth0_info$user_metadata <- user_metadata
                     },
