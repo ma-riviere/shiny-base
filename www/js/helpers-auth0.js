@@ -1,20 +1,25 @@
 // Auth0 client-side helpers
-// Cleans up URL after Auth0 callback (removes code/state/_state_id_ params)
+// Cleans up URL after Auth0 callback and detects session status for bookmark restoration offer.
+//
+// URL cleanup must happen on shiny:connected (after Shiny parses URL for bookmark restoration)
+// but before the user sees the ugly auth params in the address bar.
 
 $(document).on('shiny:connected', function () {
+    // Clean up URL: remove Auth0 callback params and bookmark state
+    // By this point, Shiny has already parsed _state_id_ for restoration
     var url = new URL(window.location.href);
     var params = url.searchParams;
 
-    // Remove Auth0 callback params and bookmark state from URL display
     var hasParamsToRemove = params.has('code') || params.has('state') || params.has('_state_id_');
     if (hasParamsToRemove) {
         params.delete('code');
         params.delete('state');
         params.delete('_state_id_');
+
         // Rebuild clean URL
         var cleanUrl = url.origin + url.pathname;
-        if (url.search) {
-            cleanUrl += url.search;
+        if (params.toString()) {
+            cleanUrl += '?' + params.toString();
         }
         history.replaceState(null, '', cleanUrl);
     }

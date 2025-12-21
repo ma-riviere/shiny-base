@@ -37,4 +37,4 @@ ui <- function(request) {
     )
 }
 
-cookies::add_cookie_handlers(auth0_ui2(ui, info = auth0_info))
+auth0r::auth0_ui_with_cookies(ui, info = auth0_info)

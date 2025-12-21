@@ -64,7 +64,7 @@ if (isTRUE(getOption("shiny.testmode"))) {
     options(auth0_disable = TRUE)
 }
 
-auth0_info <- auth0::auth0_info()
+auth0_info <- auth0r::auth0_info()
 auth0_mgmt <- if (!isTRUE(getOption("auth0_disable"))) {
     auth0r::Auth0Management$new()
 } else {
@@ -78,8 +78,6 @@ i18n$set_translation_language("en")
 
 # ------ DATABASE --------------------------------------------------------------
 
-source("R/helpers_database.R", local = TRUE)
-
 pool <- db_connect()
 
 onStop(function() {
@@ -91,6 +89,7 @@ onStop(function() {
 # The database/pool needs to be active to be able to call bookmark_cleanup
 
 source("R/helpers_bookmarks.R", local = TRUE)
+source("R/helpers_database.R", local = TRUE)
 
 bookmark_cleanup(pool)
 

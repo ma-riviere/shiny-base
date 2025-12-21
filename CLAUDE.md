@@ -133,40 +133,40 @@ If starting with callbacks and app grows complex:
 
 ## Auth0 + Bookmarking Integration
 
-The standard `auth0` package is incompatible with Shiny's server-side bookmarking because:
-1. Auth0 rejects redirect URIs containing query params (like `?_state_id_=xxx`)
-2. The `auth0:::has_auth_code()` function requires exact state match
-
-`R/shiny-utils/auth0.R` provides custom wrappers (`auth0_ui2`, `auth0_server2`) that solve this.
+The app uses `ma-riviere/auth0r` for Auth0 authentication with built-in bookmark preservation.
+Unlike the standard `curso-r/auth0` package, auth0r handles server-side bookmarking correctly by
+encoding `_state_id_` in Auth0's state parameter, keeping the redirect URI clean.
 
 ### How it works
 
-1. **Outbound**: User visits `/?_state_id_=xyz`. `auth0_ui2` encodes the bookmark ID in Auth0's
-   state param as `originalState|bookmarkId`, keeping the redirect_uri clean, then redirects
-   to Auth0.
+1. **Outbound**: User visits `/?_state_id_=xyz`. `auth0r::auth0_ui()` encodes the bookmark ID
+   in Auth0's state param as `randomState|bookmarkId`, redirects to Auth0 with a clean redirect_uri.
 
-2. **Auth0 Callback**: Auth0 redirects back with `?code=...&state=originalState|bookmarkId`.
-   `auth0_ui2` detects valid auth code and extracts the bookmark ID from the state param.
+2. **Auth0 Callback**: Auth0 redirects back with `?code=...&state=randomState|bookmarkId`.
+   `auth0r::auth0_ui()` validates state via encrypted httpOnly cookie (CSRF protection).
 
-3. **Bookmark Redirect**: If a bookmark ID was encoded in the state but `_state_id_` is not in
-   the URL, `auth0_ui2` redirects to add `_state_id_` to the URL (keeping code/state params).
-   This triggers Shiny's native bookmark restoration mechanism.
+3. **URL Cleanup**: `auth0r::auth0_ui()` injects `history.replaceState()` to clean auth params
+   from the URL while preserving `_state_id_` for bookmark restoration.
 
 4. **Native Restoration**: Shiny sees `_state_id_` in the URL and automatically restores all
    inputs from `shiny_bookmarks/{id}/input.rds`. This includes the active tab (`input$nav`)
    which `bslib::page_navbar()` handles automatically.
 
-5. **Token Exchange**: `auth0_server2` exchanges the auth code for tokens and populates
-   `session$userData$auth0_info`.
-
-6. **URL Cleanup**: `www/js/helpers-auth0.js` removes `code`, `state`, and `_state_id_` from
-   the URL after Shiny connects.
+5. **Token Exchange**: `auth0r::auth0_server()` exchanges the auth code for tokens and populates
+   `session$userData$auth0_info` and `session$userData$auth0_credentials`.
 
 ### Key components
 
-- `auth0_ui2`: Encodes `_state_id_` in Auth0's state param, redirects to add `_state_id_` after callback
-- `auth0_server2`: Handles token exchange and logout
-- `www/js/helpers-auth0.js`: Cleans up URL params and detects fresh login vs page refresh
+- `auth0r::auth0_ui()`: Handles OAuth2 flow, CSRF protection, bookmark preservation
+- `auth0r::auth0_server()`: Token exchange, logout handler, excludes auth params from bookmarks
+- `www/js/helpers-auth0.js`: Detects fresh login vs page refresh for bookmark restoration offer
+
+### CSRF Protection
+
+auth0r uses encrypted httpOnly cookies (via sodium) to protect against CSRF attacks:
+- State is generated per-request and stored encrypted in a cookie before redirecting to Auth0
+- On callback, the state from the URL is validated against the decrypted cookie
+- Set `AUTH0_COOKIE_KEY` env var for production (generate with `sodium::bin2hex(sodium::random(32))`)
 
 ### Email verification gate
 
