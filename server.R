@@ -1,10 +1,10 @@
 server <- function(input, output, session) {
     session$allowReconnect(TRUE)
 
-    # ------ ERROR HANDLING -------------------------------------------------------
+    # ------ ERROR HANDLING ----------------------------------------------------
     setup_error_handlers(session)
 
-    # ------ USAGE TRACKING -------------------------------------------------------
+    # ------ USAGE TRACKING ----------------------------------------------------
     shinylogs::track_usage(
         storage_mode = shinylogs::store_json(
             path = getOption("shinylogs_dir", "data/shinylogs")
@@ -12,10 +12,14 @@ server <- function(input, output, session) {
     )
 
     # Exclude inputs that cause restoration issues:
+    # - Auth0 params (code, state) to prevent token leakage (auth0r also excludes these but app's
+    #   call overwrites auth0r's, so we must include them here)
     # - Action buttons with shinyActionButtonValue class
     # - Upload modal inputs (file, button, name) to prevent re-upload on bookmark restore
     # - Buttons that trigger modals (open_upload in home and dataset pages)
     shiny::setBookmarkExclude(c(
+        "code",
+        "state",
         "._auth0logout_",
         "sidebar-toggle",
         "upload-file",
@@ -25,7 +29,7 @@ server <- function(input, output, session) {
         "dataset-open_upload"
     ))
 
-    # ------ BOOKMARK ON DISCONNECT -----------------------------------------------
+    # ------ BOOKMARK ON DISCONNECT --------------------------------------------
     # Save bookmark state when user disconnects (closes tab, loses connection, etc.)
     # This runs after the WebSocket is closed, so we can't notify the user,
     # but the state is saved for restoration on their next session.
@@ -35,7 +39,7 @@ server <- function(input, output, session) {
         })
     }
 
-    # ------ BOOKMARK TRACKING ----------------------------------------------------
+    # ------ BOOKMARK TRACKING -------------------------------------------------
     # Register bookmarks in DB and clean up previous ones for this user.
     # Only runs when Auth0 is enabled (user identity required).
     onBookmark(function(state) {
@@ -97,9 +101,14 @@ server <- function(input, output, session) {
     if (isTRUE(getOption("auth0_disable"))) {
         init_modules()
         # Resolve language without Auth0 (cookie -> browser -> default)
+        # Only apply if navbar language input doesn't already have a valid value
+        # (e.g., from bookmark restoration)
         observe({
-            resolved_lang <- resolve_language(NULL, session)
-            apply_language(resolved_lang, session)
+            current_lang <- input[["navbar-language"]]
+            if (purrr::is_empty(current_lang) || current_lang == getOption("default_language", "en")) {
+                resolved_lang <- resolve_language(NULL, session)
+                apply_language(resolved_lang, session)
+            }
         }) |>
             bindEvent(TRUE, once = TRUE)
     } else {
@@ -128,6 +137,9 @@ server <- function(input, output, session) {
         # 2. Cookie (remembers previous session choice)
         # 3. Browser language preference
         # 4. App default
+        #
+        # Only apply if navbar language doesn't already have a non-default value
+        # (e.g., from bookmark restoration).
         observe({
             # Wait for auth0_info to be available
             req(session$userData$auth0_info)
@@ -149,9 +161,12 @@ server <- function(input, output, session) {
                 )
             }
 
-            # Resolve language using hierarchy (auth_info now has user_metadata)
-            resolved_lang <- resolve_language(session$userData$auth0_info, session)
-            apply_language(resolved_lang, session)
+            # Only apply if input doesn't already have a non-default value
+            current_lang <- input[["navbar-language"]]
+            if (purrr::is_empty(current_lang) || current_lang == getOption("default_language", "en")) {
+                resolved_lang <- resolve_language(session$userData$auth0_info, session)
+                apply_language(resolved_lang, session)
+            }
         }) |>
             bindEvent(session$userData$auth0_info, once = TRUE)
     }
@@ -161,7 +176,7 @@ server <- function(input, output, session) {
         session$reload()
     })
 
-    # ------ BOOKMARK RESTORATION OFFER ------------------------------------------
+    # ------ BOOKMARK RESTORATION OFFER ----------------------------------------
     # On fresh login (not page refresh), check if user has a recent bookmark
     # and offer to restore it via a toast notification.
     observeEvent(
@@ -238,4 +253,4 @@ server <- function(input, output, session) {
     )
 }
 
-auth0_server2(server, info = auth0_info)
+auth0r::auth0_server(server, info = auth0_info)

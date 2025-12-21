@@ -13,7 +13,7 @@ shinyvalidate
 shinylogs
 memoise
 ggplot2
-curso-r/auth0
+sodium
 ma-riviere/auth0r
 shiny.i18n
 cookies

@@ -60,7 +60,7 @@ navbar_user_menu <- function(ns) {
         bslib::nav_item(
             tags$div(
                 id = ns("logout_wrapper"),
-                auth0::logoutButton(
+                auth0r::logout_button(
                     label = tagList(
                         bsicons::bs_icon("box-arrow-right"),
                         tags$span(class = "i18n ms-2", `data-key` = "Logout", tr("Logout"))
