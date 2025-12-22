@@ -31,7 +31,8 @@ ui <- function(request) {
                 tags$script(src = sprintf("js/helpers-modal.js?v=%s", as.integer(Sys.time())))
             ),
             shinyjs::useShinyjs(),
-            shiny.i18n::usei18n(i18n)
+            shiny.i18n::usei18n(i18n),
+            shinyWidgets::useSweetAlert()
         ),
         !!!navbar_ui("navbar")
     )

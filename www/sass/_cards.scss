@@ -54,18 +54,25 @@
 
 // Dataset list (home page)
 .datasets-card {
+    padding: 0;
+    overflow: hidden;
+
     .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap; // Allow wrapping on small screens
         gap: $spacing-sm;
-        margin-bottom: $spacing-md;
-        padding-bottom: $spacing-md;
+        padding: $spacing-md $spacing-lg;
+        background: linear-gradient(to right, rgba($primary, 0.05), $white);
         border-bottom: 1px solid $border-color;
+        border-left: 4px solid $primary;
 
         h3 {
             margin: 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: $gray-900;
         }
 
         // Full width button on mobile
@@ -77,72 +84,151 @@
     }
 
     .card-body {
+        padding: $spacing-lg;
         min-height: 200px;
     }
 }
 
 .dataset-row {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: $spacing-md;
     align-items: center;
     padding: $spacing-md;
     margin-bottom: $spacing-sm;
     background: $gray-50;
     border: 1px solid $border-color;
     border-radius: $border-radius;
-    cursor: pointer;
     transition: all $transition-fast;
 
-    // Stack on mobile
-    @media (max-width: $breakpoint-sm) {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: $spacing-md;
+    &:last-child {
+        margin-bottom: 0;
+    }
 
-        .dataset-actions {
-            width: 100%;
-            justify-content: flex-end;
+    // Inner link/container (holds Name, Age, Size)
+    // Also target anchor tags explicitly (actionLink generates <a> which defaults to inline)
+    .dataset-row-link,
+    a.dataset-row-link {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1.5fr;
+        gap: $spacing-md;
+        align-items: center;
+        text-decoration: none;
+        color: inherit;
+
+        // Fix for Shiny actionLink wrapping content in a span
+        // This ensures the children (cols) fall directly into the parent grid
+        .action-label {
+            display: contents;
+        }
+
+        &.clickable {
+            cursor: pointer;
+        }
+
+        // Stack on mobile
+        @media (max-width: $breakpoint-sm) {
+            grid-template-columns: 1fr;
+            gap: $spacing-sm;
         }
     }
 
+    // Hover effect applied to the whole row when the link is hovered
+    &:has(.clickable:hover),
+    &:has(.clickable:focus) {
+        background: $white;
+        border-color: $primary;
+        box-shadow: $shadow-sm;
+    }
+
+    // Fallback hover for older browsers or if :has isn't supported perfectly
     &:hover {
         background: $white;
         border-color: $primary;
         box-shadow: $shadow-sm;
     }
 
-    &:last-child {
-        margin-bottom: 0;
+    // Stack outer row on mobile
+    @media (max-width: $breakpoint-sm) {
+        grid-template-columns: 1fr;
+        gap: $spacing-sm;
     }
 
-    .dataset-info {
+    .dataset-col {
         display: flex;
-        flex-direction: column;
+        align-items: center;
+    }
+
+    .dataset-col-name {
         gap: $spacing-xs;
+
+        .dataset-name {
+            font-weight: 600;
+            color: $gray-800;
+        }
     }
 
-    .dataset-name {
-        font-weight: 600;
-        color: $gray-800;
-    }
-
-    .dataset-meta {
+    .dataset-col-age {
+        gap: $spacing-xs;
         font-size: 0.875rem;
         color: $gray-500;
+
+        svg {
+            opacity: 0.7;
+        }
     }
 
-    .dataset-actions {
+    .dataset-col-size {
+        gap: $spacing-xs;
+        font-size: 0.875rem;
+        color: $gray-500;
+
+        svg {
+            opacity: 0.7;
+        }
+    }
+
+    .dataset-col-actions {
         display: flex;
         gap: $spacing-xs;
-    }
+        justify-content: flex-end;
 
-    .btn-delete-dataset {
-        padding: $spacing-xs;
-        opacity: 0.6;
-        transition: opacity $transition-fast;
+        .btn-action-dataset {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: $border-radius-sm;
+            transition: all $transition-fast;
 
-        &:hover {
-            opacity: 1;
+            // Ensure icons are centered and sized correctly
+            i,
+            svg {
+                font-size: 0.875rem;
+                margin: 0;
+            }
+
+            // Fix download button hover color (bootstrap override if needed)
+            &.btn-outline-primary:hover,
+            &.shiny-download-link:hover {
+                color: $white !important;
+                background-color: $primary !important;
+                border-color: $primary !important;
+            }
+
+            &.btn-outline-secondary:hover {
+                color: $white;
+                background-color: $gray-600;
+                border-color: $gray-600;
+            }
+
+            &.btn-outline-danger:hover {
+                color: $white;
+                background-color: $danger;
+                border-color: $danger;
+            }
         }
     }
 }

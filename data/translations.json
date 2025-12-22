@@ -73,28 +73,8 @@
             "fr": "Aucun jeu de données. Téléversez votre premier jeu de données!"
         },
         {
-            "en": "Dataset Name",
-            "fr": "Nom du jeu de données"
-        },
-        {
-            "en": "Enter a name for your dataset",
-            "fr": "Entrez un nom pour votre jeu de données"
-        },
-        {
-            "en": "Drag & drop, or click Browse (max 10MB)",
-            "fr": "Glissez-déposez, ou cliquez sur Parcourir (max 10Mo)"
-        },
-        {
-            "en": "CSV File",
-            "fr": "Fichier CSV"
-        },
-        {
             "en": "Browse",
             "fr": "Parcourir"
-        },
-        {
-            "en": "No file selected",
-            "fr": "Aucun fichier sélectionné"
         },
         {
             "en": "Drag and drop a CSV file here, or click to browse",
@@ -135,10 +115,6 @@
         {
             "en": "Error parsing dataset:",
             "fr": "Erreur lors de l'analyse du jeu de données:"
-        },
-        {
-            "en": "Please enter a dataset name",
-            "fr": "Veuillez entrer un nom pour le jeu de données"
         },
         {
             "en": "Please select a valid CSV file",
@@ -217,12 +193,112 @@
             "fr": "Filtrer par nombre de lignes"
         },
         {
+            "en": "Filter by date",
+            "fr": "Filtrer par date"
+        },
+        {
             "en": "No datasets match the current filter",
             "fr": "Aucun jeu de données ne correspond au filtre actuel"
         },
         {
             "en": "Download",
             "fr": "Télécharger"
+        },
+        {
+            "en": "CSV File(s)",
+            "fr": "Fichier(s) CSV"
+        },
+        {
+            "en": "Drag & drop, or click Browse (max 10MB per file)",
+            "fr": "Glissez-déposez, ou cliquez sur Parcourir (max 10Mo par fichier)"
+        },
+        {
+            "en": "No files selected",
+            "fr": "Aucun fichier sélectionné"
+        },
+        {
+            "en": "Please select at least one CSV file",
+            "fr": "Veuillez sélectionner au moins un fichier CSV"
+        },
+        {
+            "en": "Ready to upload %s file(s)",
+            "fr": "Prêt à téléverser %s fichier(s)"
+        },
+        {
+            "en": "%s: Too many rows (max %s, has %s)",
+            "fr": "%s: Trop de lignes (max %s, contient %s)"
+        },
+        {
+            "en": "%s: Error parsing CSV - %s",
+            "fr": "%s: Erreur lors de l'analyse du CSV - %s"
+        },
+        {
+            "en": "%s: Error saving - %s",
+            "fr": "%s: Erreur lors de l'enregistrement - %s"
+        },
+        {
+            "en": "%s datasets uploaded successfully",
+            "fr": "%s jeux de données téléversés avec succès"
+        },
+        {
+            "en": "%s of %s datasets uploaded",
+            "fr": "%s sur %s jeux de données téléversés"
+        },
+        {
+            "en": "Rename Dataset",
+            "fr": "Renommer le jeu de données"
+        },
+        {
+            "en": "New Name",
+            "fr": "Nouveau nom"
+        },
+        {
+            "en": "Enter new dataset name",
+            "fr": "Entrez un nouveau nom pour le jeu de données"
+        },
+        {
+            "en": "Rename",
+            "fr": "Renommer"
+        },
+        {
+            "en": "Dataset renamed successfully",
+            "fr": "Jeu de données renommé avec succès"
+        },
+        {
+            "en": "Error renaming dataset:",
+            "fr": "Erreur lors du renommage du jeu de données:"
+        },
+        {
+            "en": "Dataset name cannot be empty",
+            "fr": "Le nom du jeu de données ne peut pas être vide"
+        },
+        {
+            "en": "Welcome Back",
+            "fr": "Bon retour"
+        },
+        {
+            "en": "You have a recent session (%s).",
+            "fr": "Vous avez une session récente (%s)."
+        },
+        {
+            "en": "Restore",
+            "fr": "Restaurer"
+        },
+        {
+            "en": "Dismiss",
+            "fr": "Ignorer"
+        },
+        {
+            "en": "just now",
+            "fr": "à l'instant"
+        },
+        {
+            "en": "%.0f min ago",
+            "fr": "il y a %.0f min"
+        },
+        {
+            "en": "%.1f hours ago",
+            "fr": "il y a %.1f h"
         }
     ]
 }
