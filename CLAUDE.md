@@ -131,6 +131,207 @@ If starting with callbacks and app grows complex:
 4. Remove callback parameters from module signatures
 5. Replace `nav_select_callback("dataset")` with `trigger("nav_to_dataset")`
 
+## Dynamic Module Instantiation
+
+When rendering a list of items where each item is a Shiny module (e.g., dataset rows), you must
+avoid calling `moduleServer()` inside `renderUI()`. Each re-render would create duplicate
+observers, causing memory leaks and multiple event handlers firing.
+
+### Anti-Pattern (DO NOT DO THIS)
+
+```r
+output$item_list <- renderUI({
+    items <- filtered_items()
+    lapply(seq_len(nrow(items)), \(i) {
+        row <- items[i, ]
+        # BAD: Creates new observers on every re-render
+        item_row_server(paste0("row_", row$id), dataset = reactive(row))
+        item_row_ui(ns(paste0("row_", row$id)))
+    }) |> tagList()
+})
+```
+
+### Solution: "Initialize Once, Render Many"
+
+Separate server initialization (once per unique ID) from UI rendering (can repeat safely).
+
+```r
+module_server <- function(id, ...) {
+    moduleServer(id, function(input, output, session) {
+        ns <- session$ns
+
+        # Cache of initialized row module IDs
+        loaded_row_ids <- reactiveVal(character(0))
+
+        # 1. Initialize module servers ONCE per new ID
+        observeEvent(all_items(), {
+            current_ids <- paste0("row_", all_items()$id)
+            new_ids <- setdiff(current_ids, loaded_row_ids())
+
+            # IMPORTANT: Use lapply, NOT for loop (lazy evaluation trap)
+            lapply(new_ids, \(rid) {
+                numeric_id <- as.integer(sub("row_", "", rid))
+                item_row_server(
+                    rid,
+                    all_items = all_items,
+                    row_id = reactive({ numeric_id })  # Always pass as reactive
+                )
+            })
+            loaded_row_ids(union(loaded_row_ids(), new_ids))
+        })
+
+        # 2. Render UI (safe to repeat - just generates HTML)
+        output$item_list <- renderUI({
+            items <- filtered_items()
+            lapply(seq_len(nrow(items)), \(i) {
+                item_row_ui(ns(paste0("row_", items$id[i])))
+            }) |> tagList()
+        })
+    })
+}
+```
+
+### Critical: Avoid the Lazy Evaluation Trap
+
+**Never use `for` loops** to initialize modules with captured variables:
+
+```r
+# BAD: All modules see the LAST value of numeric_id
+for (rid in new_ids) {
+    numeric_id <- as.integer(sub("row_", "", rid))
+    item_row_server(rid, row_id = reactive({ numeric_id }))  # All get same ID!
+}
+
+# GOOD: lapply creates new environment per iteration, freezing each value
+lapply(new_ids, \(rid) {
+    numeric_id <- as.integer(sub("row_", "", rid))
+    item_row_server(rid, row_id = reactive({ numeric_id }))  # Each gets correct ID
+})
+```
+
+R's `for` loops reuse the same environment. By the time reactives execute, they look up the
+variable and find its final value. `lapply` creates a new function environment per iteration.
+
+### Always Use Reactive for row_id
+
+For consistency, **always pass `row_id` as a reactive**, even for static IDs:
+
+```r
+# Parent (static ID case - e.g., list of items)
+row_id = reactive({ numeric_id })
+
+# Parent (dynamic ID case - e.g., selected item can change)
+row_id = reactive({ values$selected_id })
+
+# Child module - always call as reactive
+my_data <- reactive({
+    rid <- row_id()
+    req(rid)
+    # ...
+})
+```
+
+This avoids dual-mode logic in the child module and makes the API consistent.
+
+### Logic Gating with req()
+
+Inside the child module, use `req()` to pause logic when the item is deleted. This prevents
+errors without needing manual observer cleanup.
+
+```r
+item_row_server <- function(id, all_items, row_id) {
+    moduleServer(id, function(input, output, session) {
+        # Gate: pauses all downstream logic if this row no longer exists
+        my_data <- reactive({
+            data <- all_items()
+            rid <- row_id()
+            req(rid)
+            req(rid %in% data$id)
+            data[data$id == rid, ]
+        })
+
+        # All observers/outputs use my_data() - they'll silently pause if row is gone
+        output$name <- renderText({ my_data()$name })
+
+        observeEvent(input$delete, {
+            req(my_data())  # Double-check before destructive action
+            # ... delete logic
+        })
+    })
+}
+```
+
+### Key Points
+
+1. **Use persistent IDs**, not row indices (1, 2, 3). Database IDs are ideal.
+2. **Use `lapply`**, not `for` loops, to avoid lazy evaluation trap.
+3. **Always pass `row_id` as reactive** for consistent API.
+4. **Pass the full reactive**, not sliced data. Let the child module filter for its own row.
+5. **Modules stay in memory** for the session but are "paused" when their data disappears.
+6. **No manual cleanup needed** - `req()` gating is sufficient for most use cases.
+
+### Memory Considerations (Zombie Observers)
+
+When a row is deleted, its module's observers remain in memory (Shiny has no "destroy module"
+function). The `req()` gating effectively pauses them, preventing CPU usage.
+
+**This is acceptable when:**
+- Typical usage involves < 100 dynamic modules per session
+- Users don't repeatedly create/delete thousands of items
+
+**Consider alternatives when:**
+- High-churn scenarios (thousands of creates/deletes per session)
+- Heavy modules with large state or many observers
+- Memory profiling shows issues
+
+### renderUI vs insertUI/removeUI
+
+The current pattern uses `renderUI` which regenerates all HTML on each change. This is
+acceptable for read-only displays but has trade-offs:
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| `renderUI` | Simple, familiar | Resets input state, regenerates all HTML |
+| `insertUI/removeUI` | Preserves siblings, surgical updates | More complex, "zombie inputs" persist |
+
+**Stick with `renderUI` when:**
+- Rows are read-only (no inputs to preserve)
+- List is small (< 50 items)
+- Simplicity is preferred
+
+**Consider `insertUI/removeUI` when:**
+- Rows contain user inputs that must preserve state
+- Performance issues with large lists
+- Need surgical add/remove without affecting siblings
+
+### When Strict Cleanup is Needed
+
+For heavy modules (large state, many observers), you can track observer handles and call
+`$destroy()`. This is rarely necessary:
+
+```r
+# Inside module: name observers with pattern
+delete_observer <- observeEvent(input$delete, { ... })
+
+# Expose a cleanup function
+return(list(
+    destroy = function() {
+        delete_observer$destroy()
+        # ... destroy other observers
+    }
+))
+
+# Parent tracks and cleans up
+module_instances <- list()
+observeEvent(all_items(), {
+    ids_to_remove <- setdiff(names(module_instances), current_ids)
+    for (id in ids_to_remove) {
+        module_instances[[id]]$destroy()
+        module_instances[[id]] <- NULL
+    }
+})
+```
+
 ## Auth0 + Bookmarking Integration
 
 The app uses `ma-riviere/auth0r` for Auth0 authentication with built-in bookmark preservation.
@@ -346,6 +547,18 @@ Uses `shiny.i18n` for translations. Language resolution hierarchy:
 2. Cookie (name from `getOption("language_cookie_name")`, 1-year expiry)
 3. Browser language preference
 4. App default (from `getOption("default_language")`)
+
+### Important: Update translations when UI changes
+
+**ALWAYS update `data/translations.json` when adding or modifying UI text elements.** This includes:
+- New button labels, modal titles, form labels
+- Toast notifications, error messages
+- Any user-facing text marked with `tr()` or `class="i18n"`
+
+The translations file contains both English and French entries. When adding new text:
+1. Add the English entry
+2. Add the corresponding French translation (use a translation tool if needed)
+3. Ensure both entries are in the same object
 
 ## SASS/CSS
 

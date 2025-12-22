@@ -5,9 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
     auth0_sub VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE INDEX IF NOT EXISTS idx_users_auth0_sub ON users(auth0_sub);
-
 -- Datasets table
 -- Stores uploaded datasets as JSON
 -- PostgreSQL uses JSONB, SQLite uses TEXT
@@ -17,11 +15,12 @@ CREATE TABLE IF NOT EXISTS datasets (
     name VARCHAR(255) NOT NULL,
     data TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-
 CREATE INDEX IF NOT EXISTS idx_datasets_user_id ON datasets(user_id);
-
+-- Note: updated_at is managed by the application layer, not a trigger,
+-- because the schema is executed via split-by-semicolon which breaks trigger syntax.
 -- Bookmarks table
 -- Tracks server-side bookmarks per user for cleanup
 CREATE TABLE IF NOT EXISTS bookmarks (
@@ -31,6 +30,5 @@ CREATE TABLE IF NOT EXISTS bookmarks (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-
 CREATE INDEX IF NOT EXISTS idx_bookmarks_user_id ON bookmarks(user_id);
 CREATE INDEX IF NOT EXISTS idx_bookmarks_created_at ON bookmarks(created_at);

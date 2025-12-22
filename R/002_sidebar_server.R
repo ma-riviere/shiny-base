@@ -4,7 +4,8 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
         values <- reactiveValues(
             selected_dataset_id = NULL,
             user_datasets = NULL,
-            row_count_filter = c(0, 100000)
+            row_count_filter = c(0, 100000),
+            age_filter = c(Sys.Date() - 365, Sys.Date())
         )
 
         # ------ REACTIVE ------------------------------------------------------
@@ -58,6 +59,10 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
         # Track filter changes
         observeEvent(input$row_count_filter, {
             values$row_count_filter <- input$row_count_filter
+        })
+
+        observeEvent(input$age_filter, {
+            values$age_filter <- input$age_filter
         })
 
         # Update slider range when datasets are added or deleted

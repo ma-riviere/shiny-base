@@ -68,27 +68,34 @@ server <- function(input, output, session) {
 
     init_modules <- function() {
         # Initialize event triggers for cross-module communication
-        init("refresh_datasets", "show_upload_modal")
+        init("refresh_datasets", "show_upload_modal", "show_edit_dataset_modal")
 
         # Store user in session$userData for cross-module access
-        observe({
-            auth_info <- session$userData$auth0_info
-            if (purrr::is_empty(auth_info)) {
-                return()
-            }
-            auth0_sub <- purrr::pluck(auth_info, "sub")
-            if (purrr::is_empty(auth0_sub)) {
-                return()
-            }
-            session$userData$user <- db_get_or_create_user(pool, auth0_sub)
-        })
+        # When Auth0 is disabled, create a temporary user for dataset uploads
+        if (isTRUE(getOption("auth0_disable"))) {
+            session$userData$user <- db_get_or_create_temp_user(pool, session$token)
+        } else {
+            observe({
+                auth_info <- session$userData$auth0_info
+                if (purrr::is_empty(auth_info)) {
+                    return()
+                }
+                auth0_sub <- purrr::pluck(auth_info, "sub")
+                if (purrr::is_empty(auth0_sub)) {
+                    return()
+                }
+                session$userData$user <- db_get_or_create_user(pool, auth0_sub)
+            })
+        }
 
         navbar_server("navbar")
         sidebar_module <- sidebar_server("sidebar", active_page = reactive(input$nav))
         upload_dataset_server("upload")
+        edit_dataset_server("edit_dataset")
         home_server(
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
+            age_filter = reactive(sidebar_module$age_filter),
             nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
         )
         dataset_server(
@@ -215,39 +222,47 @@ server <- function(input, output, session) {
             current_time <- Sys.time()
             age_minutes <- as.numeric(difftime(current_time, created_time, units = "mins"))
             age_text <- if (age_minutes < 1) {
-                "just now"
+                tr("just now")
             } else if (age_minutes < 60) {
-                sprintf("%.0f min ago", age_minutes)
+                sprintf(tr("%.0f min ago"), age_minutes)
             } else {
-                sprintf("%.1f hours ago", age_minutes / 60)
+                sprintf(tr("%.1f hours ago"), age_minutes / 60)
             }
 
             restore_url <- paste0("/?_state_id_=", last_bookmark$state_id)
 
-            shinyWidgets::show_toast(
-                title = "Welcome Back",
-                text = htmltools::HTML(paste0(
-                    "You have a recent session (",
-                    age_text,
-                    "). ",
-                    "<br><br>",
-                    htmltools::tags$a(
-                        href = restore_url,
-                        class = "btn btn-primary btn-sm",
-                        "Restore"
-                    ),
-                    " ",
-                    htmltools::tags$button(
-                        "Dismiss",
-                        onclick = "Swal.close();",
-                        class = "btn btn-default btn-sm"
-                    )
+            toast_html <- paste0(
+                sprintf(tr("You have a recent session (%s)."), age_text),
+                "<br><br>",
+                as.character(htmltools::tags$a(
+                    href = restore_url,
+                    class = "btn btn-primary btn-sm",
+                    tr("Restore")
                 )),
-                type = "info",
-                timer = 30000,
-                position = "top-end",
-                timerProgressBar = TRUE
+                " ",
+                as.character(htmltools::tags$button(
+                    tr("Dismiss"),
+                    onclick = "Swal.close();",
+                    class = "btn btn-default btn-sm"
+                ))
             )
+
+            shinyjs::runjs(sprintf(
+                "Swal.fire({
+                    title: %s,
+                    html: %s,
+                    icon: 'info',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    showCloseButton: false,
+                    timer: 30000,
+                    timerProgressBar: true,
+                    customClass: { popup: 'toast-no-close' }
+                });",
+                jsonlite::toJSON(tr("Welcome Back"), auto_unbox = TRUE),
+                jsonlite::toJSON(toast_html, auto_unbox = TRUE)
+            ))
         },
         ignoreInit = TRUE
     )

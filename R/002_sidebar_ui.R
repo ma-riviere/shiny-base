@@ -25,6 +25,19 @@ sidebar_ui <- function(id) {
                 value = c(0, 100000),
                 step = 100,
                 width = "100%"
+            ),
+            dateRangeInput(
+                ns("age_filter"),
+                label = tags$span(
+                    class = "i18n",
+                    `data-key` = "Filter by date",
+                    tr("Filter by date")
+                ),
+                start = Sys.Date() - 365,
+                end = Sys.Date(),
+                format = "yyyy-mm-dd",
+                weekstart = 1,
+                width = "100%"
             )
         ),
         # Dataset page parameters section

@@ -1,8 +1,16 @@
-home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_select_callback = NULL) {
+home_server <- function(
+    id,
+    row_count_filter = reactive(c(0, 100000)),
+    age_filter = reactive(c(Sys.Date() - 365, Sys.Date())),
+    nav_select_callback = NULL
+) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
         values <- reactiveValues(datasets = NULL)
+
+        # Cache for initialized row module IDs (Initialize Once pattern)
+        loaded_row_ids <- reactiveVal(character(0))
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -14,18 +22,33 @@ home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_selec
             values$datasets <- db_get_user_datasets(pool, user_id)
         })
 
-        # Filter datasets based on row count slider from sidebar
+        # Filter datasets based on row count slider and date range from sidebar
         filtered_datasets <- reactive({
             req(values$datasets)
-            filter_range <- row_count_filter()
+            row_filter_range <- row_count_filter()
+            date_filter_range <- age_filter()
 
             datasets <- values$datasets
 
-            if (purrr::is_empty(filter_range) || length(filter_range) != 2) {
-                return(datasets)
+            # Apply row count filter
+            if (!purrr::is_empty(row_filter_range) && length(row_filter_range) == 2) {
+                datasets <- datasets[
+                    datasets$row_count >= row_filter_range[1] &
+                        datasets$row_count <= row_filter_range[2],
+                ]
             }
 
-            datasets[datasets$row_count >= filter_range[1] & datasets$row_count <= filter_range[2], ]
+            # Apply age filter (based on created_at)
+            if (!purrr::is_empty(date_filter_range) && length(date_filter_range) == 2) {
+                datasets$created_date <- as.Date(datasets$created_at)
+                datasets <- datasets[
+                    datasets$created_date >= date_filter_range[1] &
+                        datasets$created_date <= date_filter_range[2],
+                ]
+                datasets$created_date <- NULL
+            }
+
+            return(datasets)
         })
 
         # Open upload modal
@@ -33,70 +56,33 @@ home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_selec
             trigger("show_upload_modal")
         })
 
-        # Handle dataset click - navigate to dataset page
-        observeEvent(input$dataset_click, {
-            dataset_id <- input$dataset_click
-            # Store selected dataset ID in session for the dataset page to read
-            session$userData$selected_dataset_id <- dataset_id
-            if (!is.null(nav_select_callback)) {
-                nav_select_callback("dataset")
-            }
-        })
+        # Initialize row module servers ONCE per new dataset ID
+        observeEvent(values$datasets, {
+            req(values$datasets)
+            current_ids <- paste0("row_", values$datasets$id)
+            new_ids <- setdiff(current_ids, loaded_row_ids())
 
-        # Handle dataset delete
-        observeEvent(input$dataset_delete, {
-            dataset_id <- input$dataset_delete
-
-            showModal(modalDialog(
-                title = tr("Confirm Delete"),
-                p(
-                    class = "i18n",
-                    `data-key` = "Are you sure you want to delete this dataset?",
-                    tr("Are you sure you want to delete this dataset?")
-                ),
-                footer = tagList(
-                    actionButton(
-                        ns("confirm_delete"),
-                        tr("Delete"),
-                        class = "btn-danger i18n",
-                        `data-key` = "Delete"
-                    ),
-                    modalButton(tr("Cancel"))
-                ),
-                easyClose = TRUE
-            ))
-
-            # Store the dataset ID to delete
-            values$pending_delete_id <- dataset_id
-        })
-
-        # Confirm delete
-        observeEvent(input$confirm_delete, {
-            req(values$pending_delete_id)
-
-            tryCatch(
-                {
-                    db_delete_dataset(pool, values$pending_delete_id)
-                    values$pending_delete_id <- NULL
-                    trigger("refresh_datasets")
-                    removeModal()
-
-                    shinyWidgets::show_toast(
-                        title = tr("Dataset deleted successfully"),
-                        type = "success",
-                        timer = 3000,
-                        position = "bottom-end"
-                    )
-                },
-                error = \(e) {
-                    shinyWidgets::show_toast(
-                        title = paste(tr("Error deleting dataset:"), e$message),
-                        type = "error",
-                        timer = 5000,
-                        position = "bottom-end"
-                    )
-                }
-            )
+            # Use lapply instead of for loop to avoid lazy evaluation trap.
+            # for loops reuse the same environment - by the time reactives execute,
+            # they see the LAST value of the loop variable. lapply creates a new
+            # environment per iteration, freezing each value.
+            lapply(new_ids, \(rid) {
+                numeric_id <- as.integer(sub("row_", "", rid))
+                dataset_row_server(
+                    rid,
+                    all_datasets = reactive(values$datasets),
+                    row_id = reactive({
+                        numeric_id
+                    }),
+                    on_click = \(dataset_id) {
+                        session$userData$selected_dataset_id <- dataset_id
+                        if (!is.null(nav_select_callback)) {
+                            nav_select_callback("dataset")
+                        }
+                    }
+                )
+            })
+            loaded_row_ids(union(loaded_row_ids(), new_ids))
         })
 
         # ------ OUTPUT --------------------------------------------------------
@@ -125,17 +111,9 @@ home_server <- function(id, row_count_filter = reactive(c(0, 100000)), nav_selec
                 )
             }
 
-            # Render each dataset row using HTML template
+            # Render each dataset row using module UI
             dataset_rows <- lapply(seq_len(nrow(datasets)), \(i) {
-                row <- datasets[i, ]
-                htmltools::htmlTemplate(
-                    "www/html/dataset_row.html",
-                    id = row$id,
-                    name = row$name,
-                    row_count = format(row$row_count, big.mark = ","),
-                    col_count = row$col_count,
-                    ns = ns("")
-                )
+                dataset_row_ui(ns(paste0("row_", datasets$id[i])), clickable = TRUE)
             })
 
             tagList(dataset_rows)

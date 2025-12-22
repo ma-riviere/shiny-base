@@ -28,6 +28,18 @@ db_get_or_create_user <- function(pool, auth0_sub) {
     })
 }
 
+# Get or create a temporary user (for when Auth0 is disabled).
+# Uses session token to generate a consistent temp ID per session.
+# Returns user row (id, auth0_sub, created_at)
+#
+# @param pool Database connection pool
+# @param session_token Unique session identifier (e.g. from session$token)
+db_get_or_create_temp_user <- function(pool, session_token) {
+    # Use first 8 chars of session token hash as temporary user ID
+    temp_id <- paste0("tmp_", substr(digest::digest(session_token, algo = "md5"), 1, 12))
+    db_get_or_create_user(pool, temp_id)
+}
+
 # ------ DATASET CRUD ----------------------------------------------------------
 
 # Get all datasets for a user (metadata only, no data column)
@@ -37,10 +49,10 @@ db_get_or_create_user <- function(pool, auth0_sub) {
 # @param user_id User ID to filter by
 # @param limit Maximum number of records to return (default: NULL = all)
 # @param offset Number of records to skip (default: 0)
-# @return Data frame with dataset metadata (id, user_id, name, row_count, col_count, created_at)
+# @return Data frame with dataset metadata (id, user_id, name, row_count, col_count, created_at, updated_at)
 db_get_user_datasets <- function(pool, user_id, limit = NULL, offset = 0) {
     # Build query with optional pagination
-    base_query <- "SELECT id, user_id, name, data, created_at
+    base_query <- "SELECT id, user_id, name, data, created_at, updated_at
                    FROM datasets
                    WHERE user_id = {user_id}
                    ORDER BY created_at DESC"
@@ -74,7 +86,7 @@ db_get_user_datasets <- function(pool, user_id, limit = NULL, offset = 0) {
     datasets$row_count <- stats["row", ]
     datasets$col_count <- stats["col", ]
 
-    # Remove data column before returning
+    # Remove data column before returning (keep created_at and updated_at)
     datasets$data <- NULL
 
     return(datasets)
@@ -126,6 +138,16 @@ db_create_dataset <- function(pool, user_id, name, data_df) {
         # Get the inserted ID
         result <- DBI::dbGetQuery(con, "SELECT last_insert_rowid() as id")
         return(result$id)
+    })
+}
+
+# Update a dataset name by ID
+db_update_dataset_name <- function(pool, dataset_id, new_name) {
+    db_with_con(pool, \(con) {
+        DBI::dbExecute(
+            con,
+            glue::glue_sql("UPDATE datasets SET name = {new_name} WHERE id = {dataset_id}", .con = con)
+        )
     })
 }
 

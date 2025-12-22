@@ -11,11 +11,14 @@ dataset_server <- function(
             data = NULL
         )
 
+        # Track if summary row module is initialized
+        row_initialized <- reactiveVal(FALSE)
+
         # ------ REACTIVE ------------------------------------------------------
 
         # Load dataset when selection changes (from sidebar dropdown)
         observe({
-            # Get dataset_id from reactive (which is bound to sidebar selection)
+            watch("refresh_datasets")
             dataset_id <- selected_dataset_id()
 
             if (purrr::is_empty(dataset_id)) {
@@ -32,15 +35,18 @@ dataset_server <- function(
                 return()
             }
 
-            values$dataset <- dataset_row
-
             # Parse JSON data to data frame
             tryCatch(
                 {
                     values$data <- db_parse_dataset_data(dataset_row$data)
+                    # Add row_count and col_count (db_get_dataset doesn't compute these)
+                    dataset_row$row_count <- nrow(values$data)
+                    dataset_row$col_count <- ncol(values$data)
                 },
                 error = \(e) {
                     values$data <- NULL
+                    dataset_row$row_count <- 0L
+                    dataset_row$col_count <- 0L
                     shinyWidgets::show_toast(
                         title = paste(tr("Error parsing dataset:"), e$message),
                         type = "error",
@@ -49,22 +55,38 @@ dataset_server <- function(
                     )
                 }
             )
+
+            values$dataset <- dataset_row
         })
 
         has_data <- reactive({
             !purrr::is_empty(values$data)
         })
 
+        # Initialize summary row module ONCE (but row_id is reactive for switching)
+        observe({
+            req(values$dataset)
+            req(!row_initialized())
+
+            dataset_row_server(
+                "summary_row",
+                all_datasets = reactive({
+                    if (purrr::is_empty(values$dataset)) {
+                        return(data.frame())
+                    }
+                    values$dataset
+                }),
+                # Pass as reactive so it updates when user switches datasets
+                row_id = reactive(values$dataset$id),
+                on_click = NULL,
+                nav_select_callback = nav_select_callback
+            )
+            row_initialized(TRUE)
+        })
+
         # Open upload modal
         observeEvent(input$open_upload, {
             trigger("show_upload_modal")
-        })
-
-        # Navigate to home after upload completes (to see the new dataset in the list)
-        on("refresh_datasets", {
-            if (!is.null(nav_select_callback)) {
-                nav_select_callback("home")
-            }
         })
 
         # ------ OUTPUT --------------------------------------------------------
@@ -84,27 +106,6 @@ dataset_server <- function(
                 `data-key` = "Explore your uploaded dataset",
                 tr("Explore your uploaded dataset")
             )
-        })
-
-        output$dataset_name <- renderText({
-            if (!has_data()) {
-                return("-")
-            }
-            purrr::pluck(values$dataset, "name") %||% "-"
-        })
-
-        output$row_count <- renderText({
-            if (!has_data()) {
-                return("0")
-            }
-            format(nrow(values$data), big.mark = ",")
-        })
-
-        output$col_count <- renderText({
-            if (!has_data()) {
-                return("0")
-            }
-            ncol(values$data)
         })
 
         output$data_preview <- DT::renderDataTable({
@@ -171,20 +172,5 @@ dataset_server <- function(
                 nav_select_callback("home")
             }
         })
-
-        # Download dataset as CSV
-        output$download_csv <- downloadHandler(
-            filename = function() {
-                dataset_name <- purrr::pluck(values$dataset, "name") %||% "dataset"
-                # Sanitize filename
-                safe_name <- gsub("[^a-zA-Z0-9_-]", "_", dataset_name)
-                paste0(safe_name, "_", format(Sys.Date(), "%Y%m%d"), ".csv")
-            },
-            content = function(file) {
-                req(has_data())
-                write.csv(values$data, file, row.names = FALSE)
-                log_info("Dataset '{purrr::pluck(values$dataset, 'name')}' downloaded")
-            }
-        )
     })
 }

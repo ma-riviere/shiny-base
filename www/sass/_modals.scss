@@ -166,3 +166,10 @@
         }
     }
 }
+
+// SweetAlert2 toast - optional class to hide X close button
+.swal2-toast.toast-no-close {
+    .swal2-close {
+        display: none;
+    }
+}
