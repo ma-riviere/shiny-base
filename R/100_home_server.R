@@ -19,7 +19,7 @@ home_server <- function(
             watch("refresh_datasets")
             user_id <- purrr::pluck(session$userData$user, "id")
             req(user_id)
-            values$datasets <- db_get_user_datasets(pool, user_id)
+            values$datasets <- db_get_user_datasets(user_id)
         })
 
         # Filter datasets based on row count slider and date range from sidebar

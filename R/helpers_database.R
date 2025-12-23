@@ -1,8 +1,8 @@
 # ------ USER CRUD -------------------------------------------------------------
 
 # Get or create user by auth0_sub. Returns user row (id, auth0_sub, created_at)
-db_get_or_create_user <- function(pool, auth0_sub) {
-    db_with_con(pool, \(con) {
+db_get_or_create_user <- function(auth0_sub) {
+    db_with_con(db_pool, \(con) {
         # Try to get existing user
         user <- DBI::dbGetQuery(
             con,
@@ -32,12 +32,11 @@ db_get_or_create_user <- function(pool, auth0_sub) {
 # Uses session token to generate a consistent temp ID per session.
 # Returns user row (id, auth0_sub, created_at)
 #
-# @param pool Database connection pool
 # @param session_token Unique session identifier (e.g. from session$token)
-db_get_or_create_temp_user <- function(pool, session_token) {
+db_get_or_create_temp_user <- function(session_token) {
     # Use first 8 chars of session token hash as temporary user ID
     temp_id <- paste0("tmp_", substr(digest::digest(session_token, algo = "md5"), 1, 12))
-    db_get_or_create_user(pool, temp_id)
+    db_get_or_create_user(temp_id)
 }
 
 # ------ DATASET CRUD ----------------------------------------------------------
@@ -45,12 +44,11 @@ db_get_or_create_temp_user <- function(pool, session_token) {
 # Get all datasets for a user (metadata only, no data column)
 # Supports pagination with limit and offset parameters.
 #
-# @param pool Database connection pool
 # @param user_id User ID to filter by
 # @param limit Maximum number of records to return (default: NULL = all)
 # @param offset Number of records to skip (default: 0)
 # @return Data frame with dataset metadata (id, user_id, name, row_count, col_count, created_at, updated_at)
-db_get_user_datasets <- function(pool, user_id, limit = NULL, offset = 0) {
+db_get_user_datasets <- function(user_id, limit = NULL, offset = 0) {
     # Build query with optional pagination
     base_query <- "SELECT id, user_id, name, data, created_at, updated_at
                    FROM datasets
@@ -61,9 +59,7 @@ db_get_user_datasets <- function(pool, user_id, limit = NULL, offset = 0) {
         base_query <- paste(base_query, "LIMIT {limit} OFFSET {offset}")
     }
 
-    datasets <- db_with_con(pool, \(con) {
-        DBI::dbGetQuery(con, glue::glue_sql(base_query, .con = con))
-    })
+    datasets <- db_query(base_query, user_id = user_id, limit = limit, offset = offset)
 
     if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
         return(datasets)
@@ -94,38 +90,27 @@ db_get_user_datasets <- function(pool, user_id, limit = NULL, offset = 0) {
 
 # Get total count of datasets for a user (for pagination)
 #
-# @param pool Database connection pool
 # @param user_id User ID to filter by
 # @return Integer count
-db_get_user_datasets_count <- function(pool, user_id) {
-    db_with_con(pool, \(con) {
-        result <- DBI::dbGetQuery(
-            con,
-            glue::glue_sql("SELECT COUNT(*) as count FROM datasets WHERE user_id = {user_id}", .con = con)
-        )
-        as.integer(result$count)
-    })
+db_get_user_datasets_count <- function(user_id) {
+    result <- db_query("SELECT COUNT(*) as count FROM datasets WHERE user_id = {user_id}", user_id = user_id)
+    as.integer(result$count)
 }
 
 # Get a single dataset with full data
-db_get_dataset <- function(pool, dataset_id) {
-    db_with_con(pool, \(con) {
-        result <- DBI::dbGetQuery(
-            con,
-            glue::glue_sql("SELECT * FROM datasets WHERE id = {dataset_id}", .con = con)
-        )
-        if (nrow(result) == 0) {
-            return(NULL)
-        }
-        return(result[1, ])
-    })
+db_get_dataset <- function(dataset_id) {
+    result <- db_query("SELECT * FROM datasets WHERE id = {dataset_id}", dataset_id = dataset_id)
+    if (nrow(result) == 0) {
+        return(NULL)
+    }
+    return(result[1, ])
 }
 
 # Create a new dataset. Returns the new dataset ID.
-db_create_dataset <- function(pool, user_id, name, data_df) {
+db_create_dataset <- function(user_id, name, data_df) {
     data_json <- yyjsonr::write_json_str(data_df)
 
-    db_with_con(pool, \(con) {
+    db_with_con(db_pool, \(con) {
         DBI::dbExecute(
             con,
             glue::glue_sql(
@@ -142,23 +127,17 @@ db_create_dataset <- function(pool, user_id, name, data_df) {
 }
 
 # Update a dataset name by ID
-db_update_dataset_name <- function(pool, dataset_id, new_name) {
-    db_with_con(pool, \(con) {
-        DBI::dbExecute(
-            con,
-            glue::glue_sql("UPDATE datasets SET name = {new_name} WHERE id = {dataset_id}", .con = con)
-        )
-    })
+db_update_dataset_name <- function(dataset_id, new_name) {
+    db_execute(
+        "UPDATE datasets SET name = {new_name} WHERE id = {dataset_id}",
+        dataset_id = dataset_id,
+        new_name = new_name
+    )
 }
 
 # Delete a dataset by ID
-db_delete_dataset <- function(pool, dataset_id) {
-    db_with_con(pool, \(con) {
-        DBI::dbExecute(
-            con,
-            glue::glue_sql("DELETE FROM datasets WHERE id = {dataset_id}", .con = con)
-        )
-    })
+db_delete_dataset <- function(dataset_id) {
+    db_execute("DELETE FROM datasets WHERE id = {dataset_id}", dataset_id = dataset_id)
 }
 
 # Parse dataset JSON data back to data frame
@@ -171,8 +150,8 @@ db_parse_dataset_data <- function(data_json) {
 # Register a new bookmark for a user.
 # Deletes any previous bookmarks for this user (keeps only most recent).
 # Returns the state_ids of deleted bookmarks for filesystem cleanup.
-db_register_bookmark <- function(pool, user_id, state_id) {
-    db_with_con(pool, \(con) {
+db_register_bookmark <- function(user_id, state_id) {
+    db_with_con(db_pool, \(con) {
         # Get existing bookmarks to delete from filesystem
         old_bookmarks <- DBI::dbGetQuery(
             con,
@@ -202,8 +181,8 @@ db_register_bookmark <- function(pool, user_id, state_id) {
 
 # Get all expired bookmarks (older than expiry_minutes).
 # Returns data frame with state_id column.
-db_get_expired_bookmarks <- function(pool, expiry_minutes = 30) {
-    db_with_con(pool, \(con) {
+db_get_expired_bookmarks <- function(expiry_minutes = 30) {
+    db_with_con(db_pool, \(con) {
         # Use datetime function for SQLite, interval for PostgreSQL
         if (inherits(con, "SQLiteConnection")) {
             DBI::dbGetQuery(
@@ -228,29 +207,22 @@ db_get_expired_bookmarks <- function(pool, expiry_minutes = 30) {
 }
 
 # Delete bookmarks by state_ids from DB.
-db_delete_bookmarks <- function(pool, state_ids) {
+db_delete_bookmarks <- function(state_ids) {
     if (length(state_ids) == 0) {
         return(invisible(NULL))
     }
-    db_with_con(pool, \(con) {
-        DBI::dbExecute(
-            con,
-            glue::glue_sql("DELETE FROM bookmarks WHERE state_id IN ({state_ids*})", .con = con)
-        )
-    })
+    db_execute("DELETE FROM bookmarks WHERE state_id IN ({state_ids*})", state_ids = state_ids)
 }
 
 # Get all bookmarks from DB (for orphan cleanup).
-db_get_all_bookmarks <- function(pool) {
-    db_with_con(pool, \(con) {
-        DBI::dbGetQuery(con, "SELECT state_id FROM bookmarks")
-    })
+db_get_all_bookmarks <- function() {
+    db_query("SELECT state_id FROM bookmarks")
 }
 
 # Get the user's most recent bookmark if it's within max_age_minutes.
 # Returns NULL if no recent bookmark exists.
-db_get_user_recent_bookmark <- function(pool, user_id, max_age_minutes = 30) {
-    db_with_con(pool, \(con) {
+db_get_user_recent_bookmark <- function(user_id, max_age_minutes = 30) {
+    db_with_con(db_pool, \(con) {
         if (inherits(con, "SQLiteConnection")) {
             result <- DBI::dbGetQuery(
                 con,

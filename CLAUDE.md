@@ -2,11 +2,107 @@
 
 Base template for Shiny apps with Auth0 authentication and server-side bookmarking.
 
-To authentify in Auth0:
-- ma.riviere987@gmail.com
-- auth0test&15
+**Auth0 credentials:** `ma.riviere987@gmail.com` / `auth0test&15`
 
-When you are unsure about a shiny-related (or adjacent) issue, consult/brainstorm with the Shiny notebookLM (skill). It's a domain expert with access to up-to-date documentation, code examples, books, tutorials, and more.
+**LLM Resource:** When unsure about Shiny-related issues, consult/brainstorm with the Shiny NotebookLM (skill) - a domain expert with up-to-date documentation, code examples, books, and tutorials.
+
+---
+
+# Project Map
+
+## Tech Stack
+
+- **Framework**: Shiny with `bslib` for Bootstrap 5 UI
+- **Database**: PostgreSQL (prod) / SQLite (dev/test) via `pool` package
+- **Auth**: Auth0 via `ma-riviere/auth0r` package
+- **i18n**: `shiny.i18n` for translations (EN/FR)
+- **Email**: `blastula` via Brevo SMTP
+- **Styling**: SASS compiled to CSS
+
+## Directory Structure
+
+```
+shiny-base/
+├── global.R              # App-wide initialization, options, database pool
+├── ui.R                  # Main UI, wraps Auth0, loads base-level modules
+├── server.R              # Main server logic, module instantiation, bookmarking
+├── R/                    # All modules and helpers
+│   ├── 00x_*_ui/server.R # Shared sub-modules (navbar, sidebar, dataset_row, etc.)
+│   ├── x00_*_ui/server.R # Base-level page modules (home, dataset)
+│   ├── helpers_*.R       # Non-module helper functions
+│   └── shiny-utils/      # Reusable utilities (git submodule)
+│       ├── caching.R     # Cache utilities
+│       ├── database.R    # DB connection pool management
+│       ├── error_handling.R
+│       ├── i18n.R        # Language resolution
+│       ├── logging.R     # Structured logging
+│       ├── sass.R        # SASS compilation
+│       ├── triggers.R    # Event broadcast system
+│       └── validation.R  # Custom shinyvalidate rules
+├── www/                  # Static assets
+│   ├── css/              # Compiled CSS (main.min.css)
+│   ├── sass/             # SCSS source files
+│   │   ├── main.scss     # Entry point
+│   │   ├── variables.scss
+│   │   ├── navbar.scss, typo.scss
+│   │   └── _*.scss       # Partials (buttons, cards, layout, modals, tables, utils)
+│   ├── js/               # JavaScript helpers
+│   ├── html/             # HTML templates (for htmltools::htmlTemplate)
+│   └── img/              # Images
+├── data/                 # Data files (translations.json)
+├── database/             # DB schema/migrations
+├── tests/                # shinytest2, testthat tests
+├── renv/                 # renv configuration
+│   └── profiles/         # dev-4.5, docker-4.5
+├── _auth0.yml            # Auth0 configuration
+├── .Renviron             # Environment variables (API keys, etc.)
+└── shiny_bookmarks/      # Server-side bookmark storage
+```
+
+## Entry Points
+
+- **Run app**: `shiny::runApp(launch.browser = FALSE)` from project root
+- **Compile SASS**: Source `R/shiny-utils/sass.R`. Done automatically on app launch.
+
+---
+
+# Architecture Decisions
+
+## Auth0 Integration (auth0r package)
+
+**Choice:** Use custom `ma-riviere/auth0r` fork instead of `curso-r/auth0`.
+
+**Why:** Native bookmarking support. The fork encodes `_state_id_` in Auth0's state parameter, keeping redirect URIs clean and enabling seamless bookmark restoration after login.
+
+## Event System (Triggers)
+
+**Choice:** Gargoyle-style trigger system for cross-module communication.
+
+**Trade-off:** Escapes Shiny's reactive graph, making data flow harder to trace. Acceptable for app-wide events with single handlers (e.g., `refresh_datasets`).
+
+**Alternative considered:** Callback prop-drilling (current for navigation). Works for shallow hierarchies but becomes painful at 3+ levels.
+
+## Dynamic Module Instantiation
+
+**Choice:** "Initialize once, render many" pattern with `lapply` or `purrr::map` (not `for` loops).
+
+**Why:** Avoids duplicate observers on re-render. `lapply` creates new environments per iteration, preventing lazy evaluation traps where all modules capture the final loop value.
+
+## Bookmark on Disconnect
+
+**Choice:** Save input state in `session$onSessionEnded()` without user notification.
+
+**Trade-off:** User cannot be notified (WebSocket already closed), but state is persisted for next session.
+
+## Failed Approaches (DO NOT RETRY)
+
+1. **Manual input restoration via `sendInputMessage()`**: Wrong protocol format. Use Shiny's native restoration with `_state_id_` in URL instead.
+
+2. **Single redirect after Auth0 callback**: Auth0 codes are single-use. Cannot exchange token then redirect with same code.
+
+3. **`for` loops for module initialization**: Lazy evaluation trap. All modules see final loop value.
+
+---
 
 ## Navigation
 
@@ -500,7 +596,7 @@ Environment variables (in `.Renviron`):
 Options (set in `global.R`):
 - `email_to`, `email_from`, `smtp_host`, `smtp_port`, `smtp_user`: Read from env vars
 - `smtp_key_envvar`: Name of env var holding SMTP key (default: `"SMTP_KEY"`)
-- `error_email_enabled`: Whether to send emails on unhandled errors (default: prod only)
+- `error_email_enabled`: Whether to send emails on unhandled errors (controlled by `SEND_ERROR_EMAILS` env var, default: `FALSE`)
 
 ### Error notification emails
 
@@ -509,7 +605,7 @@ Options (set in `global.R`):
 - `setup_error_handlers(session)`: Registers session-level error handlers (call in `server.R`)
 - `setup_global_error_handlers()`: Sets up global error handling (called in `global.R`)
 
-Error emails are only sent in production (`ENV=prod`) when `EMAIL_TO` is configured.
+Error emails are only sent when `SEND_ERROR_EMAILS=TRUE` and `EMAIL_TO` is configured.
 
 ### Sending custom emails
 

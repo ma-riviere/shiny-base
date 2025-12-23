@@ -28,7 +28,7 @@ delete_bookmark_folders <- function(state_ids) {
 
 # Run bookmark cleanup: expired + orphaned folders.
 # Should be called on app startup.
-bookmark_cleanup <- function(pool) {
+bookmark_cleanup <- function() {
     bookmark_dir <- getOption("bookmark_dir", "shiny_bookmarks")
     if (!dir.exists(bookmark_dir)) {
         return(invisible(NULL))
@@ -36,15 +36,15 @@ bookmark_cleanup <- function(pool) {
 
     # 1. Delete expired bookmarks
     expiry_minutes <- getOption("bookmark_expiry_minutes", 30)
-    expired <- db_get_expired_bookmarks(pool, expiry_minutes)
+    expired <- db_get_expired_bookmarks(expiry_minutes)
     if (nrow(expired) > 0) {
         delete_bookmark_folders(expired$state_id)
-        db_delete_bookmarks(pool, expired$state_id)
+        db_delete_bookmarks(expired$state_id)
         log_info("[BOOKMARKS] Cleaned {nrow(expired)} expired bookmarks")
     }
 
     # 2. Delete orphaned folders (exist on disk but not in DB)
-    db_bookmarks <- db_get_all_bookmarks(pool)
+    db_bookmarks <- db_get_all_bookmarks()
     disk_folders <- list.dirs(bookmark_dir, full.names = FALSE, recursive = FALSE)
 
     orphans <- setdiff(disk_folders, db_bookmarks$state_id)
@@ -58,9 +58,9 @@ bookmark_cleanup <- function(pool) {
 # Called from onSessionEnded callback (no reactive context available).
 # Returns the state_id if successful, NULL otherwise.
 # Wrapped in tryCatch to handle app shutdown race conditions gracefully.
-save_bookmark_on_disconnect <- function(pool, session, input) {
+save_bookmark_on_disconnect <- function(session, input) {
     tryCatch(
-        save_bookmark_on_disconnect_impl(pool, session, input),
+        save_bookmark_on_disconnect_impl(session, input),
         error = \(e) {
             # Silently ignore errors during app shutdown (pool closed)
             NULL
@@ -68,7 +68,7 @@ save_bookmark_on_disconnect <- function(pool, session, input) {
     )
 }
 
-save_bookmark_on_disconnect_impl <- function(pool, session, input) {
+save_bookmark_on_disconnect_impl <- function(session, input) {
     auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
     if (purrr::is_empty(auth0_sub)) {
         log_debug("[BOOKMARKS] onSessionEnded: No auth0_sub, skipping")
@@ -110,16 +110,12 @@ save_bookmark_on_disconnect_impl <- function(pool, session, input) {
     # Unlike explicit bookmark saves, disconnect saves should not delete previous bookmarks
     # because the user might be trying to restore that exact bookmark on reconnect.
     # Old bookmarks will be cleaned up by periodic cleanup (bookmark_cleanup in global.R).
-    user <- db_get_or_create_user(pool, auth0_sub)
-    db_with_con(pool, \(con) {
-        DBI::dbExecute(
-            con,
-            glue::glue_sql(
-                "INSERT INTO bookmarks (user_id, state_id) VALUES ({user$id}, {state_id})",
-                .con = con
-            )
-        )
-    })
+    user <- db_get_or_create_user(auth0_sub)
+    db_execute(
+        "INSERT INTO bookmarks (user_id, state_id) VALUES ({user_id}, {state_id})",
+        user_id = user$id,
+        state_id = state_id
+    )
 
     log_info("[BOOKMARKS] onSessionEnded: Saved bookmark {state_id} for user {user$id}")
     return(state_id)
@@ -127,8 +123,8 @@ save_bookmark_on_disconnect_impl <- function(pool, session, input) {
 
 # Register bookmark and cleanup previous ones for this user.
 # Called from onBookmark callback.
-register_user_bookmark <- function(pool, user_id, state_id) {
-    old_state_ids <- db_register_bookmark(pool, user_id, state_id)
+register_user_bookmark <- function(user_id, state_id) {
+    old_state_ids <- db_register_bookmark(user_id, state_id)
     delete_bookmark_folders(old_state_ids)
 
     if (length(old_state_ids) > 0) {
