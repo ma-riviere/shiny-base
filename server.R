@@ -35,7 +35,7 @@ server <- function(input, output, session) {
     # but the state is saved for restoration on their next session.
     if (!isTRUE(getOption("auth0_disable"))) {
         session$onSessionEnded(function() {
-            save_bookmark_on_disconnect(pool, session, input)
+            save_bookmark_on_disconnect(session, input)
         })
     }
 
@@ -54,10 +54,10 @@ server <- function(input, output, session) {
         }
 
         # Get or create user to get user_id
-        user <- db_get_or_create_user(pool, auth0_sub)
+        user <- db_get_or_create_user(auth0_sub)
         state_id <- basename(state$dir)
 
-        register_user_bookmark(pool, user$id, state_id)
+        register_user_bookmark(user$id, state_id)
     })
 
     # ------ EMAIL VERIFICATION GATE -------------------------------------------
@@ -73,7 +73,7 @@ server <- function(input, output, session) {
         # Store user in session$userData for cross-module access
         # When Auth0 is disabled, create a temporary user for dataset uploads
         if (isTRUE(getOption("auth0_disable"))) {
-            session$userData$user <- db_get_or_create_temp_user(pool, session$token)
+            session$userData$user <- db_get_or_create_temp_user(session$token)
         } else {
             observe({
                 auth_info <- session$userData$auth0_info
@@ -84,7 +84,7 @@ server <- function(input, output, session) {
                 if (purrr::is_empty(auth0_sub)) {
                     return()
                 }
-                session$userData$user <- db_get_or_create_user(pool, auth0_sub)
+                session$userData$user <- db_get_or_create_user(auth0_sub)
             })
         }
 
@@ -211,8 +211,8 @@ server <- function(input, output, session) {
             }
 
             # Get user and check for recent bookmark
-            user <- db_get_or_create_user(pool, auth0_sub)
-            last_bookmark <- db_get_user_recent_bookmark(pool, user$id, max_age_minutes = 30)
+            user <- db_get_or_create_user(auth0_sub)
+            last_bookmark <- db_get_user_recent_bookmark(user$id, max_age_minutes = 30)
             if (is.null(last_bookmark)) {
                 return()
             }
@@ -224,15 +224,15 @@ server <- function(input, output, session) {
             age_text <- if (age_minutes < 1) {
                 tr("just now")
             } else if (age_minutes < 60) {
-                sprintf(tr("%.0f min ago"), age_minutes)
+                tr("%.0f min ago", age_minutes)
             } else {
-                sprintf(tr("%.1f hours ago"), age_minutes / 60)
+                tr("%.1f hours ago", age_minutes / 60)
             }
 
             restore_url <- paste0("/?_state_id_=", last_bookmark$state_id)
 
             toast_html <- paste0(
-                sprintf(tr("You have a recent session (%s)."), age_text),
+                tr("You have a recent session (%s).", age_text),
                 "<br><br>",
                 as.character(htmltools::tags$a(
                     href = restore_url,

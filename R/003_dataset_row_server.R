@@ -64,7 +64,7 @@ dataset_row_server <- function(
         observeEvent(input$confirm_delete, {
             tryCatch(
                 {
-                    db_delete_dataset(pool, row_id())
+                    db_delete_dataset(row_id())
                     removeModal()
                     trigger("refresh_datasets")
 
@@ -101,7 +101,7 @@ dataset_row_server <- function(
             },
             content = function(file) {
                 req(my_data())
-                dataset_row <- db_get_dataset(pool, row_id())
+                dataset_row <- db_get_dataset(row_id())
                 req(dataset_row)
                 data <- db_parse_dataset_data(dataset_row$data)
                 write.csv(data, file, row.names = FALSE)

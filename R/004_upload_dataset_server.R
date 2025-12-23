@@ -56,10 +56,8 @@ upload_dataset_server <- function(id) {
                         if (nrow(data) > MAX_ROWS) {
                             errors <- c(
                                 errors,
-                                sprintf(
-                                    tr(
-                                        "%s: Too many rows (max %s, has %s)"
-                                    ),
+                                tr(
+                                    "%s: Too many rows (max %s, has %s)",
                                     filename,
                                     format(MAX_ROWS, big.mark = ","),
                                     format(nrow(data), big.mark = ",")
@@ -78,7 +76,7 @@ upload_dataset_server <- function(id) {
                     error = \(e) {
                         errors <- c(
                             errors,
-                            sprintf(tr("%s: Error parsing CSV - %s"), filename, e$message)
+                            tr("%s: Error parsing CSV - %s", filename, e$message)
                         )
                     }
                 )
@@ -92,8 +90,8 @@ upload_dataset_server <- function(id) {
             } else {
                 values$error <- NULL
                 if (length(parsed_list) > 0) {
-                    values$status <- sprintf(
-                        tr("Ready to upload %s file(s)"),
+                    values$status <- tr(
+                        "Ready to upload %s file(s)",
                         length(parsed_list)
                     )
                 }
@@ -120,7 +118,7 @@ upload_dataset_server <- function(id) {
 
                 tryCatch(
                     {
-                        db_create_dataset(pool, user_id, dataset_name, file_data$data)
+                        db_create_dataset(user_id, dataset_name, file_data$data)
                         success_count <- success_count + 1
                         log_info("Dataset '{dataset_name}' uploaded by user {user_id}")
                     },
@@ -128,7 +126,7 @@ upload_dataset_server <- function(id) {
                         error_count <- error_count + 1
                         errors <- c(
                             errors,
-                            sprintf(tr("%s: Error saving - %s"), dataset_name, e$message)
+                            tr("%s: Error saving - %s", dataset_name, e$message)
                         )
                         log_error("Failed to save dataset {dataset_name}: {e$message}")
                     }
@@ -146,7 +144,7 @@ upload_dataset_server <- function(id) {
                 if (success_count == 1) {
                     msg <- tr("Dataset uploaded successfully")
                 } else {
-                    msg <- sprintf(tr("%s datasets uploaded successfully"), success_count)
+                    msg <- tr("%s datasets uploaded successfully", success_count)
                 }
 
                 shinyWidgets::show_toast(
@@ -161,8 +159,8 @@ upload_dataset_server <- function(id) {
                 if (success_count > 0) {
                     trigger("refresh_datasets")
                     shinyWidgets::show_toast(
-                        title = sprintf(
-                            tr("%s of %s datasets uploaded"),
+                        title = tr(
+                            "%s of %s datasets uploaded",
                             success_count,
                             success_count + error_count
                         ),

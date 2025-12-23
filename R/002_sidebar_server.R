@@ -5,7 +5,8 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
             selected_dataset_id = NULL,
             user_datasets = NULL,
             row_count_filter = c(0, 100000),
-            age_filter = c(Sys.Date() - 365, Sys.Date())
+            age_filter = c(Sys.Date() - 365, Sys.Date()),
+            prev_max_rows = NULL # Track previous max to detect actual changes
         )
 
         # ------ REACTIVE ------------------------------------------------------
@@ -16,7 +17,7 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
             user_id <- purrr::pluck(session$userData$user, "id")
             req(user_id)
 
-            datasets <- db_get_user_datasets(pool, user_id)
+            datasets <- db_get_user_datasets(user_id)
             values$user_datasets <- datasets
 
             # Preserve current selection if it still exists
@@ -76,30 +77,40 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
                     # Max is always based on ALL user datasets
                     max_rows <- max(values$user_datasets$row_count, na.rm = TRUE)
 
-                    # Only update value if it's still at the default (meaning not bookmarked)
-                    # or if the current max is different from the calculated max
-                    current_value <- input$row_count_filter
-                    should_update_value <- purrr::is_empty(current_value) ||
-                        identical(current_value, c(0L, 100000L)) ||
-                        current_value[2] != max_rows
+                    # Only reset value if this is the first load OR if max_rows actually changed
+                    # (e.g., dataset added/deleted), not when user manually adjusts the slider
+                    prev_max <- values$prev_max_rows
+                    max_changed <- is.null(prev_max) || prev_max != max_rows
 
-                    if (should_update_value) {
+                    current_value <- input$row_count_filter
+                    is_default <- purrr::is_empty(current_value) ||
+                        identical(current_value, c(0L, 100000L))
+
+                    if (is_default || max_changed) {
+                        # Calculate reasonable step: 1 for small datasets, ~1% of max for large
+                        step <- if (max_rows <= 200) 1 else max(1, round(max_rows / 100))
                         updateSliderInput(
                             session,
                             "row_count_filter",
                             min = 0,
                             max = max_rows,
-                            value = c(0, max_rows)
+                            value = c(0, max_rows),
+                            step = step
                         )
                     } else {
-                        # Just update the range, keep the current value
+                        # Just update the range limits, keep the current value
+                        step <- if (max_rows <= 200) 1 else max(1, round(max_rows / 100))
                         updateSliderInput(
                             session,
                             "row_count_filter",
                             min = 0,
-                            max = max_rows
+                            max = max_rows,
+                            step = step
                         )
                     }
+
+                    # Remember the current max for next comparison
+                    values$prev_max_rows <- max_rows
                 }
             },
             priority = 0

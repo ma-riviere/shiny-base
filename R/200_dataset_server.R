@@ -28,7 +28,7 @@ dataset_server <- function(
             }
 
             # Fetch dataset from DB
-            dataset_row <- db_get_dataset(pool, dataset_id)
+            dataset_row <- db_get_dataset(dataset_id)
             if (purrr::is_empty(dataset_row)) {
                 values$dataset <- NULL
                 values$data <- NULL

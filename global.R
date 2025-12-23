@@ -37,7 +37,7 @@ options(
     smtp_key_envvar = "SMTP_KEY",
 
     # Error handling (see R/shiny-utils/error_handling.R)
-    error_email_enabled = is_prod && nzchar(Sys.getenv("EMAIL_TO")),
+    error_email_enabled = isTRUE(as.logical(Sys.getenv("SEND_ERROR_EMAILS", "FALSE"))),
 
     # Shinylogs
     shinylogs_dir = Sys.getenv("SHINYLOGS_DIR", "data/shinylogs"),
@@ -78,11 +78,11 @@ i18n$set_translation_language("en")
 
 # ------ DATABASE --------------------------------------------------------------
 
-pool <- db_connect()
+db_pool <- db_connect()
 
 onStop(function() {
     clear_disk_cache(getOption("cache_dir", "cache"))
-    db_disconnect(pool)
+    db_disconnect(db_pool)
 })
 
 # ------ BOOKMARKS -------------------------------------------------------------
@@ -91,7 +91,7 @@ onStop(function() {
 source("R/helpers_bookmarks.R", local = TRUE)
 source("R/helpers_database.R", local = TRUE)
 
-bookmark_cleanup(pool)
+bookmark_cleanup()
 
 # ------ LOGGING ---------------------------------------------------------------
 
