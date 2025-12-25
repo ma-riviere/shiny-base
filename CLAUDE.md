@@ -169,6 +169,7 @@ the dataset page), there are three approaches. Choose based on app complexity.
 | Callback | Medium | Easy | Low (prop-drilling) | Small apps, shallow hierarchy |
 | Triggers | Low | Hard (hidden logic) | High | Large apps, sibling communication |
 | Reactive Return | High | Easy (explicit graph) | Medium | Need testability with `testServer()` |
+| Shared reactiveValues | Low | Easy (explicit graph) | High | Sibling modules sharing mutable state |
 
 #### 1. Callback Function (Current Pattern)
 
@@ -272,6 +273,74 @@ If starting with callbacks and app grows complex:
 3. Register handlers once in `server.R`, not in modules
 4. Remove callback parameters from module signatures
 5. Replace `nav_select_callback("dataset")` with `trigger("nav_to_dataset")`
+
+#### 4. Shared reactiveValues ("Petit r" pattern) — Current for State
+
+When **sibling modules** need to both **read and write** the same state (not just navigation),
+create a shared `reactiveValues` in the parent and pass it to both modules.
+
+```r
+# server.R - parent creates shared state
+init_modules <- function() {
+    r <- reactiveValues(
+        selected_dataset_id = NULL
+    )
+
+    sidebar_server("sidebar", r = r)  # Reads and writes r$selected_dataset_id
+    home_server("home", r = r)        # Writes r$selected_dataset_id on row click
+    dataset_server("dataset",
+        selected_dataset_id = reactive(r$selected_dataset_id)  # Reads via reactive
+    )
+}
+
+# sidebar_server.R - bidirectional sync with r
+sidebar_server <- function(id, r) {  # r is required, not optional
+    moduleServer(id, function(input, output, session) {
+        # Sync FROM shared state (when home page sets r$selected_dataset_id)
+        observeEvent(r$selected_dataset_id, {
+            req(r$selected_dataset_id)
+            updateSelectInput(session, "selected_dataset",
+                selected = as.character(r$selected_dataset_id))
+        }, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+        # Sync TO shared state (when user changes dropdown)
+        observeEvent(input$selected_dataset, {
+            r$selected_dataset_id <- as.integer(input$selected_dataset)
+        })
+    })
+}
+
+# home_server.R - writes to r on user action
+home_server <- function(id, r) {
+    moduleServer(id, function(input, output, session) {
+        on_click <- \(dataset_id) {
+            r$selected_dataset_id <- dataset_id
+        }
+    })
+}
+```
+
+**Pros:** Natively reactive (no manual sync checks). Explicit dependencies via function signature.
+Testable with `testServer()`. No hidden globals or namespace collision.
+
+**Cons:** Requires passing `r` to all modules that need it. State is mutable from multiple places.
+
+**Make `r` required, not optional:**
+```r
+# GOOD: Explicit dependency, fails fast if missing
+sidebar_server <- function(id, r) { ... }
+
+# BAD: Hidden dependency, defensive checks everywhere
+sidebar_server <- function(id, r = NULL) {
+    if (!is.null(r)) r$selected_dataset_id <- ...  # Noise
+}
+```
+
+**When to use "Petit r" over triggers:**
+- Triggers are for *events* (no payload): "refresh now", "show modal"
+- Shared `r` is for *state* (data flow): selected ID, filter values
+- If you catch yourself writing `session$userData$some_value` + `trigger("value_changed")`,
+  refactor to shared `reactiveValues` instead
 
 ## Dynamic Module Instantiation
 

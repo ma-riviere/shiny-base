@@ -26,7 +26,11 @@ server <- function(input, output, session) {
         "upload-upload_btn",
         "upload-dataset_name",
         "home-open_upload",
-        "dataset-open_upload"
+        "dataset-open_upload",
+        "navbar-open_profile",
+        "profile-save_profile",
+        "profile-profile_nickname",
+        "profile-profile_language"
     ))
 
     # ------ BOOKMARK ON DISCONNECT --------------------------------------------
@@ -68,21 +72,35 @@ server <- function(input, output, session) {
 
     init_modules <- function() {
         # Initialize event triggers for cross-module communication
-        init("refresh_datasets", "show_upload_modal", "show_edit_dataset_modal")
+        init(
+            "refresh_datasets",
+            "show_upload_modal",
+            "show_edit_dataset_modal",
+            "show_profile_modal",
+            "profile_updated"
+        )
+
+        # Shared state for cross-module communication ("Petit r" pattern)
+        # Prefer this over session$userData for reactive state that multiple modules need to read/write
+        r <- reactiveValues(
+            selected_dataset_id = NULL
+        )
 
         navbar_server("navbar")
-        sidebar_module <- sidebar_server("sidebar", active_page = reactive(input$nav))
+        sidebar_module <- sidebar_server("sidebar", active_page = reactive(input$nav), r = r)
+        profile_modal_server("profile")
         upload_dataset_server("upload")
         edit_dataset_server("edit_dataset")
         home_server(
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
             age_filter = reactive(sidebar_module$age_filter),
-            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
+            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session),
+            r = r
         )
         dataset_server(
             "dataset",
-            selected_dataset_id = reactive(sidebar_module$selected_dataset_id),
+            selected_dataset_id = reactive(r$selected_dataset_id),
             nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
         )
     }

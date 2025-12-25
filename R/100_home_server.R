@@ -1,8 +1,14 @@
+# Home page server module
+# Displays dataset list with filtering and handles dataset row clicks.
+#
+# @param r Shared reactiveValues for cross-module state. Expected fields:
+#   - selected_dataset_id: Written when user clicks a dataset row
 home_server <- function(
     id,
     row_count_filter = reactive(c(0, 100000)),
     age_filter = reactive(c(Sys.Date() - 365, Sys.Date())),
-    nav_select_callback = NULL
+    nav_select_callback = NULL,
+    r
 ) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
@@ -78,7 +84,7 @@ home_server <- function(
                         numeric_id
                     }),
                     on_click = \(dataset_id) {
-                        session$userData$selected_dataset_id <- dataset_id
+                        r$selected_dataset_id <- dataset_id
                         if (!is.null(nav_select_callback)) {
                             nav_select_callback("dataset")
                         }

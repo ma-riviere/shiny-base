@@ -1,13 +1,39 @@
-sidebar_server <- function(id, active_page = reactive(NULL)) {
+# Sidebar server module
+# Manages dataset selection dropdown, filters, and section visibility based on active page.
+#
+# @param r Shared reactiveValues for cross-module state. Expected fields:
+#   - selected_dataset_id: Dataset ID selected from home page row click (read/write)
+sidebar_server <- function(id, active_page = reactive(NULL), r) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
         values <- reactiveValues(
-            selected_dataset_id = NULL,
             user_datasets = NULL,
             row_count_filter = c(0, 100000),
             age_filter = c(Sys.Date() - 365, Sys.Date()),
             prev_max_rows = NULL # Track previous max to detect actual changes
         )
+
+        # ------ SHARED STATE SYNC ---------------------------------------------
+
+        # Sync dropdown FROM shared state (when home page sets r$selected_dataset_id)
+        observeEvent(
+            r$selected_dataset_id,
+            {
+                req(r$selected_dataset_id)
+                updateSelectInput(session, "selected_dataset", selected = as.character(r$selected_dataset_id))
+            },
+            ignoreNULL = TRUE,
+            ignoreInit = TRUE
+        )
+
+        # Sync dropdown TO shared state (when user changes dropdown)
+        observeEvent(input$selected_dataset, {
+            if (purrr::is_empty(input$selected_dataset) || input$selected_dataset == "") {
+                r$selected_dataset_id <- NULL
+            } else {
+                r$selected_dataset_id <- as.integer(input$selected_dataset)
+            }
+        })
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -22,7 +48,7 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
                 values$user_datasets <- datasets
 
                 # Preserve current selection if it still exists
-                current_selection <- values$selected_dataset_id
+                current_selection <- r$selected_dataset_id
 
                 # Update dropdown choices
                 if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
@@ -46,19 +72,12 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
                         choices = choices,
                         selected = new_selected
                     )
+                    # Also update shared state
+                    r$selected_dataset_id <- as.integer(new_selected)
                 }
             },
             ignoreInit = FALSE
         )
-
-        # Track selected dataset from dropdown
-        observeEvent(input$selected_dataset, {
-            if (purrr::is_empty(input$selected_dataset) || input$selected_dataset == "") {
-                values$selected_dataset_id <- NULL
-            } else {
-                values$selected_dataset_id <- as.integer(input$selected_dataset)
-            }
-        })
 
         # Track filter changes
         observeEvent(input$row_count_filter, {
@@ -70,11 +89,9 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
         })
 
         # Update slider range when datasets are added or deleted
-        # Priority 0 ensures this runs before normal observers but after bookmark restoration
-        observe(
+        observeEvent(
+            watch("refresh_datasets"),
             {
-                watch("refresh_datasets")
-
                 req(values$user_datasets)
                 if (nrow(values$user_datasets) > 0) {
                     # Max is always based on ALL user datasets
@@ -120,7 +137,6 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
         )
 
         # Show/hide sections based on active page
-        # Also sync with session$userData$selected_dataset_id when navigating to dataset page
         observeEvent(active_page(), {
             page <- active_page()
             if (purrr::is_empty(page)) {
@@ -133,12 +149,6 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
             } else if (page == "dataset") {
                 shinyjs::hide("home_filter_section")
                 shinyjs::show("dataset_params_section")
-                # Sync with externally set dataset ID (e.g., from home page row click)
-                external_id <- session$userData$selected_dataset_id
-                if (!purrr::is_empty(external_id) && external_id != values$selected_dataset_id) {
-                    values$selected_dataset_id <- external_id
-                    updateSelectInput(session, "selected_dataset", selected = as.character(external_id))
-                }
             } else {
                 shinyjs::hide("home_filter_section")
                 shinyjs::hide("dataset_params_section")
