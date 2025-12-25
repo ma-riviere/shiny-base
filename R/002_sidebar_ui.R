@@ -25,7 +25,10 @@ sidebar_ui <- function(id) {
                 value = c(0, 100000),
                 step = 100,
                 width = "100%"
-            ),
+            ) |>
+                tagAppendAttributes(
+                    `data-shiny-input-rate-policy` = '{"policy": "debounce", "delay": 300}'
+                ),
             dateRangeInput(
                 ns("age_filter"),
                 label = tags$span(
