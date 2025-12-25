@@ -11,9 +11,6 @@ dataset_server <- function(
             data = NULL
         )
 
-        # Track if summary row module is initialized
-        row_initialized <- reactiveVal(FALSE)
-
         # ------ REACTIVE ------------------------------------------------------
 
         # Load dataset when selection changes or refresh_datasets is triggered
@@ -65,26 +62,26 @@ dataset_server <- function(
             !purrr::is_empty(values$data)
         })
 
-        # Initialize summary row module ONCE (but row_id is reactive for switching)
-        observe({
-            req(values$dataset)
-            req(!row_initialized())
-
-            dataset_row_server(
-                "summary_row",
-                all_datasets = reactive({
-                    if (purrr::is_empty(values$dataset)) {
-                        return(data.frame())
-                    }
-                    values$dataset
-                }),
-                # Pass as reactive so it updates when user switches datasets
-                row_id = reactive(values$dataset$id),
-                on_click = NULL,
-                nav_select_callback = nav_select_callback
-            )
-            row_initialized(TRUE)
-        })
+        # Initialize summary row module ONCE when first dataset is loaded
+        # (row_id is reactive so module updates when user switches datasets)
+        observeEvent(
+            values$dataset,
+            {
+                dataset_row_server(
+                    "summary_row",
+                    all_datasets = reactive({
+                        if (purrr::is_empty(values$dataset)) {
+                            return(data.frame())
+                        }
+                        values$dataset
+                    }),
+                    row_id = reactive(values$dataset$id),
+                    on_click = NULL,
+                    nav_select_callback = nav_select_callback
+                )
+            },
+            once = TRUE
+        )
 
         # Open upload modal
         observeEvent(input$open_upload, {
