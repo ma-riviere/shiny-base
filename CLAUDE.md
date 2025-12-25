@@ -100,6 +100,34 @@ document intent and prevent accidental dependencies.
 **Triggers are events, not state:** `on()` defaults to `ignoreInit = TRUE` because triggers are
 imperative signals ("do this now"), not state synchronization.
 
+## Input Rate Limiting (Debounce/Throttle)
+
+Two approaches exist for rate-limiting high-frequency inputs (sliders, text fields):
+
+| Approach | Location | Network Traffic | Use When |
+|----------|----------|-----------------|----------|
+| `data-shiny-input-rate-policy` | Client (browser) | Low - only sends settled values | Single input, bandwidth concerns |
+| `debounce()` / `throttle()` | Server (R) | High - sends all values, debounces in R | Multiple inputs, dynamic delays |
+
+**Prefer client-side rate policy** for individual inputs like sliders:
+
+```r
+sliderInput("filter", "Filter", min = 0, max = 100, value = 50) |>
+    tagAppendAttributes(
+        `data-shiny-input-rate-policy` = '{"policy": "debounce", "delay": 300}'
+    )
+```
+
+**Prefer server-side `debounce()`** when:
+- Debouncing a combination of multiple inputs into one reactive
+- Debouncing non-input reactives (database polls, computed values)
+- Need dynamic delay based on other reactive values
+
+```r
+# Server-side: debounce a reactive that combines multiple inputs
+filters <- reactive(list(input$a, input$b, input$c)) |> debounce(500)
+```
+
 ## Dynamic Module Instantiation
 
 **Choice:** "Initialize once, render many" pattern with `lapply` or `purrr::map` (not `for` loops).
