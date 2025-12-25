@@ -82,6 +82,24 @@ shiny-base/
 
 **Alternative considered:** Callback prop-drilling (current for navigation). Works for shallow hierarchies but becomes painful at 3+ levels.
 
+## Explicit Event Handling
+
+**Preference:** Always make reactive dependencies explicit. Avoid bare `observe()` with implicit dependencies.
+
+| Pattern | When to use |
+|---------|-------------|
+| `on("trigger", { ... })` | React only when triggered (default: `ignoreInit = TRUE`) |
+| `observeEvent(x(), { ... })` | React to a single reactive |
+| `observeEvent(list(watch("trigger"), x()), { ... })` | React to trigger AND other reactives |
+| `observe({ ... }) \|> bindEvent(x())` | Same as `observeEvent`, alternative syntax |
+| `observe({ req(...); ... })` | One-time initialization waiting for state |
+
+**Why:** Implicit dependencies in `observe()` make data flow hard to trace. Explicit event expressions
+document intent and prevent accidental dependencies.
+
+**Triggers are events, not state:** `on()` defaults to `ignoreInit = TRUE` because triggers are
+imperative signals ("do this now"), not state synchronization.
+
 ## Dynamic Module Instantiation
 
 **Choice:** "Initialize once, render many" pattern with `lapply` or `purrr::map` (not `for` loops).
@@ -569,8 +587,57 @@ If two modules both call `on("show_upload_modal", ...)`, both will fire when tri
    behavior, use scoped trigger names:
    - `show_modal_home`, `show_modal_dataset` (instead of generic `show_modal`)
 
-4. **Use reactive params for tight coupling**: When a parent module needs to control exactly
-   one child, reactive parameters may still be cleaner than global triggers.
+### Triggers vs reactive parameters: when to use which
+
+**Triggers** are for **events/signals** (no payload). **Reactive parameters** are for **data flow**.
+
+| Use Case | Correct Approach |
+|----------|------------------|
+| Filter values (date range, row count) | Reactive parameters |
+| Selected item ID | Reactive parameters |
+| "Database updated, refresh UI" | Trigger |
+| "Show upload modal" | Trigger |
+
+**Anti-pattern: triggers for data flow**
+
+```r
+# WRONG: Using triggers + session$userData for filter values
+observeEvent(input$row_count, {
+    session$userData$row_count_filter <- input$row_count
+    trigger("filters_changed")
+})
+
+# Consumer has hidden dependency on session$userData structure
+on("filters_changed", {
+    filter_data(session$userData$row_count_filter)  # Where does this come from?
+})
+```
+
+**Problems:** Hidden dependencies, untestable with `testServer()`, namespace collision risk.
+
+**Correct: reactive parameters for data flow**
+
+```r
+# Sidebar module returns filter values
+sidebar_server <- function(id) {
+    moduleServer(id, function(input, output, session) {
+        return(list(
+            row_count_filter = reactive(input$row_count),
+            age_filter = reactive(input$age)
+        ))
+    })
+}
+
+# Parent captures and passes to siblings - explicit dependencies
+sidebar_module <- sidebar_server("sidebar")
+home_server("home",
+    row_count_filter = reactive(sidebar_module$row_count_filter()),
+    age_filter = reactive(sidebar_module$age_filter())
+)
+```
+
+**Rule of thumb:** If you're passing *data*, use reactive parameters. If you're saying
+*"something happened, react to it"* without caring about payload, use triggers.
 
 ### Debugging
 

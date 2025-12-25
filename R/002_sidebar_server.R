@@ -12,41 +12,44 @@ sidebar_server <- function(id, active_page = reactive(NULL)) {
         # ------ REACTIVE ------------------------------------------------------
 
         # Load user datasets for dropdown (re-runs when refresh_datasets is triggered)
-        observe({
-            watch("refresh_datasets")
-            user_id <- purrr::pluck(session$userData$user, "id")
-            req(user_id)
+        observeEvent(
+            watch("refresh_datasets"),
+            {
+                user_id <- purrr::pluck(session$userData$user, "id")
+                req(user_id)
 
-            datasets <- db_get_user_datasets(user_id)
-            values$user_datasets <- datasets
+                datasets <- db_get_user_datasets(user_id)
+                values$user_datasets <- datasets
 
-            # Preserve current selection if it still exists
-            current_selection <- values$selected_dataset_id
+                # Preserve current selection if it still exists
+                current_selection <- values$selected_dataset_id
 
-            # Update dropdown choices
-            if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
-                updateSelectInput(
-                    session,
-                    "selected_dataset",
-                    choices = c("No datasets" = ""),
-                    selected = ""
-                )
-            } else {
-                choices <- setNames(datasets$id, datasets$name)
-                # Keep current selection if it still exists in the new list
-                new_selected <- if (!is.null(current_selection) && current_selection %in% datasets$id) {
-                    current_selection
+                # Update dropdown choices
+                if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
+                    updateSelectInput(
+                        session,
+                        "selected_dataset",
+                        choices = c("No datasets" = ""),
+                        selected = ""
+                    )
                 } else {
-                    datasets$id[1]
+                    choices <- setNames(datasets$id, datasets$name)
+                    # Keep current selection if it still exists in the new list
+                    new_selected <- if (!is.null(current_selection) && current_selection %in% datasets$id) {
+                        current_selection
+                    } else {
+                        datasets$id[1]
+                    }
+                    updateSelectInput(
+                        session,
+                        "selected_dataset",
+                        choices = choices,
+                        selected = new_selected
+                    )
                 }
-                updateSelectInput(
-                    session,
-                    "selected_dataset",
-                    choices = choices,
-                    selected = new_selected
-                )
-            }
-        })
+            },
+            ignoreInit = FALSE
+        )
 
         # Track selected dataset from dropdown
         observeEvent(input$selected_dataset, {

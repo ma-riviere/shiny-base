@@ -14,13 +14,16 @@ home_server <- function(
 
         # ------ REACTIVE ------------------------------------------------------
 
-        # Fetch datasets when user is loaded or refresh is triggered
-        observe({
-            watch("refresh_datasets")
-            user_id <- purrr::pluck(session$userData$user, "id")
-            req(user_id)
-            values$datasets <- db_get_user_datasets(user_id)
-        })
+        # Fetch datasets on init and when refresh is triggered
+        observeEvent(
+            watch("refresh_datasets"),
+            {
+                user_id <- purrr::pluck(session$userData$user, "id")
+                req(user_id)
+                values$datasets <- db_get_user_datasets(user_id)
+            },
+            ignoreInit = FALSE
+        )
 
         # Filter datasets based on row count slider and date range from sidebar
         filtered_datasets <- reactive({
