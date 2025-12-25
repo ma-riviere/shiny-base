@@ -30,7 +30,8 @@ upload_dataset_server <- function(id) {
         # Enable/disable upload button based on validation state
         observe({
             shinyjs::toggleState("upload_btn", condition = iv$is_valid())
-        })
+        }) |>
+            bindEvent(iv$is_valid())
 
         # Parse uploaded files and validate
         observeEvent(input$file, {

@@ -70,24 +70,6 @@ server <- function(input, output, session) {
         # Initialize event triggers for cross-module communication
         init("refresh_datasets", "show_upload_modal", "show_edit_dataset_modal")
 
-        # Store user in session$userData for cross-module access
-        # When Auth0 is disabled, create a temporary user for dataset uploads
-        if (isTRUE(getOption("auth0_disable"))) {
-            session$userData$user <- db_get_or_create_temp_user(session$token)
-        } else {
-            observe({
-                auth_info <- session$userData$auth0_info
-                if (purrr::is_empty(auth_info)) {
-                    return()
-                }
-                auth0_sub <- purrr::pluck(auth_info, "sub")
-                if (purrr::is_empty(auth0_sub)) {
-                    return()
-                }
-                session$userData$user <- db_get_or_create_user(auth0_sub)
-            })
-        }
-
         navbar_server("navbar")
         sidebar_module <- sidebar_server("sidebar", active_page = reactive(input$nav))
         upload_dataset_server("upload")
@@ -106,6 +88,7 @@ server <- function(input, output, session) {
     }
 
     if (isTRUE(getOption("auth0_disable"))) {
+        session$userData$user <- db_get_or_create_temp_user(session$token)
         init_modules()
         # Resolve language without Auth0 (cookie -> browser -> default)
         # Only apply if navbar language input doesn't already have a valid value
@@ -133,6 +116,12 @@ server <- function(input, output, session) {
                 return()
             }
 
+            # Set user - auth0_info is already available at this point
+            auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
+            if (!purrr::is_empty(auth0_sub)) {
+                session$userData$user <- db_get_or_create_user(auth0_sub)
+            }
+
             init_modules()
         }) |>
             bindEvent(session$userData$auth0_info, once = TRUE)
@@ -151,8 +140,7 @@ server <- function(input, output, session) {
             # Wait for auth0_info to be available
             req(session$userData$auth0_info)
 
-            auth_info <- session$userData$auth0_info
-            user_id <- purrr::pluck(auth_info, "sub")
+            user_id <- purrr::pluck(session$userData$auth0_info, "sub")
 
             # Fetch user_metadata from Auth0 if we have a user_id
             if (!purrr::is_empty(user_id)) {

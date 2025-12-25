@@ -16,48 +16,50 @@ dataset_server <- function(
 
         # ------ REACTIVE ------------------------------------------------------
 
-        # Load dataset when selection changes (from sidebar dropdown)
-        observe({
-            watch("refresh_datasets")
-            dataset_id <- selected_dataset_id()
+        # Load dataset when selection changes or refresh_datasets is triggered
+        observeEvent(
+            list(watch("refresh_datasets"), selected_dataset_id()),
+            {
+                dataset_id <- selected_dataset_id()
 
-            if (purrr::is_empty(dataset_id)) {
-                values$dataset <- NULL
-                values$data <- NULL
-                return()
-            }
-
-            # Fetch dataset from DB
-            dataset_row <- db_get_dataset(dataset_id)
-            if (purrr::is_empty(dataset_row)) {
-                values$dataset <- NULL
-                values$data <- NULL
-                return()
-            }
-
-            # Parse JSON data to data frame
-            tryCatch(
-                {
-                    values$data <- db_parse_dataset_data(dataset_row$data)
-                    # Add row_count and col_count (db_get_dataset doesn't compute these)
-                    dataset_row$row_count <- nrow(values$data)
-                    dataset_row$col_count <- ncol(values$data)
-                },
-                error = \(e) {
+                if (purrr::is_empty(dataset_id)) {
+                    values$dataset <- NULL
                     values$data <- NULL
-                    dataset_row$row_count <- 0L
-                    dataset_row$col_count <- 0L
-                    shinyWidgets::show_toast(
-                        title = paste(tr("Error parsing dataset:"), e$message),
-                        type = "error",
-                        timer = 5000,
-                        position = "bottom-end"
-                    )
+                    return()
                 }
-            )
 
-            values$dataset <- dataset_row
-        })
+                # Fetch dataset from DB
+                dataset_row <- db_get_dataset(dataset_id)
+                if (purrr::is_empty(dataset_row)) {
+                    values$dataset <- NULL
+                    values$data <- NULL
+                    return()
+                }
+
+                # Parse JSON data to data frame
+                tryCatch(
+                    {
+                        values$data <- db_parse_dataset_data(dataset_row$data)
+                        # Add row_count and col_count (db_get_dataset doesn't compute these)
+                        dataset_row$row_count <- nrow(values$data)
+                        dataset_row$col_count <- ncol(values$data)
+                    },
+                    error = \(e) {
+                        values$data <- NULL
+                        dataset_row$row_count <- 0L
+                        dataset_row$col_count <- 0L
+                        shinyWidgets::show_toast(
+                            title = paste(tr("Error parsing dataset:"), e$message),
+                            type = "error",
+                            timer = 5000,
+                            position = "bottom-end"
+                        )
+                    }
+                )
+
+                values$dataset <- dataset_row
+            }
+        )
 
         has_data <- reactive({
             !purrr::is_empty(values$data)
