@@ -101,6 +101,55 @@ document intent and prevent accidental dependencies.
 **Triggers are events, not state:** `on()` defaults to `ignoreInit = TRUE` because triggers are
 imperative signals ("do this now"), not state synchronization.
 
+## UI/Server Separation
+
+**Preference:** Define all UI elements in `*_ui.R` files, not in server files via `renderUI()`.
+
+**Why:** Static UI is rendered once at page load. Dynamic UI via `renderUI()` requires a round-trip
+to the server and re-renders HTML on every state change, which is slower and harder to maintain.
+
+**Pattern:** Define UI statically in the UI file, then show/hide with `shinyjs::toggle()`, or `shinyjs::show/hide`:
+
+```r
+# UI file: define the element, start hidden
+shinyjs::hidden(
+    div(id = ns("empty_state"), class = "empty-state", ...)
+)
+
+# Server file: toggle visibility based on state
+observe(shinyjs::toggle("empty_state", condition = !has_data()))
+```
+
+**Exceptions** (OK to generate in server):
+- Toasts/notifications (`shinyWidgets::show_toast()`, `showNotification()`)
+- Simple yes/no confirmation modals (`showModal()` with `modalDialog()`)
+- Content that genuinely varies in structure (not just visibility)
+
+**Avoid renderUI when:**
+- The HTML structure is fixed and only visibility changes
+- The content changes but structure stays the same (use `renderText()` or reactive bindings)
+- You're generating the same element repeatedly with slight variations
+
+**For small dynamic content:** If the content is too small to justify a new `*_ui.R` file but still
+needs to be generated dynamically, create an HTML template in `www/html/` and load it with
+`htmltools::htmlTemplate()`:
+
+```r
+# www/html/error_card.html
+<div class="error-card">
+  <h3>{{ title }}</h3>
+  <p>{{ message }}</p>
+</div>
+
+# Server file
+output$error_display <- renderUI({
+    htmltools::htmlTemplate("www/html/error_card.html",
+        title = "Error",
+        message = error_message()
+    )
+})
+```
+
 ## Input Rate Limiting (Debounce/Throttle)
 
 Two approaches exist for rate-limiting high-frequency inputs (sliders, text fields):
