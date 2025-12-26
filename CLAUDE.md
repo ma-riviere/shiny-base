@@ -31,12 +31,13 @@ shiny-base/
 │   ├── x00_*_ui/server.R # Base-level page modules (home, dataset)
 │   ├── helpers_*.R       # Non-module helper functions
 │   └── shiny-utils/      # Reusable utilities (git submodule)
+│       ├── 000_logging.R # Structured logging
 │       ├── caching.R     # Cache utilities
 │       ├── database.R    # DB connection pool management
 │       ├── error_handling.R
 │       ├── i18n.R        # Language resolution
-│       ├── logging.R     # Structured logging
 │       ├── sass.R        # SASS compilation
+│       ├── scheduler.R   # Recurring task scheduler (uses `later`)
 │       ├── triggers.R    # Event broadcast system
 │       └── validation.R  # Custom shinyvalidate rules
 ├── www/                  # Static assets
@@ -799,6 +800,41 @@ The app uses a PostgreSQL database with connection pooling (`pool` package).
 - Connection setup in `R/shiny-utils/database.R`, CRUD functions in `R/helpers_database.R`
 - Pool created in `global.R`, closed via `onStop()` callback
 - Bookmark tracking: stores user bookmarks in DB, cleans up old ones on save
+
+## Scheduler
+
+The app uses `R/shiny-utils/scheduler.R` for recurring background tasks via the `later` package.
+
+### API
+
+```r
+# Schedule a recurring task (replaces existing task with same ID)
+schedule_task("bookmark_cleanup", bookmark_cleanup, interval_seconds = 30 * 60)
+
+# Cancel a specific task
+cancel_task("bookmark_cleanup")
+
+# Cancel all tasks (call in onStop())
+cancel_all_tasks()
+
+# List active task IDs
+list_tasks()
+```
+
+### How it works
+
+- Tasks self-reschedule after each execution
+- Errors are caught and logged without stopping the schedule
+- Tasks are tracked by ID, allowing replacement of existing tasks
+- `cancel_all_tasks()` is called in `onStop()` for clean shutdown
+
+### Current scheduled tasks
+
+| Task ID | Function | Interval | Purpose |
+|---------|----------|----------|---------|
+| `bookmark_cleanup` | `bookmark_cleanup()` | 30 min | Delete expired bookmarks and orphaned folders |
+
+**Note:** `logs_cleanup()` runs once on startup only (not scheduled) since log files are only created when the app starts.
 
 ## i18n (Internationalization)
 

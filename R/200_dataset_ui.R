@@ -11,13 +11,13 @@ dataset_ui <- function(id) {
                 uiOutput(ns("dataset_description"), inline = TRUE)
             )
         ),
-        # Dataset summary row (not clickable)
+        # ----- DATASET SUMMARY ------------------------------------------------
         div(
             class = "mb-4",
             dataset_row_ui(ns("summary_row"), clickable = FALSE)
         ),
 
-        # Data preview and summary
+        # ----- DATA PREVIEW ---------------------------------------------------
         div(
             class = "content-section",
             div(

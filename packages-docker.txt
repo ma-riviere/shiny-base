@@ -19,14 +19,15 @@ shiny.i18n
 cookies
 blastula
 shinyWidgets
+DT
 yyjsonr
 otel
 otelsdk
 btw
-RPostgres
-DT
 pool
 DBI
+RPostgres
+dbplyr
 R6
 httr2
 logger

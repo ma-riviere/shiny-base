@@ -12,7 +12,7 @@ home_ui <- function(id) {
                 tr("Your uploaded datasets.")
             )
         ),
-        # Summary card
+        # ------ SUMMARY CARDS -------------------------------------------------
         div(
             class = "content-grid",
             div(
@@ -29,7 +29,7 @@ home_ui <- function(id) {
                 )
             )
         ),
-        # Dataset list section
+        # ------ DATASET LIST --------------------------------------------------
         div(
             class = "content-section",
             div(

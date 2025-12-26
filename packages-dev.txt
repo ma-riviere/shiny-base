@@ -19,6 +19,7 @@ shiny.i18n
 cookies
 blastula
 shinyWidgets
+DT
 yyjsonr
 shinytest2
 testthat
@@ -28,11 +29,10 @@ watcher
 otel
 otelsdk
 btw
-RSQLite
-RPostgres
-DT
 pool
 DBI
+RSQLite
+dbplyr
 R6
 httr2
 logger

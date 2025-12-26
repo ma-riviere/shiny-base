@@ -61,9 +61,7 @@ home_server <- function(
         })
 
         # Open upload modal
-        observeEvent(input$open_upload, {
-            trigger("show_upload_modal")
-        })
+        observeEvent(input$open_upload, trigger("show_upload_modal"))
 
         # Initialize row module servers ONCE per new dataset ID
         observeEvent(values$datasets, {
@@ -96,12 +94,7 @@ home_server <- function(
 
         # ------ OUTPUT --------------------------------------------------------
 
-        output$dataset_count <- renderText({
-            if (purrr::is_empty(values$datasets)) {
-                return("0")
-            }
-            nrow(values$datasets)
-        })
+        output$dataset_count <- renderText(nrow(values$datasets) %||% 0)
 
         output$dataset_list <- renderUI({
             datasets <- filtered_datasets()
@@ -121,10 +114,7 @@ home_server <- function(
             }
 
             # Render each dataset row using module UI
-            dataset_rows <- lapply(seq_len(nrow(datasets)), \(i) {
-                dataset_row_ui(ns(paste0("row_", datasets$id[i])), clickable = TRUE)
-            })
-
+            dataset_rows <- purrr::map(datasets$id, \(id) dataset_row_ui(ns(paste0("row_", id)), clickable = TRUE))
             tagList(dataset_rows)
         })
     })

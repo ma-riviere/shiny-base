@@ -12,6 +12,9 @@ upload_dataset_server <- function(id) {
             parsed_files = list()
         )
 
+        # Trigger for regenerating the fileInput (workaround since shinyjs::reset doesn't work for fileInput)
+        file_input_trigger <- reactiveVal(0)
+
         # ------ VALIDATION ----------------------------------------------------
 
         iv <- shinyvalidate::InputValidator$new()
@@ -24,14 +27,16 @@ upload_dataset_server <- function(id) {
 
         # Show modal when triggered
         on("show_upload_modal", {
+            # Reset state (to not see the names of the previously uploaded files)
+            values$error <- NULL
+            values$status <- NULL
+            values$parsed_files <- list()
+            file_input_trigger(file_input_trigger() + 1) # Force re-render of fileInput
             showModal(upload_dataset_modal_ui(ns))
         })
 
         # Enable/disable upload button based on validation state
-        observe({
-            shinyjs::toggleState("upload_btn", condition = iv$is_valid())
-        }) |>
-            bindEvent(iv$is_valid())
+        observeEvent(iv$is_valid(), shinyjs::toggleState("upload_btn", condition = iv$is_valid()))
 
         # Parse uploaded files and validate
         observeEvent(input$file, {
@@ -175,14 +180,27 @@ upload_dataset_server <- function(id) {
 
         # ------ OUTPUT --------------------------------------------------------
 
-        # Display selected files info
+        # Render fileInput dynamically so it can be reset by incrementing file_input_trigger
+        output$file_input_ui <- renderUI({
+            file_input_trigger() # Take dependency on trigger
+            fileInput(
+                ns("file"),
+                label = NULL,
+                accept = c(".csv", "text/csv"),
+                buttonLabel = tr("Browse"),
+                placeholder = tr("No files selected"),
+                multiple = TRUE
+            )
+        })
+
+        # Display selected files info (depends on parsed_files to respect reset)
         output$selected_file_ui <- renderUI({
-            req(input$file)
-            file_list <- lapply(seq_len(nrow(input$file)), \(i) {
+            req(length(values$parsed_files) > 0)
+            file_list <- lapply(names(values$parsed_files), \(name) {
                 div(
                     class = "selected-file-info",
                     bsicons::bs_icon("file-earmark-text"),
-                    span(class = "filename", input$file$name[i])
+                    span(class = "filename", values$parsed_files[[name]]$filename)
                 )
             })
             tagList(file_list)

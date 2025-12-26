@@ -29,6 +29,7 @@ delete_bookmark_folders <- function(state_ids) {
 # Run bookmark cleanup: expired + orphaned folders.
 # Should be called on app startup.
 bookmark_cleanup <- function() {
+    log_debug("[BOOKMARKS] Running scheduled cleanup")
     bookmark_dir <- getOption("bookmark_dir", "shiny_bookmarks")
     if (!dir.exists(bookmark_dir)) {
         return(invisible(NULL))
