@@ -11,6 +11,8 @@ dataset_server <- function(
             data = NULL
         )
 
+        has_data <- reactive(!purrr::is_empty(values$data))
+
         # ------ REACTIVE ------------------------------------------------------
 
         # Load dataset when selection changes or refresh_datasets is triggered
@@ -37,7 +39,6 @@ dataset_server <- function(
                 tryCatch(
                     {
                         values$data <- db_parse_dataset_data(dataset_row$data)
-                        # Add row_count and col_count (db_get_dataset doesn't compute these)
                         dataset_row$row_count <- nrow(values$data)
                         dataset_row$col_count <- ncol(values$data)
                     },
@@ -58,10 +59,6 @@ dataset_server <- function(
             }
         )
 
-        has_data <- reactive({
-            !purrr::is_empty(values$data)
-        })
-
         # Initialize summary row module ONCE when first dataset is loaded
         # (row_id is reactive so module updates when user switches datasets)
         observeEvent(
@@ -69,12 +66,7 @@ dataset_server <- function(
             {
                 dataset_row_server(
                     "summary_row",
-                    all_datasets = reactive({
-                        if (purrr::is_empty(values$dataset)) {
-                            return(data.frame())
-                        }
-                        values$dataset
-                    }),
+                    all_datasets = reactive(values$dataset),
                     row_id = reactive(values$dataset$id),
                     on_click = NULL,
                     nav_select_callback = nav_select_callback
@@ -83,10 +75,8 @@ dataset_server <- function(
             once = TRUE
         )
 
-        # Open upload modal
-        observeEvent(input$open_upload, {
-            trigger("show_upload_modal")
-        })
+        # Upload modal trigger
+        observeEvent(input$open_upload, trigger("show_upload_modal"))
 
         # ------ OUTPUT --------------------------------------------------------
 

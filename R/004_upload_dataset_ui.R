@@ -25,17 +25,11 @@ upload_dataset_modal_ui <- function(ns) {
                     tr("CSV File(s)")
                 ),
                 # Wrapper div that CSS will style as dropzone
+                # Using uiOutput to allow resetting the fileInput (browser limitation workaround)
                 div(
                     class = "fancy-file-input",
                     `data-after-content` = tr("Drag & drop, or click Browse (max 10MB per file)"),
-                    fileInput(
-                        ns("file"),
-                        label = NULL,
-                        accept = c(".csv", "text/csv"),
-                        buttonLabel = tr("Browse"),
-                        placeholder = tr("No files selected"),
-                        multiple = TRUE
-                    )
+                    uiOutput(ns("file_input_ui"))
                 ),
                 # Selected files display
                 uiOutput(ns("selected_file_ui"))

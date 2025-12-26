@@ -22,12 +22,10 @@ dataset_row_server <- function(
         })
 
         # ------ CLICK (row navigation) ----------------------------------------
-        # Handle row click if on_click callback provided
-        if (!is.null(on_click)) {
-            observeEvent(input$row_click, {
-                on_click(row_id())
-            })
-        }
+        observeEvent(input$row_click, {
+            req(on_click) # Only from the home page
+            on_click(row_id())
+        })
 
         # ------ EDIT ----------------------------------------------------------
         observeEvent(input$edit, {

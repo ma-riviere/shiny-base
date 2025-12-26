@@ -53,10 +53,27 @@ enableBookmarking(store = "server")
 
 # ------ SUB-DIRS --------------------------------------------------------------
 # Sourcing R files from all sub-directories in R/
+# Load shiny-utils first (contains logging, database, etc.), then other directories
+if (dir.exists("R/shiny-utils/")) {
+    void_ <- lapply(
+        list.files(path = "R/shiny-utils/", pattern = "\\.[Rr]$", full.names = TRUE, recursive = TRUE),
+        source
+    )
+}
+
 void_ <- lapply(
-    list.dirs("R", full.names = TRUE, recursive = FALSE),
+    {
+        r_subdirs <- list.dirs("R", full.names = TRUE, recursive = FALSE)
+        r_subdirs[basename(r_subdirs) != "shiny-utils"]
+    },
     \(d) lapply(list.files(path = d, pattern = "\\.[Rr]$", full.names = TRUE, recursive = TRUE), source)
 )
+
+# ------ LOGGING ---------------------------------------------------------------
+# Initialize logging early so it's available for all subsequent initialization
+
+init_logging()
+setup_global_error_handlers()
 
 # ------ AUTH0 -----------------------------------------------------------------
 # Set options(auth0_disable = TRUE) to skip auth during development
@@ -81,6 +98,7 @@ i18n$set_translation_language("en")
 db_pool <- db_connect()
 
 onStop(function() {
+    cancel_all_tasks()
     clear_disk_cache(getOption("cache_dir", "cache"))
     db_disconnect(db_pool)
 })
@@ -91,12 +109,16 @@ onStop(function() {
 source("R/helpers_bookmarks.R", local = TRUE)
 source("R/helpers_database.R", local = TRUE)
 
+# Run cleanup on startup, then schedule recurring cleanup every 30 minutes
 bookmark_cleanup()
+schedule_task(
+    "bookmark_cleanup",
+    bookmark_cleanup,
+    interval_seconds = 30 * 60 # In minutes
+)
 
-# ------ LOGGING ---------------------------------------------------------------
-
-init_logging()
-setup_global_error_handlers()
+# Run logs cleanup on startup only (logs are only created on app start)
+logs_cleanup()
 
 log_info("Application started (ENV={Sys.getenv('ENV', 'dev')})")
 

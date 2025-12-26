@@ -5,7 +5,7 @@ sidebar_ui <- function(id) {
         width = 280,
         # Collapse by default on mobile, open on desktop
         open = list(desktop = "open", mobile = "closed"),
-        # Home page filter section
+        # ------ HOME FILTER SECTION -------------------------------------------
         div(
             id = ns("home_filter_section"),
             h6(
@@ -41,7 +41,7 @@ sidebar_ui <- function(id) {
                 width = "100%"
             )
         ),
-        # Dataset page parameters section
+        # ------ DATASET PARAMETERS SECTION ------------------------------------
         div(
             id = ns("dataset_params_section"),
             h6(
@@ -60,7 +60,7 @@ sidebar_ui <- function(id) {
                 selected = ""
             )
         ),
-        # Footer with bookmark button
+        # ------ FOOTER --------------------------------------------------------
         div(
             class = "mt-auto pt-3 border-top",
             bookmarkButton(

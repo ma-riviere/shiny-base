@@ -3,7 +3,8 @@
 dataset_row_ui <- function(id, clickable = TRUE) {
     ns <- NS(id)
 
-    # 1. Main Content (Name + Age + Size)
+    # ------ MAIN CONTENT ------------------------------------------------------
+    # Info displayed on the dataset (Name, Age, Size)
     # This will be inside the actionLink if clickable
     main_content <- tagList(
         # Name column
@@ -27,7 +28,8 @@ dataset_row_ui <- function(id, clickable = TRUE) {
         )
     )
 
-    # 2. Actions Content (Buttons)
+    # ------ ACTIONS CONTENT ---------------------------------------------------
+    # Buttons (edit, download, delete)
     # This acts as the second column in the outer grid
     actions_content <- div(
         class = "dataset-col dataset-col-actions",
@@ -56,7 +58,7 @@ dataset_row_ui <- function(id, clickable = TRUE) {
         )
     )
 
-    # 3. Assemble structural components
+    # ------ UI ----------------------------------------------------------------
     if (clickable) {
         # Clickable:
         # Outer div (dataset-row) holds:
