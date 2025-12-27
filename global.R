@@ -9,8 +9,10 @@ is_prod <- Sys.getenv("ENV") == "prod"
 
 options(
     # Database
-    db_schema_path = "database/schema.sql",
     db_path_dev = "database/dev.db",
+
+    # Sessions
+    session_timeout_minutes = 15,
 
     # Bookmarks
     bookmark_dir = "shiny_bookmarks",
@@ -26,7 +28,7 @@ options(
     log_dir = Sys.getenv("LOGS_DIR", "logs"),
     log_console_threshold = if (is_prod) logger::INFO else logger::DEBUG,
     log_file_threshold = logger::DEBUG,
-    log_json_format = is_prod,
+    log_as_json = if (is_prod) TRUE else FALSE,
 
     # Email (see R/shiny-utils/error_handling.R for error email usage)
     email_to = Sys.getenv("EMAIL_TO"),
@@ -74,7 +76,7 @@ void_ <- lapply(
 # Initialize logging early so it's available for all subsequent initialization
 
 init_logging()
-setup_global_error_handlers()
+setup_global_error_emails()
 
 # ------ AUTH0 -----------------------------------------------------------------
 # Set options(auth0_disable = TRUE) to skip auth during development
@@ -83,11 +85,7 @@ if (isTRUE(getOption("shiny.testmode"))) {
 }
 
 auth0_info <- auth0r::auth0_info()
-auth0_mgmt <- if (!isTRUE(getOption("auth0_disable"))) {
-    auth0r::Auth0Management$new()
-} else {
-    NULL
-}
+auth0_mgmt <- if (!isTRUE(getOption("auth0_disable"))) auth0r::Auth0Management$new() else NULL
 
 # ------ TRANSLATIONS ----------------------------------------------------------
 
@@ -98,25 +96,33 @@ i18n$set_translation_language("en")
 
 db_pool <- db_connect()
 
-onStop(function() {
-    cancel_all_tasks()
-    clear_disk_cache(getOption("cache_dir", "cache"))
-    db_disconnect(db_pool)
-})
+register_on_stop(
+    function() {
+        cancel_all_tasks()
+        clear_disk_cache(getOption("cache_dir", "cache"))
+        db_disconnect(db_pool)
+    },
+    id = "cleanup"
+)
 
 # ------ BOOKMARKS -------------------------------------------------------------
-# The database/pool needs to be active to be able to call bookmark_cleanup
+# Put after the DATABASE section: the pool needs to be active to be able to call bookmark_cleanup
 
-source("R/helpers_bookmarks.R", local = TRUE)
 source("R/helpers_database.R", local = TRUE)
 
-# Run cleanup on startup, then schedule recurring cleanup every 30 minutes
+# Run cleanup on startup
 bookmark_cleanup()
-schedule_task(
-    "bookmark_cleanup",
-    bookmark_cleanup,
-    interval_seconds = 30 * 60 # In minutes
-)
+
+# Schedule recurring cleanup every 30 minutes
+schedule_task("bookmark_cleanup", bookmark_cleanup, interval_seconds = 30 * 60)
+
+# ------ SESSIONS --------------------------------------------------------------
+
+# Session cleanup: mark stale sessions (no heartbeat for 15+ min) as timed out
+# Runs every 10 minutes. Heartbeat is every 5 min, so 15 min = 3 missed heartbeats.
+schedule_task("session_cleanup", session_cleanup, interval_seconds = 10 * 60)
+
+# ------ LOGS ------------------------------------------------------------------
 
 # Run logs cleanup on startup only (logs are only created on app start)
 logs_cleanup()

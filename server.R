@@ -2,7 +2,7 @@ server <- function(input, output, session) {
     session$allowReconnect(TRUE)
 
     # ------ ERROR HANDLING ----------------------------------------------------
-    setup_error_handlers(session)
+    setup_session_error_emails(session)
 
     # Exclude inputs that cause restoration issues:
     # - Auth0 params (code, state) to prevent token leakage (auth0r also excludes these but app's
@@ -26,12 +26,19 @@ server <- function(input, output, session) {
         "profile-profile_language"
     ))
 
-    # ------ BOOKMARK ON DISCONNECT --------------------------------------------
-    # Save bookmark state when user disconnects (closes tab, loses connection, etc.)
-    # This runs after the WebSocket is closed, so we can't notify the user,
-    # but the state is saved for restoration on their next session.
+    # ------ SESSION TRACKING & BOOKMARK ON DISCONNECT --------------------------
+    # Track session in DB and save bookmark when user disconnects.
+    # onSessionEnded runs after WebSocket closes, so we can't notify the user.
     if (!isTRUE(getOption("auth0_disable"))) {
         session$onSessionEnded(function() {
+            # End session tracking (graceful disconnect)
+            # Check pool validity first - onStop() may have closed it already
+            if (!is.null(session$userData$session_db_id) && pool::dbIsValid(db_pool)) {
+                tryCatch(
+                    db_session_end(session$userData$session_db_id),
+                    error = \(e) log_warn("[SESSION] Failed to end session: {e$message}")
+                )
+            }
             save_bookmark_on_disconnect(session, input)
         })
     }
@@ -102,6 +109,7 @@ server <- function(input, output, session) {
 
         # Dynamically inject admin nav panel only for admins (server-side rendering)
         # This ensures the admin UI HTML is never sent to non-admin clients
+        # Uses once = TRUE to prevent duplicate insertion when language changes
         observe({
             req(is_admin(session))
             bslib::nav_insert(
@@ -115,7 +123,8 @@ server <- function(input, output, session) {
                 position = "after",
                 session = session
             )
-        })
+        }) |>
+            bindEvent(TRUE, once = TRUE)
     }
 
     if (isTRUE(getOption("auth0_disable"))) {
@@ -151,9 +160,31 @@ server <- function(input, output, session) {
             auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
             if (!purrr::is_empty(auth0_sub)) {
                 session$userData$user <- db_get_or_create_user(auth0_sub)
+
+                # Start session tracking
+                tryCatch(
+                    {
+                        session$userData$session_db_id <- db_session_start(
+                            session$token,
+                            session$userData$user$id,
+                            auth0_sub
+                        )
+                    },
+                    error = \(e) log_warn("[SESSION] Failed to start session: {e$message}")
+                )
             }
 
             init_modules()
+
+            # Session heartbeat: update updated_at every 5 minutes
+            observe({
+                invalidateLater(5 * 60 * 1000)
+                req(session$userData$session_db_id)
+                tryCatch(
+                    db_session_heartbeat(session$userData$session_db_id),
+                    error = \(e) log_debug("[SESSION] Heartbeat failed: {e$message}")
+                )
+            })
         }) |>
             bindEvent(session$userData$auth0_info, once = TRUE)
 

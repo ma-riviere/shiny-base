@@ -1,0 +1,52 @@
+// Navigation components
+
+// Tabs inside cards (bslib::navset_card_tab)
+// We transform the default "folder tab" look into a modern "underline" style
+// This feels cleaner and more premium
+.card {
+    .card-header {
+        background-color: $white;
+        border-bottom: none; // Remove header border, we use nav-tabs border instead
+        padding: 0 $spacing-lg; // Align with card body padding
+
+        // The nav-tabs container
+        .nav-tabs {
+            border-bottom: 1px solid $border-color; // Single border line
+            gap: $spacing-lg; // Space between tabs
+
+            .nav-item {
+                margin-bottom: -1px; // Align tab underline with the nav-tabs border
+            }
+
+            .nav-link {
+                border: none;
+                border-bottom: 2px solid transparent;
+                border-radius: 0; // No rounded corners
+                color: $secondary; // Muted text for inactive
+                font-weight: 600;
+                font-size: 0.95rem;
+                padding: $spacing-sm $spacing-sm; // Balanced padding, keeping underline closer to text
+                background: transparent;
+                transition: all $transition-fast;
+
+                &:hover {
+                    color: $gray-800;
+                    border-bottom-color: $gray-300;
+                }
+
+                &.active {
+                    color: $primary;
+                    border-bottom-color: $primary;
+                    background: transparent;
+                }
+
+                // Add focus ring for accessibility but keep it subtle
+                &:focus-visible {
+                    outline: 2px solid $primary-light;
+                    outline-offset: 4px;
+                    border-radius: $border-radius-sm;
+                }
+            }
+        }
+    }
+}
