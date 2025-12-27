@@ -299,6 +299,18 @@
         {
             "en": "%.1f hours ago",
             "fr": "il y a %.1f h"
+        },
+        {
+            "en": "Admin",
+            "fr": "Admin"
+        },
+        {
+            "en": "Admin Dashboard",
+            "fr": "Tableau de bord admin"
+        },
+        {
+            "en": "System administration and monitoring.",
+            "fr": "Administration système et surveillance."
         }
     ]
 }

@@ -247,3 +247,11 @@
         }
     }
 }
+
+/* Admin nav item - hidden by default, shown via JS for admins */
+.admin-nav-item {
+    display: none !important;
+}
+.admin-nav-item.admin-visible {
+    display: inline !important;
+}

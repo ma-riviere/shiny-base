@@ -39,11 +39,12 @@ options(
     # Error handling (see R/shiny-utils/error_handling.R)
     error_email_enabled = isTRUE(as.logical(Sys.getenv("SEND_ERROR_EMAILS", "FALSE"))),
 
-    # Shinylogs
-    shinylogs_dir = Sys.getenv("SHINYLOGS_DIR", "data/shinylogs"),
-
     # Caching (see R/shiny-utils/caching.R)
     cache_dir = "cache",
+
+    # Auth0 RBAC (see R/shiny-utils/auth.R)
+    # Must match the namespace in your Auth0 Action that adds roles to the ID token
+    auth0_roles_claim = "https://shiny-base.ma-riviere.com/roles",
 
     # Debug
     shiny.autoreload = if (is_prod) FALSE else TRUE
@@ -121,11 +122,3 @@ schedule_task(
 logs_cleanup()
 
 log_info("Application started (ENV={Sys.getenv('ENV', 'dev')})")
-
-# ------ SHINYLOGS -------------------------------------------------------------
-# Ensure shinylogs directory exists
-
-shinylogs_dir <- getOption("shinylogs_dir")
-if (!dir.exists(shinylogs_dir)) {
-    dir.create(shinylogs_dir, recursive = TRUE)
-}
