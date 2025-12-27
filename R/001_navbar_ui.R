@@ -16,6 +16,7 @@ navbar_ui <- function(id) {
             value = "dataset",
             dataset_ui("dataset")
         ),
+        # Admin panel is injected dynamically via nav_insert() in server.R for admins only
         # Right side: language selector and user menu
         bslib::nav_spacer(),
         bslib::nav_item(navbar_language_selector(ns)),

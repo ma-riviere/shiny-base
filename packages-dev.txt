@@ -10,7 +10,6 @@ bsicons
 sass
 shinyjs
 shinyvalidate
-shinylogs
 memoise
 ggplot2
 sodium

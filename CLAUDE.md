@@ -32,12 +32,14 @@ shiny-base/
 │   ├── helpers_*.R       # Non-module helper functions
 │   └── shiny-utils/      # Reusable utilities (git submodule)
 │       ├── 000_logging.R # Structured logging
+│       ├── auth0.R       # Auth0 utils (overriding/relying on ma-riviere/auth0r)
 │       ├── caching.R     # Cache utilities
 │       ├── database.R    # DB connection pool management
 │       ├── error_handling.R
 │       ├── i18n.R        # Language resolution
 │       ├── sass.R        # SASS compilation
 │       ├── scheduler.R   # Recurring task scheduler (uses `later`)
+│       ├── shinylogs.R   # (Unused) Session replay utility - see file for schema
 │       ├── triggers.R    # Event broadcast system
 │       └── validation.R  # Custom shinyvalidate rules
 ├── www/                  # Static assets
@@ -884,6 +886,63 @@ list_tasks()
 | `bookmark_cleanup` | `bookmark_cleanup()` | 30 min | Delete expired bookmarks and orphaned folders |
 
 **Note:** `logs_cleanup()` runs once on startup only (not scheduled) since log files are only created when the app starts.
+
+## Logging & Observability
+
+The app uses a dual-layer approach for observability:
+
+### 1. Application Logging (`R/shiny-utils/000_logging.R`)
+
+**Purpose:** Debug logs, errors, operational info for developers.
+
+```r
+log_info("User {user_id} logged in")
+log_debug("Processing {nrow(data)} rows")
+log_error("Failed to save: {e$message}")
+```
+
+- Console output (DEBUG in dev, INFO in prod)
+- File output to `logs/` directory (JSON format in prod for log aggregators)
+- Cleaned up on startup via `logs_cleanup()` (3-day retention)
+
+### 2. OpenTelemetry (Shiny 1.12+)
+
+**Purpose:** Performance tracing, distributed debugging, production observability.
+
+```bash
+# .Renviron (no code changes needed)
+OTEL_EXPORTER_OTLP_ENDPOINT=https://your-otel-collector:4318
+OTEL_SERVICE_NAME=shiny-base
+```
+
+- Automatic spans for reactive updates, output renders, session lifecycle
+- Cross-process tracing (mirai background processes)
+- External API call tracking (httr2, ellmer)
+- Code location attributes (file, line, column)
+- Export to Grafana, Jaeger, or any OTLP-compatible backend
+- See: https://shiny.posit.co/r/articles/improve/opentelemetry/
+
+### 3. Matomo (Optional - for User Analytics)
+
+**Purpose:** Visitor tracking, demographics, retention analysis.
+
+See `MATOMO.md` for integration guide. Matomo provides:
+- Device/browser/OS detection
+- Geolocation and referrer tracking
+- Retention/cohort analysis
+- Pre-built analytics dashboards
+- GDPR-compliant opt-out
+
+### When to Use What
+
+| Need | Use |
+|------|-----|
+| "Why did this error happen?" | Application logs (`log_error`) |
+| "Why is the app slow?" | OpenTelemetry (reactive timing, spans) |
+| "Who visits? From where? On what device?" | Matomo (see MATOMO.md) |
+| "Do users return?" | Matomo retention/cohorts |
+
+**Note:** shinylogs (session replay) is deprecated in favor of OTEL. If you need exact input value capture for debugging, see `R/shiny-utils/shinylogs.R` for schema and re-enable it.
 
 ## i18n (Internationalization)
 

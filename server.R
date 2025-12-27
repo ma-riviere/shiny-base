@@ -4,13 +4,6 @@ server <- function(input, output, session) {
     # ------ ERROR HANDLING ----------------------------------------------------
     setup_error_handlers(session)
 
-    # ------ USAGE TRACKING ----------------------------------------------------
-    shinylogs::track_usage(
-        storage_mode = shinylogs::store_json(
-            path = getOption("shinylogs_dir", "data/shinylogs")
-        )
-    )
-
     # Exclude inputs that cause restoration issues:
     # - Auth0 params (code, state) to prevent token leakage (auth0r also excludes these but app's
     #   call overwrites auth0r's, so we must include them here)
@@ -103,6 +96,26 @@ server <- function(input, output, session) {
             selected_dataset_id = reactive(r$selected_dataset_id),
             nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
         )
+
+        # Admin module - always instantiate but gated by req(is_admin()) inside
+        admin_server("admin")
+
+        # Dynamically inject admin nav panel only for admins (server-side rendering)
+        # This ensures the admin UI HTML is never sent to non-admin clients
+        observe({
+            req(is_admin(session))
+            bslib::nav_insert(
+                id = "nav",
+                nav = bslib::nav_panel(
+                    title = tags$span(class = "i18n", `data-key` = "Admin", tr("Admin")),
+                    value = "admin",
+                    admin_ui("admin")
+                ),
+                target = "dataset",
+                position = "after",
+                session = session
+            )
+        })
     }
 
     if (isTRUE(getOption("auth0_disable"))) {

@@ -8,6 +8,15 @@ profile_modal_ui <- function(ns, auth_info) {
     current_language <- purrr::pluck(auth_info, "user_metadata", "language") %||%
         i18n$get_key_translation()
 
+    # Extract roles from custom claim
+    roles_claim <- getOption("auth0_roles_claim", "https://shiny-base.ma-riviere.com/roles")
+    roles <- purrr::pluck(auth_info, roles_claim) %||% character(0)
+    roles_text <- if (purrr::is_empty(roles)) {
+        tr("None")
+    } else {
+        paste(roles, collapse = ", ")
+    }
+
     modalDialog(
         title = tr("Profile"),
         easyClose = TRUE,
@@ -38,6 +47,11 @@ profile_modal_ui <- function(ns, auth_info) {
                     class = "mb-3",
                     tags$label(class = "form-label i18n", `data-key` = "Email", tr("Email")),
                     tags$div(class = "form-control-plaintext", email)
+                ),
+                div(
+                    class = "mb-3",
+                    tags$label(class = "form-label i18n", `data-key` = "Roles", tr("Roles")),
+                    tags$div(class = "form-control-plaintext", roles_text)
                 ),
                 div(
                     class = "mb-3",
