@@ -311,6 +311,46 @@
         {
             "en": "System administration and monitoring.",
             "fr": "Administration système et surveillance."
+        },
+        {
+            "en": "Users",
+            "fr": "Utilisateurs"
+        },
+        {
+            "en": "System",
+            "fr": "Système"
+        },
+        {
+            "en": "Currently Connected",
+            "fr": "Actuellement connectés"
+        },
+        {
+            "en": "Recently Connected",
+            "fr": "Connexions récentes"
+        },
+        {
+            "en": "No active sessions",
+            "fr": "Aucune session active"
+        },
+        {
+            "en": "No recent connections",
+            "fr": "Aucune connexion récente"
+        },
+        {
+            "en": "Connected:",
+            "fr": "Connecté:"
+        },
+        {
+            "en": "None",
+            "fr": "Aucun"
+        },
+        {
+            "en": "%.0f days ago",
+            "fr": "il y a %.0f jours"
+        },
+        {
+            "en": "Roles",
+            "fr": "Rôles"
         }
     ]
 }

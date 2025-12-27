@@ -33,14 +33,17 @@ shiny-base/
 │   └── shiny-utils/      # Reusable utilities (git submodule)
 │       ├── 000_logging.R # Structured logging
 │       ├── auth0.R       # Auth0 utils (overriding/relying on ma-riviere/auth0r)
+│       ├── bookmarks.R   # Bookmark CRUD + filesystem + lifecycle helpers
 │       ├── caching.R     # Cache utilities
 │       ├── database.R    # DB connection pool management
 │       ├── error_handling.R
 │       ├── i18n.R        # Language resolution
 │       ├── sass.R        # SASS compilation
 │       ├── scheduler.R   # Recurring task scheduler (uses `later`)
+│       ├── sessions.R    # Session tracking CRUD + cleanup
 │       ├── shinylogs.R   # (Unused) Session replay utility - see file for schema
 │       ├── triggers.R    # Event broadcast system
+│       ├── users.R       # User CRUD
 │       └── validation.R  # Custom shinyvalidate rules
 ├── www/                  # Static assets
 │   ├── css/              # Compiled CSS (main.min.css)
@@ -48,12 +51,14 @@ shiny-base/
 │   │   ├── main.scss     # Entry point
 │   │   ├── variables.scss
 │   │   ├── navbar.scss, typo.scss
-│   │   └── _*.scss       # Partials (buttons, cards, layout, modals, tables, utils)
+│   │   └── _*.scss       # Partials (buttons, cards, layout, modals, navs, tables, utils)
 │   ├── js/               # JavaScript helpers
 │   ├── html/             # HTML templates (for htmltools::htmlTemplate)
 │   └── img/              # Images
 ├── data/                 # Data files (translations.json)
-├── database/             # DB schema/migrations
+├── database/             # DB schema
+│   ├── schema-base.sql   # Base tables (users, sessions, bookmarks)
+│   └── schema.sql        # App-specific tables (datasets)
 ├── tests/                # shinytest2, testthat tests
 ├── renv/                 # renv configuration
 │   └── profiles/         # dev-4.5, docker-4.5
@@ -61,13 +66,6 @@ shiny-base/
 ├── .Renviron             # Environment variables (API keys, etc.)
 └── shiny_bookmarks/      # Server-side bookmark storage
 ```
-
-## Entry Points
-
-- **Run app**: `shiny::runApp(launch.browser = FALSE)` from project root
-- **Compile SASS**: Source `R/shiny-utils/sass.R`. Done automatically on app launch.
-
----
 
 # Architecture Decisions
 
@@ -79,7 +77,7 @@ shiny-base/
 
 ## Event System (Triggers)
 
-**Choice:** Gargoyle-style trigger system for cross-module communication.
+**Choice:** `gargoyle`-style trigger system for cross-module communication.
 
 **Trade-off:** Escapes Shiny's reactive graph, making data flow harder to trace. Acceptable for app-wide events with single handlers (e.g., `refresh_datasets`).
 
@@ -95,10 +93,6 @@ shiny-base/
 | `observeEvent(x(), { ... })` | React to a single reactive |
 | `observeEvent(list(watch("trigger"), x()), { ... })` | React to trigger AND other reactives |
 | `observe({ ... }) \|> bindEvent(x())` | Same as `observeEvent`, alternative syntax |
-| `observe({ req(...); ... })` | One-time initialization waiting for state |
-
-**Why:** Implicit dependencies in `observe()` make data flow hard to trace. Explicit event expressions
-document intent and prevent accidental dependencies.
 
 **Triggers are events, not state:** `on()` defaults to `ignoreInit = TRUE` because triggers are
 imperative signals ("do this now"), not state synchronization.
@@ -113,12 +107,9 @@ to the server and re-renders HTML on every state change, which is slower and har
 **Pattern:** Define UI statically in the UI file, then show/hide with `shinyjs::toggle()`, or `shinyjs::show/hide`:
 
 ```r
-# UI file: define the element, start hidden
-shinyjs::hidden(
-    div(id = ns("empty_state"), class = "empty-state", ...)
-)
-
-# Server file: toggle visibility based on state
+# UI
+shinyjs::hidden(div(id = ns("empty_state"), class = "empty-state", ...))
+# Server
 observe(shinyjs::toggle("empty_state", condition = !has_data()))
 ```
 
@@ -126,11 +117,6 @@ observe(shinyjs::toggle("empty_state", condition = !has_data()))
 - Toasts/notifications (`shinyWidgets::show_toast()`, `showNotification()`)
 - Simple yes/no confirmation modals (`showModal()` with `modalDialog()`)
 - Content that genuinely varies in structure (not just visibility)
-
-**Avoid renderUI when:**
-- The HTML structure is fixed and only visibility changes
-- The content changes but structure stays the same (use `renderText()` or reactive bindings)
-- You're generating the same element repeatedly with slight variations
 
 **For small dynamic content:** If the content is too small to justify a new `*_ui.R` file but still
 needs to be generated dynamically, create an HTML template in `www/html/` and load it with
@@ -143,13 +129,8 @@ needs to be generated dynamically, create an HTML template in `www/html/` and lo
   <p>{{ message }}</p>
 </div>
 
-# Server file
-output$error_display <- renderUI({
-    htmltools::htmlTemplate("www/html/error_card.html",
-        title = "Error",
-        message = error_message()
-    )
-})
+# Server or UI file:
+htmltools::htmlTemplate("www/html/error_card.html", title = "Error", message = error_message)
 ```
 
 ## Input Rate Limiting (Debounce/Throttle)
@@ -165,9 +146,7 @@ Two approaches exist for rate-limiting high-frequency inputs (sliders, text fiel
 
 ```r
 sliderInput("filter", "Filter", min = 0, max = 100, value = 50) |>
-    tagAppendAttributes(
-        `data-shiny-input-rate-policy` = '{"policy": "debounce", "delay": 300}'
-    )
+    tagAppendAttributes(`data-shiny-input-rate-policy` = '{"policy": "debounce", "delay": 300}')
 ```
 
 **Prefer server-side `debounce()`** when:
@@ -197,8 +176,6 @@ filters <- reactive(list(input$a, input$b, input$c)) |> debounce(500)
 1. **Manual input restoration via `sendInputMessage()`**: Wrong protocol format. Use Shiny's native restoration with `_state_id_` in URL instead.
 
 2. **Single redirect after Auth0 callback**: Auth0 codes are single-use. Cannot exchange token then redirect with same code.
-
-3. **`for` loops for module initialization**: Lazy evaluation trap. All modules see final loop value.
 
 ---
 
@@ -797,80 +774,32 @@ options(triggers.verbose = TRUE)
 
 ## Email
 
-The app uses `blastula` for sending emails via SMTP (configured for Brevo).
-
-### Configuration
-
-Environment variables (in `.Renviron`):
-- `EMAIL_TO`: Default recipient email address
-- `EMAIL_FROM`: Sender email address
-- `SMTP_HOST`: SMTP server (e.g., `smtp-relay.brevo.com`)
-- `SMTP_PORT`: SMTP port (default: 587)
-- `SMTP_USER`: SMTP username/login
-- `SMTP_KEY`: SMTP API key/password
-
-Options (set in `global.R`):
-- `email_to`, `email_from`, `smtp_host`, `smtp_port`, `smtp_user`: Read from env vars
-- `smtp_key_envvar`: Name of env var holding SMTP key (default: `"SMTP_KEY"`)
-- `error_email_enabled`: Whether to send emails on unhandled errors (controlled by `SEND_ERROR_EMAILS` env var, default: `FALSE`)
+`blastula` + Brevo
 
 ### Error notification emails
 
 `R/shiny-utils/error_handling.R` provides automatic error notification:
 - `send_error_email(error_msg, session)`: Sends error details with context (user, R version, stack trace)
-- `setup_error_handlers(session)`: Registers session-level error handlers (call in `server.R`)
-- `setup_global_error_handlers()`: Sets up global error handling (called in `global.R`)
+- `setup_session_error_emails(session)`: Sends error emails with session context (call in `server.R`)
+- `setup_global_error_emails()`: Sends error emails for startup/global errors (call in `global.R`)
 
-Error emails are only sent when `SEND_ERROR_EMAILS=TRUE` and `EMAIL_TO` is configured.
-
-### Sending custom emails
-
-```r
-email <- blastula::compose_email(
-    body = blastula::md("Your **markdown** content here")
-)
-
-blastula::smtp_send(
-    email = email,
-    to = "recipient@example.com",
-    from = getOption("email_from"),
-    subject = "Subject line",
-    credentials = blastula::creds_envvar(
-        user = getOption("smtp_user"),
-        pass_envvar = getOption("smtp_key_envvar"),
-        host = getOption("smtp_host"),
-        port = getOption("smtp_port"),
-        use_ssl = TRUE
-    )
-)
-```
+Error emails are only sent when `SEND_ERROR_EMAILS=TRUE` and `EMAIL_TO` is configured in .Renviron
 
 ## Database
 
 The app uses a PostgreSQL database with connection pooling (`pool` package).
-- Connection setup in `R/shiny-utils/database.R`, CRUD functions in `R/helpers_database.R`
+- Connection setup in `R/shiny-utils/database.R`
 - Pool created in `global.R`, closed via `onStop()` callback
-- Bookmark tracking: stores user bookmarks in DB, cleans up old ones on save
+- Schema split into base (`database/schema-base.sql`) and app-specific (`database/schema.sql`)
+- CRUD functions organized by domain:
+  - `R/shiny-utils/users.R` - User management
+  - `R/shiny-utils/sessions.R` - Session tracking
+  - `R/shiny-utils/bookmarks.R` - Bookmark CRUD + filesystem cleanup
+  - `R/helpers_database.R` - App-specific (datasets only)
 
 ## Scheduler
 
 The app uses `R/shiny-utils/scheduler.R` for recurring background tasks via the `later` package.
-
-### API
-
-```r
-# Schedule a recurring task (replaces existing task with same ID)
-schedule_task("bookmark_cleanup", bookmark_cleanup, interval_seconds = 30 * 60)
-
-# Cancel a specific task
-cancel_task("bookmark_cleanup")
-
-# Cancel all tasks (call in onStop())
-cancel_all_tasks()
-
-# List active task IDs
-list_tasks()
-```
 
 ### How it works
 
@@ -879,19 +808,40 @@ list_tasks()
 - Tasks are tracked by ID, allowing replacement of existing tasks
 - `cancel_all_tasks()` is called in `onStop()` for clean shutdown
 
-### Current scheduled tasks
+## Session Tracking
 
-| Task ID | Function | Interval | Purpose |
-|---------|----------|----------|---------|
-| `bookmark_cleanup` | `bookmark_cleanup()` | 30 min | Delete expired bookmarks and orphaned folders |
+The app tracks user sessions in the database.
 
-**Note:** `logs_cleanup()` runs once on startup only (not scheduled) since log files are only created when the app starts.
+### Session Lifecycle
+
+| Event | Action | Where |
+|-------|--------|-------|
+| Login | `INSERT` with `ended_at = NULL` | `server.R` (after auth gate) |
+| Every 5 min | `UPDATE updated_at` | `server.R` (heartbeat observer) |
+| Tab close | `UPDATE ended_at, end_reason = 'disconnect'` | `session$onSessionEnded` |
+| Every 10 min | Mark stale sessions with `end_reason = 'timeout'` | `global.R` (scheduled task) |
+
+### Detecting Active vs Stale Sessions
+
+- **Active**: `ended_at IS NULL AND updated_at > now() - 15 min`
+- **Stale/Crashed**: `ended_at IS NULL AND updated_at <= now() - 15 min` (caught by cleanup task)
+- **Ended**: `ended_at IS NOT NULL`
+
+### Why This Design
+
+**Problem**: `session$onSessionEnded` only fires on graceful disconnects. If the R process crashes or the
+browser force-closes, the callback never runs.
+
+**Solution**: Heartbeat + scheduled cleanup.
+- Each session updates `updated_at` every 5 minutes (heartbeat)
+- A scheduled task runs every 10 minutes and marks sessions with no heartbeat for 15+ minutes as timed out
+- 15 min threshold = 3 missed heartbeats = definitely dead
 
 ## Logging & Observability
 
 The app uses a dual-layer approach for observability:
 
-### 1. Application Logging (`R/shiny-utils/000_logging.R`)
+### 1. Application Logging (`R/shiny-utils/logging.R`)
 
 **Purpose:** Debug logs, errors, operational info for developers.
 
@@ -917,7 +867,7 @@ OTEL_SERVICE_NAME=shiny-base
 
 - Automatic spans for reactive updates, output renders, session lifecycle
 - Cross-process tracing (mirai background processes)
-- External API call tracking (httr2, ellmer)
+- External API call tracking (httr2)
 - Code location attributes (file, line, column)
 - Export to Grafana, Jaeger, or any OTLP-compatible backend
 - See: https://shiny.posit.co/r/articles/improve/opentelemetry/
@@ -926,21 +876,12 @@ OTEL_SERVICE_NAME=shiny-base
 
 **Purpose:** Visitor tracking, demographics, retention analysis.
 
-See `MATOMO.md` for integration guide. Matomo provides:
+Matomo provides:
 - Device/browser/OS detection
 - Geolocation and referrer tracking
 - Retention/cohort analysis
 - Pre-built analytics dashboards
 - GDPR-compliant opt-out
-
-### When to Use What
-
-| Need | Use |
-|------|-----|
-| "Why did this error happen?" | Application logs (`log_error`) |
-| "Why is the app slow?" | OpenTelemetry (reactive timing, spans) |
-| "Who visits? From where? On what device?" | Matomo (see MATOMO.md) |
-| "Do users return?" | Matomo retention/cohorts |
 
 **Note:** shinylogs (session replay) is deprecated in favor of OTEL. If you need exact input value capture for debugging, see `R/shiny-utils/shinylogs.R` for schema and re-enable it.
 
@@ -952,17 +893,7 @@ Uses `shiny.i18n` for translations. Language resolution hierarchy:
 3. Browser language preference
 4. App default (from `getOption("default_language")`)
 
-### Important: Update translations when UI changes
-
-**ALWAYS update `data/translations.json` when adding or modifying UI text elements.** This includes:
-- New button labels, modal titles, form labels
-- Toast notifications, error messages
-- Any user-facing text marked with `tr()` or `class="i18n"`
-
-The translations file contains both English and French entries. When adding new text:
-1. Add the English entry
-2. Add the corresponding French translation (use a translation tool if needed)
-3. Ensure both entries are in the same object
+**ALWAYS update `data/translations.json` when adding or modifying UI text elements.**
 
 ## SASS/CSS
 
@@ -970,7 +901,7 @@ The translations file contains both English and French entries. When adding new 
 - Partials: `_buttons.scss`, `_cards.scss`, `_layout.scss`, `_modals.scss`, `_tables.scss`, `_utils.scss`
 - Variables: `www/sass/variables.scss`
 - Output: `www/css/main.min.css` (compressed)
-- Compilation: `R/shiny-utils/sass.R` (run manually when SASS changes)
+- Compilation: `R/shiny-utils/sass.R` (run automatically on app restart)
 
 ## Development Notes
 
