@@ -30,3 +30,4 @@ dbplyr
 R6
 httr2
 logger
+data.table

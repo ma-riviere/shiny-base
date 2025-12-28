@@ -26,20 +26,24 @@ upload_dataset_server <- function(id) {
         # ------ REACTIVE ------------------------------------------------------
 
         # Show modal when triggered
-        on("show_upload_modal", {
-            # Reset state (to not see the names of the previously uploaded files)
-            values$error <- NULL
-            values$status <- NULL
-            values$parsed_files <- list()
-            file_input_trigger(file_input_trigger() + 1) # Force re-render of fileInput
-            showModal(upload_dataset_modal_ui(ns))
-        })
+        on(
+            "show_upload_modal",
+            {
+                # Reset state (to not see the names of the previously uploaded files)
+                values$error <- NULL
+                values$status <- NULL
+                values$parsed_files <- list()
+                file_input_trigger(file_input_trigger() + 1) # Force re-render of fileInput
+                showModal(upload_dataset_modal_ui(ns))
+            },
+            label = "upload_show_modal"
+        )
 
         # Enable/disable upload button based on validation state
-        observe(shinyjs::toggleState("upload_btn", condition = iv$is_valid()))
+        observe(shinyjs::toggleState("upload_btn", condition = iv$is_valid()), label = "upload_toggle_btn")
 
         # Parse uploaded files and validate
-        observeEvent(input$file, {
+        observeEvent(input$file, label = "upload_parse_file", {
             req(input$file)
             req(iv$is_valid())
 
@@ -105,7 +109,7 @@ upload_dataset_server <- function(id) {
         })
 
         # Handle upload button click
-        observeEvent(input$upload_btn, {
+        observeEvent(input$upload_btn, label = "upload_process", {
             # Validation is handled by shinyvalidate, but double-check
             if (!iv$is_valid() || length(values$parsed_files) == 0) {
                 return()

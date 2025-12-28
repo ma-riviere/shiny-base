@@ -25,23 +25,32 @@ navbar_server <- function(id) {
                 # Store in cookie only on explicit selection
                 set_language_cookie(input$language, session)
             },
-            ignoreInit = TRUE
+            ignoreInit = TRUE,
+            label = "navbar_language_switch"
         )
 
         # ------ PROFILE -------------------------------------------------------
 
         # Open profile modal via trigger
-        observeEvent(input$open_profile, {
-            trigger("show_profile_modal")
-        })
+        observeEvent(
+            input$open_profile,
+            {
+                trigger("show_profile_modal")
+            },
+            label = "navbar_open_profile"
+        )
 
         # Sync language selector when profile is updated
-        on("profile_updated", {
-            new_lang <- purrr::pluck(session$userData$auth0_info, "user_metadata", "language")
-            if (!purrr::is_empty(new_lang)) {
-                updateSelectInput(session, "language", selected = new_lang)
-            }
-        })
+        on(
+            "profile_updated",
+            {
+                new_lang <- purrr::pluck(session$userData$auth0_info, "user_metadata", "language")
+                if (!purrr::is_empty(new_lang)) {
+                    updateSelectInput(session, "language", selected = new_lang)
+                }
+            },
+            label = "navbar_sync_profile_lang"
+        )
 
         # ------ OUTPUT --------------------------------------------------------
 

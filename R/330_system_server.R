@@ -90,7 +90,7 @@ system_server <- function(id, is_active) {
         observeEvent(input$refresh_logs, trigger("refresh_logs"))
 
         # ------ OBSERVER: Scroll to bottom ------------------------------------
-        observeEvent(input$scroll_to_bottom, {
+        observeEvent(input$scroll_to_bottom, label = "system_scroll_to_bottom", {
             shinyjs::runjs(sprintf(
                 "document.getElementById('%s').scrollTop = document.getElementById('%s').scrollHeight;",
                 ns("log_container"),

@@ -31,3 +31,9 @@ SMTP_USER=xxxxxx@smtp-brevo.com
 SMTP_KEY=
 
 SEND_ERROR_EMAILS=TRUE
+
+# OTel - Memory exporter for in-app trace viewer (dev mode)
+# Format: <package>::<provider> -> uses otelsdk::tracer_provider_memory$new()
+## Other option: otlp/file for jsonl (with OTEL_EXPORTER_OTLP_TRACES_FILE & OTEL_EXPORTER_OTLP_TRACES_FILE_ALIAS)
+OTEL_TRACES_EXPORTER=otelsdk::tracer_provider_memory
+OTEL_R_EXPORTER_MEMORY_TRACES_BUFFER_SIZE=5000

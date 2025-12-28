@@ -23,17 +23,22 @@ sidebar_server <- function(id, active_page = reactive(NULL), r) {
                 updateSelectInput(session, "selected_dataset", selected = as.character(r$selected_dataset_id))
             },
             ignoreNULL = TRUE,
-            ignoreInit = TRUE
+            ignoreInit = TRUE,
+            label = "sidebar_sync_shared_to_dropdown"
         )
 
         # Sync dropdown TO shared state (when user changes dropdown)
-        observeEvent(input$selected_dataset, {
-            if (purrr::is_empty(input$selected_dataset) || input$selected_dataset == "") {
-                r$selected_dataset_id <- NULL
-            } else {
-                r$selected_dataset_id <- as.integer(input$selected_dataset)
-            }
-        })
+        observeEvent(
+            input$selected_dataset,
+            {
+                if (purrr::is_empty(input$selected_dataset) || input$selected_dataset == "") {
+                    r$selected_dataset_id <- NULL
+                } else {
+                    r$selected_dataset_id <- as.integer(input$selected_dataset)
+                }
+            },
+            label = "sidebar_sync_dropdown_to_shared"
+        )
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -76,17 +81,26 @@ sidebar_server <- function(id, active_page = reactive(NULL), r) {
                     r$selected_dataset_id <- as.integer(new_selected)
                 }
             },
-            ignoreInit = FALSE
+            ignoreInit = FALSE,
+            label = "sidebar_refresh_datasets"
         )
 
         # Track filter changes
-        observeEvent(input$row_count_filter, {
-            values$row_count_filter <- input$row_count_filter
-        })
+        observeEvent(
+            input$row_count_filter,
+            {
+                values$row_count_filter <- input$row_count_filter
+            },
+            label = "sidebar_filter_row_count"
+        )
 
-        observeEvent(input$age_filter, {
-            values$age_filter <- input$age_filter
-        })
+        observeEvent(
+            input$age_filter,
+            {
+                values$age_filter <- input$age_filter
+            },
+            label = "sidebar_filter_age"
+        )
 
         # Update slider range when datasets are added or deleted
         observeEvent(
@@ -133,11 +147,12 @@ sidebar_server <- function(id, active_page = reactive(NULL), r) {
                     values$prev_max_rows <- max_rows
                 }
             },
-            priority = 0
+            priority = 0,
+            label = "sidebar_update_slider_range"
         )
 
         # Show/hide sections based on active page
-        observeEvent(active_page(), {
+        observeEvent(active_page(), label = "sidebar_visibility_toggle", {
             page <- active_page()
             if (purrr::is_empty(page)) {
                 return()

@@ -11,13 +11,14 @@ dataset_server <- function(
             data = NULL
         )
 
-        has_data <- reactive(!purrr::is_empty(values$data))
+        has_data <- reactive(!purrr::is_empty(values$data), label = "dataset_has_data")
 
         # ------ REACTIVE ------------------------------------------------------
 
         # Load dataset when selection changes or refresh_datasets is triggered
         observeEvent(
             list(watch("refresh_datasets"), selected_dataset_id()),
+            label = "dataset_load",
             {
                 dataset_id <- selected_dataset_id()
 
@@ -63,6 +64,7 @@ dataset_server <- function(
         # (row_id is reactive so module updates when user switches datasets)
         observeEvent(
             values$dataset,
+            label = "dataset_init_summary_row",
             {
                 dataset_row_server(
                     "summary_row",
@@ -76,7 +78,7 @@ dataset_server <- function(
         )
 
         # Upload modal trigger
-        observeEvent(input$open_upload, trigger("show_upload_modal"))
+        observeEvent(input$open_upload, trigger("show_upload_modal"), label = "dataset_open_upload")
 
         # ------ OUTPUT --------------------------------------------------------
 
@@ -112,10 +114,10 @@ dataset_server <- function(
         })
 
         # Show/hide empty state based on data presence
-        observe(shinyjs::toggle("empty_state", condition = !has_data()))
+        observe(shinyjs::toggle("empty_state", condition = !has_data()), label = "dataset_empty_toggle")
 
         # Navigate to home page
-        observeEvent(input$go_home, {
+        observeEvent(input$go_home, label = "dataset_go_home", {
             if (!is.null(nav_select_callback)) {
                 nav_select_callback("home")
             }

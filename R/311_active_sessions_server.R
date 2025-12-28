@@ -38,11 +38,9 @@ active_sessions_server <- function(id, is_active) {
 
             # For each user_id, find the most recently active session (by updated_at)
             # All other sessions for that user will be greyed out
-            most_recent_by_user <- sessions |>
-                dplyr::group_by(user_id) |>
-                dplyr::slice_max(updated_at, n = 1, with_ties = FALSE) |>
-                dplyr::ungroup() |>
-                dplyr::pull(id)
+            sessions_dt <- data.table::as.data.table(sessions)
+            data.table::setorder(sessions_dt, user_id, -updated_at)
+            most_recent_by_user <- sessions_dt[, .SD[1L], by = user_id]$id
 
             # Build cards for each session
             cards <- purrr::pmap(sessions, \(id, session_token, user_id, auth0_sub, started_at, updated_at, ...) {

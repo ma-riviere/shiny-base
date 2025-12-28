@@ -78,7 +78,8 @@ server <- function(input, output, session) {
             "show_edit_dataset_modal",
             "show_profile_modal",
             "profile_updated",
-            "refresh_logs"
+            "refresh_logs",
+            "refresh_otel"
         )
 
         # Shared state for cross-module communication ("Petit r" pattern)
@@ -106,12 +107,12 @@ server <- function(input, output, session) {
         )
 
         # Admin module - always instantiate but gated by req(is_admin()) inside
-        admin_server("admin")
+        admin_server("admin", active_page = reactive(input$nav))
 
         # Dynamically inject admin nav panel only for admins (server-side rendering)
         # This ensures the admin UI HTML is never sent to non-admin clients
         # Uses once = TRUE to prevent duplicate insertion when language changes
-        observe({
+        observe(label = "server_admin_nav_insert", {
             req(is_admin(session))
             bslib::nav_insert(
                 id = "nav",
@@ -134,7 +135,7 @@ server <- function(input, output, session) {
         # Resolve language without Auth0 (cookie -> browser -> default)
         # Only apply if navbar language input doesn't already have a valid value
         # (e.g., from bookmark restoration)
-        observe({
+        observe(label = "server_resolve_lang_no_auth", {
             current_lang <- input[["navbar-language"]]
             if (purrr::is_empty(current_lang) || current_lang == getOption("default_language", "en")) {
                 resolved_lang <- resolve_language(NULL, session)
@@ -143,7 +144,7 @@ server <- function(input, output, session) {
         }) |>
             bindEvent(TRUE, once = TRUE)
     } else {
-        observe({
+        observe(label = "server_auth_gate", {
             req(session$userData$auth0_info)
 
             if (!isTRUE(session$userData$auth0_info$email_verified)) {
@@ -178,7 +179,7 @@ server <- function(input, output, session) {
             init_modules()
 
             # Session heartbeat: update updated_at every 5 minutes
-            observe({
+            observe(label = "server_session_heartbeat", {
                 invalidateLater(5 * 60 * 1000)
                 req(session$userData$session_db_id)
                 tryCatch(
@@ -199,7 +200,7 @@ server <- function(input, output, session) {
         #
         # Only apply if navbar language doesn't already have a non-default value
         # (e.g., from bookmark restoration).
-        observe({
+        observe(label = "server_resolve_lang_with_auth", {
             # Wait for auth0_info to be available
             req(session$userData$auth0_info)
 
@@ -230,7 +231,7 @@ server <- function(input, output, session) {
     }
 
     # Reload button (outside gate so it works for unverified users)
-    observeEvent(input$reload_page, {
+    observeEvent(input$reload_page, label = "server_reload_page", {
         session$reload()
     })
 
@@ -239,6 +240,7 @@ server <- function(input, output, session) {
     # and offer to restore it via a toast notification.
     observeEvent(
         input$session_status,
+        label = "server_bookmark_restore_offer",
         {
             if (input$session_status != "fresh_login") {
                 return()

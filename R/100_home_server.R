@@ -28,11 +28,12 @@ home_server <- function(
                 req(user_id)
                 values$datasets <- db_get_user_datasets(user_id)
             },
-            ignoreInit = FALSE
+            ignoreInit = FALSE,
+            label = "home_fetch_datasets"
         )
 
         # Filter datasets based on row count slider and date range from sidebar
-        filtered_datasets <- reactive({
+        filtered_datasets <- reactive(label = "home_filtered_datasets", {
             req(values$datasets)
             row_filter_range <- row_count_filter()
             date_filter_range <- age_filter()
@@ -61,10 +62,10 @@ home_server <- function(
         })
 
         # Open upload modal
-        observeEvent(input$open_upload, trigger("show_upload_modal"))
+        observeEvent(input$open_upload, trigger("show_upload_modal"), label = "home_open_upload")
 
         # Initialize row module servers ONCE per new dataset ID
-        observeEvent(values$datasets, {
+        observeEvent(values$datasets, label = "home_init_row_modules", {
             req(values$datasets)
             current_ids <- paste0("row_", values$datasets$id)
             new_ids <- setdiff(current_ids, loaded_row_ids())
