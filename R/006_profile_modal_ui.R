@@ -1,21 +1,10 @@
-# Profile modal UI
-# Contains the modal dialog for viewing/editing user profile
+# Profile UI components
+# Profile modal for current user (editable)
+# Uses extract_profile_info() from shiny-utils/auth0.R
 
+# Profile modal UI (editable, for current user)
 profile_modal_ui <- function(ns, auth_info) {
-    current_nickname <- purrr::pluck(auth_info, "nickname") %||% ""
-    picture_url <- purrr::pluck(auth_info, "picture")
-    email <- purrr::pluck(auth_info, "email") %||% ""
-    current_language <- purrr::pluck(auth_info, "user_metadata", "language") %||%
-        i18n$get_key_translation()
-
-    # Extract roles from custom claim
-    roles_claim <- getOption("auth0_roles_claim", "https://shiny-base.ma-riviere.com/roles")
-    roles <- purrr::pluck(auth_info, roles_claim) %||% character(0)
-    roles_text <- if (purrr::is_empty(roles)) {
-        tr("None")
-    } else {
-        paste(roles, collapse = ", ")
-    }
+    info <- extract_profile_info(auth_info)
 
     modalDialog(
         title = tr("Profile"),
@@ -31,11 +20,11 @@ profile_modal_ui <- function(ns, auth_info) {
         ),
         div(
             class = "profile-modal-content",
-            if (!purrr::is_empty(picture_url)) {
+            if (!purrr::is_empty(info$picture_url)) {
                 div(
                     class = "profile-picture-section",
                     tags$img(
-                        src = picture_url,
+                        src = info$picture_url,
                         class = "profile-picture",
                         alt = "Profile picture"
                     )
@@ -46,12 +35,12 @@ profile_modal_ui <- function(ns, auth_info) {
                 div(
                     class = "mb-3",
                     tags$label(class = "form-label i18n", `data-key` = "Email", tr("Email")),
-                    tags$div(class = "form-control-plaintext", email)
+                    tags$div(class = "form-control-plaintext", info$email)
                 ),
                 div(
                     class = "mb-3",
                     tags$label(class = "form-label i18n", `data-key` = "Roles", tr("Roles")),
-                    tags$div(class = "form-control-plaintext", roles_text)
+                    tags$div(class = "form-control-plaintext", info$roles_text)
                 ),
                 div(
                     class = "mb-3",
@@ -60,7 +49,7 @@ profile_modal_ui <- function(ns, auth_info) {
                         label = tagList(
                             tags$span(class = "i18n", `data-key` = "Nickname", tr("Nickname"))
                         ),
-                        value = current_nickname
+                        value = info$nickname
                     )
                 ),
                 div(
@@ -75,7 +64,7 @@ profile_modal_ui <- function(ns, auth_info) {
                             )
                         ),
                         choices = get_language_choices(),
-                        selected = current_language
+                        selected = info$language
                     )
                 )
             )

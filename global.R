@@ -1,6 +1,7 @@
 suppressPackageStartupMessages({
     library(shiny)
     library(shiny.i18n)
+    library(DT) # Avoid Global error: object 'datatables_html' not found
 })
 
 # ------ CONFIG ----------------------------------------------------------------

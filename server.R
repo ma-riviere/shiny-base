@@ -77,7 +77,8 @@ server <- function(input, output, session) {
             "show_upload_modal",
             "show_edit_dataset_modal",
             "show_profile_modal",
-            "profile_updated"
+            "profile_updated",
+            "refresh_logs"
         )
 
         # Shared state for cross-module communication ("Petit r" pattern)
