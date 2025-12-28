@@ -90,10 +90,10 @@ db_create_dataset <- function(user_id, name, data_df) {
             "INSERT INTO datasets (user_id, name, data) VALUES ({user_id}, {name}, {data_json})",
             .con = con
         )
-        DBI::dbExecute(con, sql)
+        pool::dbExecute(con, sql)
 
         # Get the inserted ID (SQLite-specific; PostgreSQL would use RETURNING clause)
-        DBI::dbGetQuery(con, "SELECT last_insert_rowid() as id")$id
+        pool::dbGetQuery(con, "SELECT last_insert_rowid() as id")$id
     })
 }
 
