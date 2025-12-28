@@ -12,32 +12,20 @@ admin_ui <- function(id) {
                 tr("System administration and monitoring.")
             )
         ),
-        # ------ PLACEHOLDER ---------------------------------------------------
-        div(
-            class = "content-section",
-            div(
-                class = "card",
-                div(
-                    class = "card-body",
-                    p(
-                        class = "text-muted",
-                        textOutput(ns("placeholder_text"))
-                    ),
-                    tags$ul(
-                        tags$li(
-                            strong("Usage analytics:"),
-                            " See MATOMO.md for Matomo integration (visitor tracking, devices, retention)"
-                        ),
-                        tags$li(
-                            strong("Performance tracing:"),
-                            " Use Shiny's native OpenTelemetry (reactive execution, timing, cross-process tracing)"
-                        ),
-                        tags$li(
-                            strong("Future features:"),
-                            " User management, system health monitoring, app configuration"
-                        )
-                    )
-                )
+        # ------ SUB-TABS ------------------------------------------------------
+        bslib::navset_card_tab(
+            id = ns("admin_tabs"),
+            # ------ AUTH0 / USERS TAB -----------------------------------------
+            bslib::nav_panel(
+                title = tags$span(class = "i18n", `data-key` = "Users", tr("Users")),
+                value = "users",
+                auth0_ui(ns("auth0"))
+            ),
+            # ------ SYSTEM TAB ------------------------------------------------
+            bslib::nav_panel(
+                title = tags$span(class = "i18n", `data-key` = "System", tr("System")),
+                value = "system",
+                system_ui(ns("system"))
             )
         )
     )
