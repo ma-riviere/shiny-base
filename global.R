@@ -79,6 +79,15 @@ void_ <- lapply(
 init_logging()
 setup_global_error_emails()
 
+# ------ OTEL ------------------------------------------------------------------
+# Memory-based trace storage for admin trace viewer
+# Configured via .Renviron: OTEL_TRACES_EXPORTER=otelsdk::tracer_provider_memory
+OTEL_TRACER_PROVIDER <- otel_setup_tracer()
+OTEL_ENABLED <- !is.null(OTEL_TRACER_PROVIDER)
+if (isTRUE(OTEL_ENABLED)) {
+    log_info("[OTEL] Tracer initialized (provider: memory)")
+}
+
 # ------ AUTH0 -----------------------------------------------------------------
 # Set options(auth0_disable = TRUE) to skip auth during development
 if (isTRUE(getOption("shiny.testmode"))) {

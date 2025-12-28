@@ -21,6 +21,12 @@ admin_ui <- function(id) {
                 value = "users",
                 auth0_ui(ns("auth0"))
             ),
+            # ------ OTEL TRACES TAB -------------------------------------------
+            bslib::nav_panel(
+                title = tags$span(class = "i18n", `data-key` = "Traces", tr("Traces")),
+                value = "otel",
+                otel_ui(ns("otel"))
+            ),
             # ------ SYSTEM TAB ------------------------------------------------
             bslib::nav_panel(
                 title = tags$span(class = "i18n", `data-key` = "System", tr("System")),

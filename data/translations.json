@@ -351,6 +351,50 @@
         {
             "en": "Roles",
             "fr": "Rôles"
+        },
+        {
+            "en": "Traces",
+            "fr": "Traces"
+        },
+        {
+            "en": "No spans",
+            "fr": "Aucun span"
+        },
+        {
+            "en": "No traces captured yet",
+            "fr": "Aucune trace capturée"
+        },
+        {
+            "en": "Interact with the app to generate traces",
+            "fr": "Interagissez avec l'app pour générer des traces"
+        },
+        {
+            "en": "OTel not configured",
+            "fr": "OTel non configuré"
+        },
+        {
+            "en": "To enable OpenTelemetry tracing:",
+            "fr": "Pour activer le traçage OpenTelemetry :"
+        },
+        {
+            "en": "Clear traces",
+            "fr": "Effacer les traces"
+        },
+        {
+            "en": "Trace viewer disabled in production",
+            "fr": "Visualiseur de traces désactivé en production"
+        },
+        {
+            "en": "The in-app trace viewer is only available in development mode.",
+            "fr": "Le visualiseur de traces intégré n'est disponible qu'en mode développement."
+        },
+        {
+            "en": "For production tracing, use an external OTLP backend:",
+            "fr": "Pour le traçage en production, utilisez un backend OTLP externe :"
+        },
+        {
+            "en": "Configure via OTEL_EXPORTER_OTLP_ENDPOINT in .Renviron",
+            "fr": "Configurer via OTEL_EXPORTER_OTLP_ENDPOINT dans .Renviron"
         }
     ]
 }

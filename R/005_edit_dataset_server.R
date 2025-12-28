@@ -9,7 +9,7 @@ edit_dataset_server <- function(id) {
         )
 
         # Show modal when triggered
-        on("show_edit_dataset_modal", {
+        on("show_edit_dataset_modal", label = "edit_dataset_show_modal", {
             dataset_id <- session$userData$edit_dataset_id
             dataset_name <- session$userData$edit_dataset_name
             req(dataset_id, dataset_name)
@@ -19,7 +19,7 @@ edit_dataset_server <- function(id) {
         })
 
         # Confirm rename
-        observeEvent(input$confirm_rename, {
+        observeEvent(input$confirm_rename, label = "edit_dataset_confirm_rename", {
             req(values$pending_rename_id)
             new_name <- trimws(input$new_dataset_name)
 

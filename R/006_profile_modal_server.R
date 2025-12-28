@@ -7,14 +7,14 @@ profile_modal_server <- function(id) {
 
         # ------ MODAL DISPLAY -------------------------------------------------
 
-        on("show_profile_modal", {
+        on("show_profile_modal", label = "profile_show_modal", {
             req(session$userData$auth0_info)
             showModal(profile_modal_ui(ns, session$userData$auth0_info))
         })
 
         # ------ SAVE PROFILE --------------------------------------------------
 
-        observeEvent(input$save_profile, {
+        observeEvent(input$save_profile, label = "profile_save", {
             auth_info <- session$userData$auth0_info
             new_nickname <- input$profile_nickname
             new_language <- input$profile_language

@@ -729,8 +729,33 @@ log_error("Failed to save: {e$message}")
 
 **Purpose:** Performance tracing, distributed debugging, production observability.
 
+**Local Trace Viewer (Admin Tab):**
+
+The app includes a built-in trace viewer in Admin → Traces. Uses `otelsdk::tracer_provider_memory`
+to store spans in memory, which are fetched and cached by the admin module for display.
+
+Configuration in `.Renviron`:
 ```bash
-# .Renviron (no code changes needed)
+OTEL_TRACES_EXPORTER=otelsdk::tracer_provider_memory
+OTEL_R_EXPORTER_MEMORY_TRACES_BUFFER_SIZE=5000
+```
+
+Implementation:
+- Initialized in `global.R` via `otel_setup_tracer()` (reads config from env vars)
+- Reusable utilities in `R/shiny-utils/otel.R` (parsing, caching, rendering)
+- Admin module in `R/320_otel_ui.R` and `R/320_otel_server.R`
+- Requires `otel` and `otelsdk` packages (optional - graceful degradation if missing)
+- Disabled in production (ENV=prod) - UI shows message to use external backend instead
+
+**Alternative: File-based storage** (`otel_read_jsonl()` in utilities supports reading from JSONL files if
+configured with `OTEL_TRACES_EXPORTER=otlp/file`)
+
+**External Backend (Production):**
+
+For production, configure an external backend alongside or instead of local memory storage:
+
+```bash
+# .Renviron
 OTEL_EXPORTER_OTLP_ENDPOINT=https://your-otel-collector:4318
 OTEL_SERVICE_NAME=shiny-base
 ```
@@ -739,7 +764,7 @@ OTEL_SERVICE_NAME=shiny-base
 - Cross-process tracing (mirai background processes)
 - External API call tracking (httr2)
 - Code location attributes (file, line, column)
-- Export to Grafana, Jaeger, or any OTLP-compatible backend
+- Export to Grafana, Jaeger, Logfire, or any OTLP-compatible backend
 - See: https://shiny.posit.co/r/articles/improve/opentelemetry/
 
 ### 3. Matomo (Optional - for User Analytics)

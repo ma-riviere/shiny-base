@@ -13,7 +13,7 @@ dataset_row_server <- function(
         ns <- session$ns
 
         # Gate: stop all logic if this row no longer exists in data
-        my_data <- reactive({
+        my_data <- reactive(label = paste0("row_", id, "_data"), {
             data <- all_datasets()
             rid <- row_id()
             req(rid)
@@ -22,13 +22,13 @@ dataset_row_server <- function(
         })
 
         # ------ CLICK (row navigation) ----------------------------------------
-        observeEvent(input$row_click, {
+        observeEvent(input$row_click, label = paste0("row_", id, "_click"), {
             req(on_click) # Only from the home page
             on_click(row_id())
         })
 
         # ------ EDIT ----------------------------------------------------------
-        observeEvent(input$edit, {
+        observeEvent(input$edit, label = paste0("row_", id, "_edit"), {
             req(my_data())
             session$userData$edit_dataset_id <- row_id()
             session$userData$edit_dataset_name <- my_data()$name
@@ -36,7 +36,7 @@ dataset_row_server <- function(
         })
 
         # ------ DELETE --------------------------------------------------------
-        observeEvent(input$delete, {
+        observeEvent(input$delete, label = paste0("row_", id, "_delete"), {
             req(my_data())
 
             showModal(modalDialog(
@@ -59,7 +59,7 @@ dataset_row_server <- function(
             ))
         })
 
-        observeEvent(input$confirm_delete, {
+        observeEvent(input$confirm_delete, label = paste0("row_", id, "_confirm_delete"), {
             tryCatch(
                 {
                     db_delete_dataset(row_id())
