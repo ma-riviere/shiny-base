@@ -13,8 +13,8 @@
             "fr": "Accueil"
         },
         {
-            "en": "Dataset",
-            "fr": "Jeu de données"
+            "en": "Explore",
+            "fr": "Explorer"
         },
         {
             "en": "Logout",
@@ -119,10 +119,6 @@
         {
             "en": "Please select a valid CSV file",
             "fr": "Veuillez sélectionner un fichier CSV valide"
-        },
-        {
-            "en": "Dataset Explorer",
-            "fr": "Explorateur de jeu de données"
         },
         {
             "en": "Select a dataset to explore",
@@ -395,6 +391,66 @@
         {
             "en": "Configure via OTEL_EXPORTER_OTLP_ENDPOINT in .Renviron",
             "fr": "Configurer via OTEL_EXPORTER_OTLP_ENDPOINT dans .Renviron"
+        },
+        {
+            "en": "Model",
+            "fr": "Modèle"
+        },
+        {
+            "en": "Fit linear models to your data",
+            "fr": "Ajuster des modèles linéaires à vos données"
+        },
+        {
+            "en": "Model Equation",
+            "fr": "Équation du modèle"
+        },
+        {
+            "en": "Fit",
+            "fr": "Ajuster"
+        },
+        {
+            "en": "Enter an R formula (e.g., y ~ x1 + x2, y ~ poly(x, 2))",
+            "fr": "Entrez une formule R (ex: y ~ x1 + x2, y ~ poly(x, 2))"
+        },
+        {
+            "en": "Model Summary",
+            "fr": "Résumé du modèle"
+        },
+        {
+            "en": "Select a dataset from the sidebar to start modeling",
+            "fr": "Sélectionnez un jeu de données dans la barre latérale pour commencer"
+        },
+        {
+            "en": "Saved Models",
+            "fr": "Modèles enregistrés"
+        },
+        {
+            "en": "Load Model",
+            "fr": "Charger un modèle"
+        },
+        {
+            "en": "Model fitted successfully",
+            "fr": "Modèle ajusté avec succès"
+        },
+        {
+            "en": "Model fitting failed",
+            "fr": "Échec de l'ajustement du modèle"
+        },
+        {
+            "en": "Model saved",
+            "fr": "Modèle enregistré"
+        },
+        {
+            "en": "Error saving model",
+            "fr": "Erreur lors de l'enregistrement du modèle"
+        },
+        {
+            "en": "Error loading model",
+            "fr": "Erreur lors du chargement du modèle"
+        },
+        {
+            "en": "Model not found",
+            "fr": "Modèle non trouvé"
         }
     ]
 }

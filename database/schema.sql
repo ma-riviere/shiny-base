@@ -16,3 +16,20 @@ CREATE TABLE IF NOT EXISTS datasets (
 CREATE INDEX IF NOT EXISTS idx_datasets_user_id ON datasets(user_id);
 -- Note: updated_at is managed by the application layer, not a trigger,
 -- because the schema is executed via split-by-semicolon which breaks trigger syntax.
+
+-- Models table
+-- Stores fitted models (butchered + serialized). Metrics are computed on display.
+CREATE TABLE IF NOT EXISTS models (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    dataset_id INTEGER NOT NULL,
+    formula TEXT NOT NULL,
+    model_blob BLOB,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (dataset_id) REFERENCES datasets(id) ON DELETE CASCADE,
+    UNIQUE(user_id, dataset_id, formula)
+);
+CREATE INDEX IF NOT EXISTS idx_models_user_id ON models(user_id);
+CREATE INDEX IF NOT EXISTS idx_models_dataset_id ON models(dataset_id);

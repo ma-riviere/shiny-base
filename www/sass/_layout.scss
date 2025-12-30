@@ -8,6 +8,11 @@ body {
     color: $gray-800;
 }
 
+// Page container - position relative so overlays are scoped to page content, not entire viewport
+.page {
+    position: relative;
+}
+
 // Page layouts
 .page-header {
     margin-bottom: $spacing-xl;

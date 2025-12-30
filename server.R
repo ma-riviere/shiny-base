@@ -1,6 +1,19 @@
 server <- function(input, output, session) {
     session$allowReconnect(TRUE)
 
+    # ------ APP LOADER --------------------------------------------------------
+    # Track initialization steps; hide loader when all complete
+    init_state <- reactiveValues(
+        auth = FALSE, # Auth0 check complete (or disabled)
+        modules = FALSE # Modules initialized
+    )
+    restore_ready <- is_restore_ready(session)
+
+    observe(label = "server_hide_loader", {
+        req(init_state$auth, init_state$modules, restore_ready())
+        waiter::waiter_hide()
+    })
+
     # ------ ERROR HANDLING ----------------------------------------------------
     setup_session_error_emails(session)
 
@@ -74,6 +87,7 @@ server <- function(input, output, session) {
         # Initialize event triggers for cross-module communication
         init(
             "refresh_datasets",
+            "refresh_models",
             "show_upload_modal",
             "show_edit_dataset_modal",
             "show_profile_modal",
@@ -85,11 +99,12 @@ server <- function(input, output, session) {
         # Shared state for cross-module communication ("Petit r" pattern)
         # Prefer this over session$userData for reactive state that multiple modules need to read/write
         r <- reactiveValues(
-            selected_dataset_id = NULL
+            selected_dataset_id = NULL,
+            selected_model_id = NULL
         )
 
         navbar_server("navbar")
-        sidebar_module <- sidebar_server("sidebar", active_page = reactive(input$nav), r = r)
+        sidebar_module <- sidebar_server("sidebar", r = r)
         profile_modal_server("profile")
         upload_dataset_server("upload")
         edit_dataset_server("edit_dataset")
@@ -104,6 +119,13 @@ server <- function(input, output, session) {
             "dataset",
             selected_dataset_id = reactive(r$selected_dataset_id),
             nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
+        )
+        model_server(
+            "model",
+            selected_dataset_id = reactive(r$selected_dataset_id),
+            selected_model_id = reactive(r$selected_model_id),
+            active_page = reactive(input$nav),
+            r = r
         )
 
         # Admin module - always instantiate but gated by req(is_admin()) inside
@@ -121,7 +143,7 @@ server <- function(input, output, session) {
                     value = "admin",
                     admin_ui("admin")
                 ),
-                target = "dataset",
+                target = "model",
                 position = "after",
                 session = session
             )
@@ -130,8 +152,10 @@ server <- function(input, output, session) {
     }
 
     if (isTRUE(getOption("auth0_disable"))) {
+        init_state$auth <- TRUE
         session$userData$user <- db_get_or_create_temp_user(session$token)
         init_modules()
+        init_state$modules <- TRUE
         # Resolve language without Auth0 (cookie -> browser -> default)
         # Only apply if navbar language input doesn't already have a valid value
         # (e.g., from bookmark restoration)
@@ -177,6 +201,8 @@ server <- function(input, output, session) {
             }
 
             init_modules()
+            init_state$auth <- TRUE
+            init_state$modules <- TRUE
 
             # Session heartbeat: update updated_at every 5 minutes
             observe(label = "server_session_heartbeat", {

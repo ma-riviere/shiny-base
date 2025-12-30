@@ -4,7 +4,7 @@ Base template for Shiny apps with Auth0 authentication and server-side bookmarki
 
 **Auth0 credentials:** `ma.riviere987@gmail.com` / `auth0test&15`
 
-**LLM Resource:** When unsure about Shiny-related issues, consult/brainstorm with the Shiny NotebookLM (skill) - a domain expert with up-to-date documentation, code examples, books, and tutorials.
+**LLM Resource:** When unsure about Shiny-related issues, consult/brainstorm with the Shiny NotebookLM (skill).
 
 ---
 
@@ -12,809 +12,218 @@ Base template for Shiny apps with Auth0 authentication and server-side bookmarki
 
 ## Tech Stack
 
-- **Framework**: Shiny with `bslib` for Bootstrap 5 UI
-- **Database**: PostgreSQL (prod) / SQLite (dev/test) via `pool` package
-- **Auth**: Auth0 via `ma-riviere/auth0r` package
-- **i18n**: `shiny.i18n` for translations (EN/FR)
+- **Framework**: Shiny + bslib (Bootstrap 5)
+- **Database**: PostgreSQL (prod) / SQLite (dev/test) via `pool`
+- **Auth**: Auth0 via `ma-riviere/auth0r`
 - **Email**: `blastula` via Brevo SMTP
-- **Styling**: SASS compiled to CSS
+- **Observability**: OpenTelemetry (Shiny 1.12+)
 
 ## Directory Structure
 
 ```
 shiny-base/
-├── global.R              # App-wide initialization, options, database pool
-├── ui.R                  # Main UI, wraps Auth0, loads base-level modules
-├── server.R              # Main server logic, module instantiation, bookmarking
-├── R/                    # All modules and helpers
-│   ├── 00x_*_ui/server.R # Shared sub-modules (navbar, sidebar, dataset_row, etc.)
-│   ├── x00_*_ui/server.R # Base-level page modules (home, dataset)
-│   ├── helpers_*.R       # Non-module helper functions
+├── global.R              # App-wide init, options, database pool
+├── ui.R                  # Main UI, wraps Auth0, base-level modules
+├── server.R              # Main server, module instantiation, bookmarking
+├── R/                    # Modules and helpers
+│   ├── 00x_*             # Shared sub-modules (navbar, sidebar, dataset_row)
+│   ├── 1xx_*             # Home module
+│   ├── 2xx_*             # Dataset (Explore) module
+│   ├── 3xx_*             # Model module (async fitting via ExtendedTask)
+│   ├── 9xx_*             # Admin module (always last)
+│   ├── helpers_*.R       # Non-module functions (includes model DB ops)
 │   └── shiny-utils/      # Reusable utilities (git submodule)
-│       ├── 000_logging.R # Structured logging
-│       ├── auth0.R       # Auth0 utils (overriding/relying on ma-riviere/auth0r)
-│       ├── bookmarks.R   # Bookmark CRUD + filesystem + lifecycle helpers
-│       ├── caching.R     # Cache utilities
-│       ├── database.R    # DB connection pool management
-│       ├── error_handling.R
-│       ├── i18n.R        # Language resolution
-│       ├── sass.R        # SASS compilation
-│       ├── scheduler.R   # Recurring task scheduler (uses `later`)
-│       ├── sessions.R    # Session tracking CRUD + cleanup
-│       ├── shinylogs.R   # (Unused) Session replay utility - see file for schema
-│       ├── triggers.R    # Event broadcast system
-│       ├── users.R       # User CRUD
-│       └── validation.R  # Custom shinyvalidate rules
-├── www/                  # Static assets
-│   ├── css/              # Compiled CSS (main.min.css)
-│   ├── sass/             # SCSS source files
-│   │   ├── main.scss     # Entry point
-│   │   ├── variables.scss
-│   │   ├── navbar.scss, typo.scss
-│   │   └── _*.scss       # Partials (buttons, cards, layout, modals, navs, tables, utils)
-│   ├── js/               # JavaScript helpers
-│   ├── html/             # HTML templates (for htmltools::htmlTemplate)
-│   └── img/              # Images
-├── data/                 # Data files (translations.json)
-├── database/             # DB schema
-│   ├── schema-base.sql   # Base tables (users, sessions, bookmarks)
-│   └── schema.sql        # App-specific tables (datasets)
-├── tests/                # shinytest2, testthat tests
-├── renv/                 # renv configuration
-│   └── profiles/         # dev-4.5, docker-4.5
+│       ├── logging.R, auth0.R, bookmarks.R, caching.R
+│       ├── database.R, error_handling.R, i18n.R, loading.R
+│       ├── otel.R, sass.R, scheduler.R, sessions.R
+│       ├── triggers.R, users.R, validation.R
+│       └── shinylogs.R   # (Unused) Session replay - see file for schema
+├── www/                  # Static assets (css/, sass/, js/, html/, img/)
+├── data/                 # translations.json
+├── database/             # schema-base.sql (users, sessions, bookmarks), schema.sql (app-specific)
+├── tests/                # shinytest2, testthat
 ├── _auth0.yml            # Auth0 configuration
-├── .Renviron             # Environment variables (API keys, etc.)
+├── .Renviron             # Environment variables
 └── shiny_bookmarks/      # Server-side bookmark storage
 ```
 
+---
+
 # Architecture Decisions
 
-## Auth0 Integration (auth0r package)
+## Auth0 Integration
 
-**Choice:** Use custom `ma-riviere/auth0r` fork instead of `curso-r/auth0`.
+**Choice:** Custom (private) `ma-riviere/auth0r` instead of `curso-r/auth0`.
 
-**Why:** Native bookmarking support. The fork encodes `_state_id_` in Auth0's state parameter, keeping redirect URIs clean and enabling seamless bookmark restoration after login.
-
-## Event System (Triggers)
-
-**Choice:** `gargoyle`-style trigger system for cross-module communication.
-
-**Trade-off:** Escapes Shiny's reactive graph, making data flow harder to trace. Acceptable for app-wide events with single handlers (e.g., `refresh_datasets`).
-
-**Alternative considered:** Callback prop-drilling (current for navigation). Works for shallow hierarchies but becomes painful at 3+ levels.
-
-## Explicit Event Handling
-
-**Preference:** Always make reactive dependencies explicit. Avoid bare `observe()` with implicit dependencies.
-
-| Pattern | When to use |
-|---------|-------------|
-| `on("trigger", { ... })` | React only when triggered (default: `ignoreInit = TRUE`) |
-| `observeEvent(x(), { ... })` | React to a single reactive |
-| `observeEvent(list(watch("trigger"), x()), { ... })` | React to trigger AND other reactives |
-| `observe({ ... }) \|> bindEvent(x())` | Same as `observeEvent`, alternative syntax |
-
-**Triggers are events, not state:** `on()` defaults to `ignoreInit = TRUE` because triggers are
-imperative signals ("do this now"), not state synchronization.
-
-## UI/Server Separation
-
-**Preference:** Define all UI elements in `*_ui.R` files, not in server files via `renderUI()`.
-
-**Why:** Static UI is rendered once at page load. Dynamic UI via `renderUI()` requires a round-trip
-to the server and re-renders HTML on every state change, which is slower and harder to maintain.
-
-**Pattern:** Define UI statically in the UI file, then show/hide with `shinyjs::toggle()`, or `shinyjs::show/hide`:
-
-```r
-# UI
-shinyjs::hidden(div(id = ns("empty_state"), class = "empty-state", ...))
-# Server
-observe(shinyjs::toggle("empty_state", condition = !has_data()))
-```
-
-**Exceptions** (OK to generate in server):
-- Toasts/notifications (`shinyWidgets::show_toast()`, `showNotification()`)
-- Simple yes/no confirmation modals (`showModal()` with `modalDialog()`)
-- Content that genuinely varies in structure (not just visibility)
-
-**For small dynamic content:** If the content is too small to justify a new `*_ui.R` file but still
-needs to be generated dynamically, create an HTML template in `www/html/` and load it with
-`htmltools::htmlTemplate()`:
-
-```r
-# www/html/error_card.html
-<div class="error-card">
-  <h3>{{ title }}</h3>
-  <p>{{ message }}</p>
-</div>
-
-# Server or UI file:
-htmltools::htmlTemplate("www/html/error_card.html", title = "Error", message = error_message)
-```
-
-## Input Rate Limiting (Debounce/Throttle)
-
-Two approaches exist for rate-limiting high-frequency inputs (sliders, text fields):
-
-| Approach | Location | Network Traffic | Use When |
-|----------|----------|-----------------|----------|
-| `data-shiny-input-rate-policy` | Client (browser) | Low - only sends settled values | Single input, bandwidth concerns |
-| `debounce()` / `throttle()` | Server (R) | High - sends all values, debounces in R | Multiple inputs, dynamic delays |
-
-**Prefer client-side rate policy** for individual inputs like sliders:
-
-```r
-sliderInput("filter", "Filter", min = 0, max = 100, value = 50) |>
-    tagAppendAttributes(`data-shiny-input-rate-policy` = '{"policy": "debounce", "delay": 300}')
-```
-
-**Prefer server-side `debounce()`** when:
-- Debouncing a combination of multiple inputs into one reactive
-- Debouncing non-input reactives (database polls, computed values)
-- Need dynamic delay based on other reactive values
-
-```r
-# Server-side: debounce a reactive that combines multiple inputs
-filters <- reactive(list(input$a, input$b, input$c)) |> debounce(500)
-```
-
-## Dynamic Module Instantiation
-
-**Choice:** "Initialize once, render many" pattern with `lapply` or `purrr::map` (not `for` loops).
-
-**Why:** Avoids duplicate observers on re-render. `lapply` creates new environments per iteration, preventing lazy evaluation traps where all modules capture the final loop value.
+**Why:** Native bookmarking support. Encodes `_state_id_` in Auth0's state parameter, keeping redirect URIs clean.
 
 ## Bookmark on Disconnect
 
-**Choice:** Save input state in `session$onSessionEnded()` without user notification.
+**Choice:** Save state in `session$onSessionEnded()` without notification.
 
-**Trade-off:** User cannot be notified (WebSocket already closed), but state is persisted for next session.
+**Trade-off:** User cannot be notified (WebSocket closed), but state persists for next session.
 
 ## Failed Approaches (DO NOT RETRY)
 
-1. **Manual input restoration via `sendInputMessage()`**: Wrong protocol format. Use Shiny's native restoration with `_state_id_` in URL instead.
+1. **Manual input restoration via `sendInputMessage()`**: Wrong protocol format. Use Shiny's native restoration with `_state_id_` in URL.
 
 2. **Single redirect after Auth0 callback**: Auth0 codes are single-use. Cannot exchange token then redirect with same code.
 
+3. **Restoring inputs before dynamic UI exists**: Shiny's native restoration handles timing. Manual restoration in `onFlushed` runs before `renderUI` outputs exist.
+
+## Model Module (300_model)
+
+**Purpose:** Async linear model fitting with save/load functionality.
+
+**Key components:**
+- `ExtendedTask` + `mirai` for non-blocking model fitting
+- `bslib::input_task_button()` for automatic button state management during async ops
+- `butcher::axe_env()` + `axe_fitted()` to minimize model size before storage
+- `base::serialize()` to BLOB for robust R object storage (not JSON)
+
+**Why not JSON?** `jsonlite::serializeJSON()` loses environment references. `predict()` fails without manual `.GlobalEnv` fix. `base::serialize()` preserves everything.
+
+**Selective butchering:** Don't use `butcher::butcher()` directly - it removes the `call` component (replaced with `dummy_call()`), breaking `summary()` output. Instead, apply specific axe methods: `axe_env() |> axe_fitted()`. When loading from DB, restore fitted values via `model$fitted.values <- predict(model, newdata = data)`.
+
+**Active page gating:** Expensive operations (DB fetches, deserialization) should only run when user is on the relevant page. Pass `active_page = reactive(input$nav)` to modules and guard with `req(identical(active_page(), "page_id"))`. This prevents wasted work when shared state (like `selected_model_id`) changes while user is on a different page.
+
 ---
 
-## Navigation
+# Navigation
 
-The app uses `bslib::page_navbar()` for navigation with a shared sidebar across all pages.
-- Navigation tabs are defined as `bslib::nav_panel()` elements
-- The active tab is tracked via `input$nav` (automatically bookmarked by Shiny)
-- Use `bslib::nav_select("nav", "page_value", session = session)` to programmatically switch tabs
+Uses `bslib::page_navbar()` with shared sidebar. Active tab via `input$nav` (auto-bookmarked).
 
-When a child module needs to trigger navigation (e.g., clicking a dataset row navigates to
-the dataset page), there are three approaches. Choose based on app complexity.
-
-### Pattern Comparison
-
-| Approach | Coupling | Debugging | Scalability | Use When |
-|----------|----------|-----------|-------------|----------|
-| Callback | Medium | Easy | Low (prop-drilling) | Small apps, shallow hierarchy |
-| Triggers | Low | Hard (hidden logic) | High | Large apps, sibling communication |
-| Reactive Return | High | Easy (explicit graph) | Medium | Need testability with `testServer()` |
-
-### 1. Callback Function (Current Pattern)
-
-Parent defines a navigation helper and passes it to child modules.
+**Current pattern:** Callback (see global r-shiny.md for alternatives).
 
 ```r
 # server.R
-home_server(
-    "home",
-    nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
-)
+home_server("home", nav_select_callback = \(page) nav_select("nav", page, session = session))
 
-# R/100_home_server.R
-home_server <- function(id, nav_select_callback = NULL) {
-    moduleServer(id, function(input, output, session) {
-        observeEvent(input$dataset_click, {
-            if (!is.null(nav_select_callback)) {
-                nav_select_callback("dataset")
-            }
-        })
-    })
-}
+# Child module
+observeEvent(input$click, nav_select_callback("dataset"))
 ```
 
-**Pros:** Child stays decoupled from parent's navbar ID. Simple, explicit.
+---
 
-**Cons:** "Prop drilling" - deeply nested modules require passing callback through every layer.
+# Auth0 + Bookmarking Integration
 
-### 2. Triggers (gargoyle-style)
+## Flow
 
-Uses the event system from `R/shiny-utils/triggers.R`. Navigation becomes a broadcast event.
+1. **Outbound**: User visits `/?_state_id_=xyz`. `auth0r::auth0_ui()` encodes bookmark in Auth0's state as `randomState|bookmarkId`.
 
-```r
-# server.R
-init("nav_to_dataset", "nav_to_home")
-on("nav_to_dataset", { nav_select("nav", "dataset") })
-on("nav_to_home", { nav_select("nav", "home") })
+2. **Callback**: Auth0 redirects with `?code=...&state=randomState|bookmarkId`. State validated via encrypted httpOnly cookie.
 
-# R/100_home_server.R (no callback parameter needed)
-observeEvent(input$dataset_click, trigger("nav_to_dataset"))
+3. **URL Cleanup**: `history.replaceState()` removes auth params, preserves `_state_id_`.
+
+4. **Restoration**: Shiny sees `_state_id_`, restores from `shiny_bookmarks/{id}/input.rds`.
+
+5. **Token Exchange**: `auth0r::auth0_server()` populates `session$userData$auth0_info` and `auth0_credentials`.
+
+## Key Components
+
+- `auth0r::auth0_ui()`: OAuth2 flow, CSRF protection, bookmark preservation
+- `auth0r::auth0_server()`: Token exchange, logout, excludes auth params from bookmarks
+- `auth0r::use_auth0()`: Client-side helpers for URL cleanup
+
+## CSRF Protection
+
+State stored in encrypted httpOnly cookie (sodium). Set `AUTH0_COOKIE_KEY` for production:
+```bash
+sodium::bin2hex(sodium::random(32))
 ```
 
-**Pros:** Completely decouples modules. Sibling modules can trigger navigation without any
-direct link. No prop drilling regardless of nesting depth.
+## Email Verification Gate
 
-**Cons:** "Escapes the reactive graph" - navigation logic is hidden from Shiny's dependency
-tracking. Harder to reason about data flow. Multiple listeners react to same trigger.
+Modules instantiated only after `session$userData$auth0_info$email_verified`. Unverified users see verification modal.
 
-### 3. Reactive Return Values
+## Bookmark State ID Format
 
-Child module returns an `eventReactive` signaling the target tab. Parent observes and navigates.
+**Alphanumeric only** (a-zA-Z0-9). Shiny's `RestoreContext` rejects special characters including hyphens.
 
-```r
-# R/100_home_server.R
-home_server <- function(id) {
-    moduleServer(id, function(input, output, session) {
-        nav_target <- eventReactive(input$dataset_click, { "dataset" })
-        return(list(nav_to = nav_target))
-    })
-}
+---
 
-# server.R
-home_module <- home_server("home")
-observeEvent(home_module$nav_to(), {
-    req(home_module$nav_to())
-    nav_select("nav", home_module$nav_to())
-})
-```
+# Session Tracking
 
-**Pros:** Most "Shiny-native". Explicit reactive graph. Testable with `testServer()`.
-
-**Cons:** More verbose. Each module needs return value handling in parent. Managing multiple
-navigation targets requires returning a list of reactives.
-
-## Cross-Module Communication
-
-## Event Triggers
-
-`R/shiny-utils/triggers.R` provides a lightweight event system for cross-module communication,
-inspired by the `gargoyle` package. Triggers are stored in `session$userData` and act as
-**broadcast events** - any module can fire them, and all listeners react.
-
-### API
-
-```r
-init("refresh_datasets", "show_upload_modal")  # Call once in server.R
-trigger("refresh_datasets")                     # Fire from any module
-watch("refresh_datasets")                       # Create reactive dependency in observe/reactive
-on("show_upload_modal", { showModal(...) })     # React to trigger (wrapper around observeEvent)
-```
-
-### Key principle: triggers are broadcasts
-
-Unlike reactive parameters (which are point-to-point), triggers broadcast to **all** listeners.
-If two modules both call `on("show_upload_modal", ...)`, both will fire when triggered.
-
-### Best practices
-
-1. **App-wide events with single handler**: Use for events where exactly one module should react.
-   - `refresh_datasets` - sidebar refreshes dropdown
-   - `show_upload_modal` - single upload module shows modal
-
-2. **Shared modules belong at app level**: If multiple pages need the same functionality (e.g.,
-   upload modal), instantiate the module once in `server.R`, not in each page module.
-
-3. **Scoped naming for multiple instances**: If you need independent instances of the same
-   behavior, use scoped trigger names:
-   - `show_modal_home`, `show_modal_dataset` (instead of generic `show_modal`)
-
-### Triggers vs reactive parameters: when to use which
-
-**Triggers** are for **events/signals** (no payload). **Reactive parameters** are for **data flow**.
-
-| Use Case | Correct Approach |
-|----------|------------------|
-| Filter values (date range, row count) | Reactive parameters |
-| Selected item ID | Reactive parameters |
-| "Database updated, refresh UI" | Trigger |
-| "Show modal" | Trigger |
-
-**Rule of thumb:** If you're passing *data*, use reactive parameters. If you're saying
-*"something happened, react to it"* without caring about payload, use triggers.
-
-### State sharing
-
-#### Shared reactiveValues ("Petit r" pattern)
-
-When **sibling modules** need to both **read and write** the same state (not just navigation),
-create a shared `reactiveValues` in the parent and pass it to both modules.
-
-```r
-# server.R - parent creates shared state
-init_modules <- function() {
-    r <- reactiveValues(
-        selected_dataset_id = NULL
-    )
-
-    sidebar_server("sidebar", r = r)  # Reads and writes r$selected_dataset_id
-    home_server("home", r = r)        # Writes r$selected_dataset_id on row click
-    dataset_server("dataset",
-        selected_dataset_id = reactive(r$selected_dataset_id)  # Reads via reactive
-    )
-}
-
-# sidebar_server.R - bidirectional sync with r
-sidebar_server <- function(id, r) {  # r is required, not optional
-    moduleServer(id, function(input, output, session) {
-        # Sync FROM shared state (when home page sets r$selected_dataset_id)
-        observeEvent(r$selected_dataset_id, {
-            req(r$selected_dataset_id)
-            updateSelectInput(session, "selected_dataset", selected = as.character(r$selected_dataset_id))
-        }, ignoreNULL = TRUE, ignoreInit = TRUE)
-
-        # Sync TO shared state (when user changes dropdown)
-        observeEvent(input$selected_dataset, {
-            r$selected_dataset_id <- as.integer(input$selected_dataset)
-        })
-    })
-}
-
-# home_server.R - writes to r on user action
-home_server <- function(id, r) {
-    moduleServer(id, function(input, output, session) {
-        on_click <- \(dataset_id) {
-            r$selected_dataset_id <- dataset_id
-        }
-    })
-}
-```
-
-**Pros:** Natively reactive (no manual sync checks). Explicit dependencies via function signature.
-Testable with `testServer()`. No hidden globals or namespace collision.
-
-**Cons:** Requires passing `r` to all modules that need it. State is mutable from multiple places.
-
-**Note:** Make `r` required, not optional:
-```r
-# GOOD: Explicit dependency, fails fast if missing
-sidebar_server <- function(id, r) { ... }
-
-# BAD: Hidden dependency, defensive checks everywhere
-sidebar_server <- function(id, r = NULL) {
-    if (!is.null(r)) r$selected_dataset_id <- ...  # Noise
-}
-```
-
-**When to use "Petit r" over triggers:**
-- Triggers are for *events* (no payload): "refresh now", "show modal"
-- Shared `r` is for *state* (data flow): selected ID, filter values
-- If you catch yourself writing `session$userData$some_value` + `trigger("value_changed")`, refactor to shared `reactiveValues` instead
-
-
-## Dynamic Module Instantiation
-
-When rendering a list of items where each item is a Shiny module (e.g., dataset rows), you must
-avoid calling `moduleServer()` inside `renderUI()`. Each re-render would create duplicate
-observers, causing memory leaks and multiple event handlers firing.
-
-### Anti-Pattern (DO NOT DO THIS)
-
-```r
-output$item_list <- renderUI({
-    items <- filtered_items()
-    lapply(seq_len(nrow(items)), \(i) {
-        row <- items[i, ]
-        # BAD: Creates new observers on every re-render
-        item_row_server(paste0("row_", row$id), dataset = reactive(row))
-        item_row_ui(ns(paste0("row_", row$id)))
-    }) |> tagList()
-})
-```
-
-### Solution 1: "Initialize Once, Render Many"
-
-Separate server initialization (once per unique ID) from UI rendering (which can repeat safely).
-
-```r
-module_server <- function(id, ...) {
-    moduleServer(id, function(input, output, session) {
-        ns <- session$ns
-
-        # Cache of initialized row module IDs
-        loaded_row_ids <- reactiveVal(character(0))
-
-        # 1. Initialize module servers ONCE per new ID
-        observeEvent(all_items(), {
-            current_ids <- paste0("row_", all_items()$id)
-            new_ids <- setdiff(current_ids, loaded_row_ids())
-
-            # IMPORTANT: Use lapply, NOT for loop (lazy evaluation trap)
-            lapply(new_ids, \(rid) {
-                numeric_id <- as.integer(sub("row_", "", rid))
-                item_row_server(
-                    rid,
-                    all_items = all_items,
-                    row_id = reactive({ numeric_id })  # Always pass as reactive
-                )
-            })
-            loaded_row_ids(union(loaded_row_ids(), new_ids))
-        })
-
-        # 2. Render UI (safe to repeat - just generates HTML)
-        output$item_list <- renderUI({
-            items <- filtered_items()
-            lapply(seq_len(nrow(items)), \(i) {
-                item_row_ui(ns(paste0("row_", items$id[i])))
-            }) |> tagList()
-        })
-    })
-}
-```
-
-**Critical:** Never use `for` loops to initialize modules with captured variables. R's `for` loops reuse the same environment. 
-By the time reactives execute, they look up the variable and find its final value. `lapply` creates a new function environment per iteration.
-
-For consistency, **always pass `row_id` as a reactive**, even for static IDs.
-
-#### Logic Gating with req()
-
-Inside the child module, use `req()` to pause logic when the item is deleted. This prevents
-errors without needing manual observer cleanup.
-
-```r
-item_row_server <- function(id, all_items, row_id) {
-    moduleServer(id, function(input, output, session) {
-        # Gate: pauses all downstream logic if this row no longer exists
-        my_data <- reactive({
-            data <- all_items()
-            rid <- row_id()
-            req(rid)
-            req(rid %in% data$id)
-            data[data$id == rid, ]
-        })
-
-        # All observers/outputs use my_data() - they'll silently pause if row is gone
-        output$name <- renderText({ my_data()$name })
-
-        observeEvent(input$delete, {
-            req(my_data())  # Double-check before destructive action
-            # ... delete logic
-        })
-    })
-}
-```
-
-#### Key Points
-
-1. **Use persistent IDs**, not row indices (1, 2, 3). Database IDs are ideal.
-2. **Use `lapply`**, not `for` loops, to avoid lazy evaluation trap.
-3. **Always pass `row_id` as reactive** for consistent API.
-4. **Pass the full reactive**, not sliced data. Let the child module filter for its own row.
-5. **Modules stay in memory** for the session but are "paused" when their data disappears.
-6. **No manual cleanup needed** - `req()` gating is sufficient for most use cases.
-
-#### Memory Considerations (Zombie Observers)
-
-When a row is deleted, its module's observers remain in memory (Shiny has no "destroy module"
-function). The `req()` gating effectively pauses them, preventing CPU usage.
-
-**This is acceptable when:**
-- Typical usage involves < 100 dynamic modules per session
-- Users don't repeatedly create/delete thousands of items
-
-**Consider alternatives when:**
-- High-churn scenarios (thousands of creates/deletes per session)
-- Heavy modules with large state or many observers
-- Memory profiling shows issues
-
-#### renderUI vs insertUI/removeUI
-
-The current pattern uses `renderUI` which regenerates all HTML on each change. This is
-acceptable for read-only displays but has trade-offs:
-
-| Approach | Pros | Cons |
-|----------|------|------|
-| `renderUI` | Simple, familiar | Resets input state, regenerates all HTML |
-| `insertUI/removeUI` | Preserves siblings, surgical updates | More complex, "zombie inputs" persist |
-
-**Stick with `renderUI` when:**
-- Rows are read-only (no inputs to preserve)
-- List is small (< 50 items)
-- Simplicity is preferred
-
-**Consider `insertUI/removeUI` when:**
-- Rows contain user inputs that must preserve state
-- Performance issues with large lists
-- Need surgical add/remove without affecting siblings
-
-#### When Strict Cleanup is Needed
-
-For heavy modules (large state, many observers), you can track observer handles and call
-`$destroy()`. This is rarely necessary:
-
-```r
-# Inside module: name observers with pattern
-delete_observer <- observeEvent(input$delete, { ... })
-
-# Expose a cleanup function
-return(list(
-    destroy = function() {
-        delete_observer$destroy()
-        # PS: You can use mget() to automatically get all observers by shared name suffix and destroy all of them
-    }
-))
-
-# Parent tracks and cleans up
-module_instances <- list()
-observeEvent(all_items(), {
-    ids_to_remove <- setdiff(names(module_instances), current_ids)
-    for (id in ids_to_remove) {
-        module_instances[[id]]$destroy()
-        module_instances[[id]] <- NULL
-    }
-})
-```
-
-## Auth0 + Bookmarking Integration
-
-The app uses `ma-riviere/auth0r` (private package) for Auth0 authentication with built-in bookmark preservation.
-Unlike the standard `curso-r/auth0` package, auth0r handles server-side bookmarking correctly by
-encoding `_state_id_` in Auth0's state parameter, keeping the redirect URI clean.
-
-### How it works
-
-1. **Outbound**: User visits `/?_state_id_=xyz`. `auth0r::auth0_ui()` encodes the bookmark ID
-   in Auth0's state param as `randomState|bookmarkId`, redirects to Auth0 with a clean redirect_uri.
-
-2. **Auth0 Callback**: Auth0 redirects back with `?code=...&state=randomState|bookmarkId`.
-   `auth0r::auth0_ui()` validates state via encrypted httpOnly cookie (CSRF protection).
-
-3. **URL Cleanup**: `auth0r::auth0_ui()` injects `history.replaceState()` to clean auth params
-   from the URL while preserving `_state_id_` for bookmark restoration.
-
-4. **Native Restoration**: Shiny sees `_state_id_` in the URL and automatically restores all
-   inputs from `shiny_bookmarks/{id}/input.rds`. This includes the active tab (`input$nav`)
-   which `bslib::page_navbar()` handles automatically.
-
-5. **Token Exchange**: `auth0r::auth0_server()` exchanges the auth code for tokens and populates
-   `session$userData$auth0_info` and `session$userData$auth0_credentials`.
-
-### Key components
-
-- `auth0r::auth0_ui()`: Handles OAuth2 flow, CSRF protection, bookmark preservation
-- `auth0r::auth0_server()`: Token exchange, logout handler, excludes auth params from bookmarks
-- `auth0r::use_auth0()`: Includes client-side helpers for URL cleanup and session status detection
-
-### CSRF Protection
-
-auth0r uses encrypted httpOnly cookies (via sodium) to protect against CSRF attacks:
-- State is generated per-request and stored encrypted in a cookie before redirecting to Auth0
-- On callback, the state from the URL is validated against the decrypted cookie
-- Set `AUTH0_COOKIE_KEY` env var for production (generate with `sodium::bin2hex(sodium::random(32))`)
-
-### Email verification gate
-
-Modules are only instantiated after verifying `session$userData$auth0_info$email_verified`.
-Unverified users see a modal prompting them to verify their email.
-
-### Excluded inputs
-
-Some inputs must be excluded from bookmarking via `setBookmarkExclude()` in `server.R`.
-
-**Always exclude:**
-
-1. **Action buttons that trigger side effects**: Any `observeEvent(input$btn, ...)` that triggers
-   modals, API calls, file uploads, database writes, or navigation. Shiny restores button click
-   counts, causing the handler to fire immediately on restore.
-
-2. **File inputs**: Restored metadata references temp files that no longer exist.
-
-3. **Inputs inside modals**: Modal content is transient and shouldn't persist. Restoring these
-   inputs is pointless (modal isn't open) and can cause errors.
-
-4. **Confirmation/delete buttons**: Especially dangerous - restoring a delete confirmation could
-   trigger data loss.
-
-### Bookmark on disconnect
-
-The current `R/shiny-utils/bookmarks.R` handles bookmarking on disconnect. 
-When a user disconnects (closes tab, loses internet, etc.), `session$onSessionEnded()` saves the current input state as a bookmark.
-
-- Manually creates `shiny_bookmarks/{id}/input.rds` (same format as native bookmarking)
-- Registers bookmark in DB for the restore-on-login flow
-- Does NOT delete previous bookmarks (unlike explicit saves) to avoid race conditions
-
-**Important**: State IDs must be alphanumeric only (a-zA-Z0-9). Shiny's `RestoreContext`
-validates with `grepl("[^a-zA-Z0-9]", id)` and rejects any special characters including
-hyphens.
-
-### Pitfalls and failed approaches
-
-**DO NOT try these approaches - they don't work in this context:**
-
-1. **Manual input restoration via `sendInputMessage()`**: Does not work. The message format
-   `list(value = value)` is not the correct protocol for Shiny inputs. The `update*()` functions
-   handle the correct format internally, but calling them for every input type is complex.
-   **Solution**: Use Shiny's native restoration by ensuring `_state_id_` is in the URL.
-
-2. **Restoring inputs before dynamic UI exists**: Shiny's native restoration handles timing
-   correctly. Manual restoration in `onFlushed` callbacks runs before `renderUI` outputs exist.
-
-3. **Single redirect after Auth0 callback**: Auth0 codes are single-use. You cannot exchange
-   the code for tokens and then redirect to a different URL with the same code.
-   **Solution**: Redirect in the UI layer (before server runs) to add `_state_id_` while
-   keeping the original `code` and `state` params.
-
-## Email
-
-`blastula` + Brevo
-
-### Error notification emails
-
-`R/shiny-utils/error_handling.R` provides automatic error notification:
-- `send_error_email(error_msg, session)`: Sends error details with context (user, R version, stack trace)
-- `setup_session_error_emails(session)`: Sends error emails with session context (call in `server.R`)
-- `setup_global_error_emails()`: Sends error emails for startup/global errors (call in `global.R`)
-
-Error emails are only sent when `SEND_ERROR_EMAILS=TRUE` and `EMAIL_TO` is configured in .Renviron
-
-## Database
-
-The app uses a PostgreSQL database with connection pooling (`pool` package).
-- Connection setup in `R/shiny-utils/database.R`
-- Pool created in `global.R`, closed via `onStop()` callback
-- Schema split into base (`database/schema-base.sql`) and app-specific (`database/schema.sql`)
-- CRUD functions organized by domain:
-  - `R/shiny-utils/users.R` - User management
-  - `R/shiny-utils/sessions.R` - Session tracking
-  - `R/shiny-utils/bookmarks.R` - Bookmark CRUD + filesystem cleanup
-  - `R/helpers_database.R` - App-specific (datasets only)
-
-## Scheduler
-
-The app uses `R/shiny-utils/scheduler.R` for recurring background tasks via the `later` package.
-
-### How it works
-
-- Tasks self-reschedule after each execution
-- Errors are caught and logged without stopping the schedule
-- Tasks are tracked by ID, allowing replacement of existing tasks
-- `cancel_all_tasks()` is called in `onStop()` for clean shutdown
-
-## Session Tracking
-
-The app tracks user sessions in the database.
-
-### Session Lifecycle
+## Lifecycle
 
 | Event | Action | Where |
 |-------|--------|-------|
-| Login | `INSERT` with `ended_at = NULL` | `server.R` (after auth gate) |
-| Every 5 min | `UPDATE updated_at` | `server.R` (heartbeat observer) |
-| Tab close | `UPDATE ended_at, end_reason = 'disconnect'` | `session$onSessionEnded` |
-| Every 10 min | Mark stale sessions with `end_reason = 'timeout'` | `global.R` (scheduled task) |
+| Login | INSERT (ended_at = NULL) | server.R |
+| Every 5 min | UPDATE updated_at | server.R (heartbeat) |
+| Tab close | UPDATE ended_at, end_reason = 'disconnect' | session$onSessionEnded |
+| Every 10 min | Mark stale as 'timeout' | global.R (scheduled) |
 
-### Detecting Active vs Stale Sessions
+## Detection
 
 - **Active**: `ended_at IS NULL AND updated_at > now() - 15 min`
-- **Stale/Crashed**: `ended_at IS NULL AND updated_at <= now() - 15 min` (caught by cleanup task)
+- **Stale/Crashed**: `ended_at IS NULL AND updated_at <= now() - 15 min`
 - **Ended**: `ended_at IS NOT NULL`
 
-### Why This Design
+**Why heartbeat?** `session$onSessionEnded` only fires on graceful disconnects. Crashes/force-closes leave orphan records. 15 min = 3 missed heartbeats = definitely dead.
 
-**Problem**: `session$onSessionEnded` only fires on graceful disconnects. If the R process crashes or the
-browser force-closes, the callback never runs.
+---
 
-**Solution**: Heartbeat + scheduled cleanup.
-- Each session updates `updated_at` every 5 minutes (heartbeat)
-- A scheduled task runs every 10 minutes and marks sessions with no heartbeat for 15+ minutes as timed out
-- 15 min threshold = 3 missed heartbeats = definitely dead
+# Logging & Observability
 
-## Logging & Observability
+## Application Logging
 
-The app uses a dual-layer approach for observability:
+`R/shiny-utils/logging.R`: `log_info()`, `log_debug()`, `log_error()`. Console (DEBUG in dev, INFO in prod) + JSON files in `logs/` (3-day retention).
 
-### 1. Application Logging (`R/shiny-utils/logging.R`)
+## OpenTelemetry
 
-**Purpose:** Debug logs, errors, operational info for developers.
-
-```r
-log_info("User {user_id} logged in")
-log_debug("Processing {nrow(data)} rows")
-log_error("Failed to save: {e$message}")
-```
-
-- Console output (DEBUG in dev, INFO in prod)
-- File output to `logs/` directory (JSON format in prod for log aggregators)
-- Cleaned up on startup via `logs_cleanup()` (3-day retention)
-
-### 2. OpenTelemetry (Shiny 1.12+)
-
-**Purpose:** Performance tracing, distributed debugging, production observability.
-
-**Local Trace Viewer (Admin Tab):**
-
-The app includes a built-in trace viewer in Admin → Traces. Uses `otelsdk::tracer_provider_memory`
-to store spans in memory, which are fetched and cached by the admin module for display.
-
-Configuration in `.Renviron`:
+**Local trace viewer** in Admin → Traces (dev only). Config in `.Renviron`:
 ```bash
 OTEL_TRACES_EXPORTER=otelsdk::tracer_provider_memory
 OTEL_R_EXPORTER_MEMORY_TRACES_BUFFER_SIZE=5000
 ```
 
-Implementation:
-- Initialized in `global.R` via `otel_setup_tracer()` (reads config from env vars)
-- Reusable utilities in `R/shiny-utils/otel.R` (parsing, caching, rendering)
-- Admin module in `R/320_otel_ui.R` and `R/320_otel_server.R`
-- Requires `otel` and `otelsdk` packages (optional - graceful degradation if missing)
-- Disabled in production (ENV=prod) - UI shows message to use external backend instead
+**Production**: Use external OTLP backend (Grafana, Jaeger, Logfire).
 
-**Alternative: File-based storage** (`otel_read_jsonl()` in utilities supports reading from JSONL files if
-configured with `OTEL_TRACES_EXPORTER=otlp/file`)
+See: https://shiny.posit.co/r/articles/improve/opentelemetry/
 
-**External Backend (Production):**
+---
 
-For production, configure an external backend alongside or instead of local memory storage:
+# Utilities Reference
 
-```bash
-# .Renviron
-OTEL_EXPORTER_OTLP_ENDPOINT=https://your-otel-collector:4318
-OTEL_SERVICE_NAME=shiny-base
-```
+## Database
 
-- Automatic spans for reactive updates, output renders, session lifecycle
-- Cross-process tracing (mirai background processes)
-- External API call tracking (httr2)
-- Code location attributes (file, line, column)
-- Export to Grafana, Jaeger, Logfire, or any OTLP-compatible backend
-- See: https://shiny.posit.co/r/articles/improve/opentelemetry/
+- Pool setup: `R/shiny-utils/database.R`
+- Schema: `database/schema-base.sql` (users, sessions, bookmarks), `database/schema.sql` (app-specific)
+- CRUD: `R/shiny-utils/users.R`, `sessions.R`, `bookmarks.R`; `R/helpers_database.R` (app-specific)
 
-### 3. Matomo (Optional - for User Analytics)
+## Scheduler
 
-**Purpose:** Visitor tracking, demographics, retention analysis.
+`R/shiny-utils/scheduler.R`: Tasks self-reschedule via `later`. Tracked by ID, errors logged without stopping. Call `cancel_all_tasks()` in `onStop()`.
 
-Matomo provides:
-- Device/browser/OS detection
-- Geolocation and referrer tracking
-- Retention/cohort analysis
-- Pre-built analytics dashboards
-- GDPR-compliant opt-out
+## Email
 
-**Note:** shinylogs (session replay) is deprecated in favor of OTEL. If you need exact input value capture for debugging, see `R/shiny-utils/shinylogs.R` for schema and re-enable it.
+`R/shiny-utils/error_handling.R`: `send_error_email()`, `setup_session_error_emails()`, `setup_global_error_emails()`. Requires `SEND_ERROR_EMAILS=TRUE` and `EMAIL_TO` in .Renviron.
 
-## i18n (Internationalization)
+## i18n
 
-Uses `shiny.i18n` for translations. Language resolution hierarchy:
-1. Auth0 `user_metadata.language` (source of truth for authenticated users)
-2. Cookie (name from `getOption("language_cookie_name")`, 1-year expiry)
-3. Browser language preference
-4. App default (from `getOption("default_language")`)
+Resolution hierarchy: Auth0 `user_metadata.language` → Cookie → Browser preference → App default (`getOption("default_language")`).
 
-**ALWAYS update `data/translations.json` when adding or modifying UI text elements.**
+## App Loader
 
-## SASS/CSS
+Uses `waiter` package for full-page overlay during initialization. `R/shiny-utils/loading.R` provides `is_restore_ready()` for bookmark detection.
 
-- Entry point: `www/sass/main.scss`
-- Partials: `_buttons.scss`, `_cards.scss`, `_layout.scss`, `_modals.scss`, `_tables.scss`, `_utils.scss`
-- Variables: `www/sass/variables.scss`
-- Output: `www/css/main.min.css` (compressed)
-- Compilation: `R/shiny-utils/sass.R` (run automatically on app restart)
+Mark `init_state$auth` and `init_state$modules` as TRUE at appropriate points.
 
-## Development Notes
+---
 
-### Disabling Auth0
+# Development Notes
 
-Set `options(auth0_disable = TRUE)` before running the app. Automatically set in test mode.
-
-### Static asset caching
-
-Browser caching can cause stale JS/CSS files during development. The `ui.R` uses a timestamp
-query param for cache-busting:
+## Disabling Auth0
 
 ```r
-tags$script(src = sprintf("js/helpers-modal.js?v=%s", as.integer(Sys.time())))
+options(auth0_disable = TRUE)
+```
+Automatically set in test mode.
+
+## Static Asset Cache Busting
+
+```r
+tags$script(src = sprintf("js/helpers.js?v=%s", as.integer(Sys.time())))
 ```
 
-This ensures fresh assets on each app restart. For production, consider using a fixed version
-number or file hash instead.
-
-Note: `auth0r::use_auth0()` uses `htmltools::htmlDependency()` which automatically handles
-versioning based on the package version.
+For production, use fixed version or file hash.

@@ -47,26 +47,6 @@ system_ui <- function(id) {
                 "word-break: break-all;"
             ),
             verbatimTextOutput(ns("log_content"), placeholder = TRUE)
-        ),
-        hr(class = "my-4"),
-        # Future: Add system health info
-        div(
-            class = "text-muted",
-            p("Future features:"),
-            tags$ul(
-                tags$li(
-                    strong("Usage analytics:"),
-                    " See MATOMO.md for Matomo integration"
-                ),
-                tags$li(
-                    strong("Performance tracing:"),
-                    " Use Shiny's native OpenTelemetry"
-                ),
-                tags$li(
-                    strong("System health:"),
-                    " DB connection status, memory usage"
-                )
-            )
         )
     )
 }

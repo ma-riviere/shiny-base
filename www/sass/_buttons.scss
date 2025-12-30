@@ -40,6 +40,23 @@
     }
 }
 
+// bslib's input_task_button uses a custom web component
+.bslib-task-button {
+    // The button uses bslib-switch-inline with slot elements
+    bslib-switch-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: $spacing-sm;
+
+        [slot="ready"],
+        [slot="busy"] {
+            display: inline-flex;
+            align-items: center;
+            gap: $spacing-sm;
+        }
+    }
+}
+
 .btn-outline-secondary {
     display: inline-flex;
     align-items: center;

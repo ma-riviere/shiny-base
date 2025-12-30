@@ -12,9 +12,14 @@ navbar_ui <- function(id) {
             home_ui("home")
         ),
         bslib::nav_panel(
-            title = tags$span(class = "i18n", `data-key` = "Dataset", "Dataset"),
+            title = tags$span(class = "i18n", `data-key` = "Explore", "Explore"),
             value = "dataset",
             dataset_ui("dataset")
+        ),
+        bslib::nav_panel(
+            title = tags$span(class = "i18n", `data-key` = "Model", "Model"),
+            value = "model",
+            model_ui("model")
         ),
         # Admin panel is injected dynamically via nav_insert() in server.R for admins only
         # Right side: language selector and user menu

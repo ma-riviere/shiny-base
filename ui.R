@@ -12,8 +12,16 @@ ui <- function(request) {
             collapsible = TRUE,
             underline = FALSE
         ),
-        sidebar = sidebar_ui("sidebar"),
         header = tagList(
+            waiter::use_waiter(),
+            waiter::waiter_show_on_load(
+                html = tagList(
+                    waiter::spin_fading_circles(),
+                    tags$p(tr("Loading..."), style = "color: #666; margin-top: 16px;")
+                ),
+                color = "#ffffff"
+            ),
+            # Will be relocated/injected in <head> by Shiny
             tags$head(
                 # Google Fonts with preconnect for better performance
                 tags$link(rel = "preconnect", href = "https://fonts.googleapis.com"),
@@ -34,6 +42,7 @@ ui <- function(request) {
             shiny.i18n::usei18n(i18n),
             shinyWidgets::useSweetAlert()
         ),
+        sidebar = sidebar_ui("sidebar"),
         !!!navbar_ui("navbar")
     )
 }

@@ -29,5 +29,8 @@ RPostgres
 dbplyr
 R6
 httr2
-logger
 data.table
+mirai
+butcher
+digest
+waiter
