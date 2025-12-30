@@ -42,6 +42,7 @@ auth0_server <- function(id, is_active) {
                 # Format for display
                 data.frame(
                     Name = users$name,
+                    `Auth0 ID` = users$auth0_sub,
                     `Last Connected` = format(
                         as.POSIXct(users$last_connected, tz = "UTC"),
                         "%Y-%m-%d %H:%M"

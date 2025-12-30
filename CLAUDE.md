@@ -37,9 +37,10 @@ shiny-base/
 │       ├── database.R, error_handling.R, i18n.R, loading.R
 │       ├── otel.R, sass.R, scheduler.R, sessions.R
 │       ├── triggers.R, users.R, validation.R
+│       ├── permissions.R # RBAC helpers (has_permission, req_permission)
 │       └── shinylogs.R   # (Unused) Session replay - see file for schema
 ├── www/                  # Static assets (css/, sass/, js/, html/, img/)
-├── data/                 # translations.json
+├── data/                 # translations.json, permissions.yaml
 ├── database/             # schema-base.sql (users, sessions, bookmarks), schema.sql (app-specific)
 ├── tests/                # shinytest2, testthat
 ├── _auth0.yml            # Auth0 configuration
@@ -72,6 +73,8 @@ shiny-base/
 3. **Restoring inputs before dynamic UI exists**: Shiny's native restoration handles timing. Manual restoration in `onFlushed` runs before `renderUI` outputs exist.
 
 4. **Checking `isolate(input$x)` for restored value in updateSelectInput observer**: Race condition. By the time the observer runs (with `ignoreInit = FALSE`), `updateSelectInput` overwrites the restored value before it can be read.
+
+5. **Using `req()` or `req_permission()` at top level of `moduleServer()`**: Silent errors thrown by `req(FALSE)` propagate up when called outside reactive contexts, crashing `init_modules()` before `init_state` flags are set. Use `if (!has_permission(...)) return()` instead.
 
 ## Bookmark Restoration for Dynamic Inputs
 
@@ -171,6 +174,57 @@ Modules instantiated only after `session$userData$auth0_info$email_verified`. Un
 ## Bookmark State ID Format
 
 **Alphanumeric only** (a-zA-Z0-9). Shiny's `RestoreContext` rejects special characters including hyphens.
+
+---
+
+# Role-Based Access Control (RBAC)
+
+## Configuration
+
+Role-permission mapping in `data/permissions.yaml`:
+
+```yaml
+roles:
+    admin: "*"                    # Wildcard = all permissions
+    dev:
+        - "view:admin"
+        - "view:admin:traces"     # Can see traces/system, but not users
+        - "delete:dataset"
+    user:
+        - "view:home"
+        - "write:dataset"         # No admin, no delete
+```
+
+## Usage
+
+```r
+# Check permission (returns TRUE/FALSE)
+has_permission("write:dataset")
+
+# Gate server logic (silent stop if denied)
+observeEvent(input$save, {
+    req_permission("write:dataset")
+    db_save(...)
+})
+
+# UI: toggle visibility/state
+observe({
+    shinyjs::toggle("delete_btn", condition = has_permission("delete:dataset"))
+    shinyjs::toggleState("save_btn", condition = has_permission("write:dataset"))
+})
+
+# Check actual role if needed
+"admin" %in% get_user_roles()
+```
+
+## Key Files
+
+- `data/permissions.yaml`: Role-permission mapping (app-specific)
+- `R/shiny-utils/permissions.R`: `has_permission()`, `req_permission()`, `get_user_roles()` (reusable)
+
+## Dev Mode
+
+When `ENV=dev`, all users are treated as admin (bypass for local development).
 
 ---
 
