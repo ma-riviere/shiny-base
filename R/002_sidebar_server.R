@@ -34,7 +34,7 @@ sidebar_server <- function(id, r) {
         observeEvent(
             input$selected_dataset,
             {
-                if (purrr::is_empty(input$selected_dataset) || input$selected_dataset == "") {
+                if (purrr::is_empty(input$selected_dataset) || !nzchar(input$selected_dataset)) {
                     r$selected_dataset_id <- NULL
                 } else {
                     r$selected_dataset_id <- as.integer(input$selected_dataset)
@@ -59,7 +59,7 @@ sidebar_server <- function(id, r) {
         observeEvent(
             input$selected_model,
             {
-                if (purrr::is_empty(input$selected_model) || input$selected_model == "") {
+                if (purrr::is_empty(input$selected_model) || !nzchar(input$selected_model)) {
                     r$selected_model_id <- NULL
                 } else {
                     r$selected_model_id <- as.integer(input$selected_model)
@@ -80,21 +80,16 @@ sidebar_server <- function(id, r) {
                 datasets <- db_get_user_datasets(user_id)
                 values$user_datasets <- datasets
 
-                # Preserve current selection if it still exists
-                current_selection <- r$selected_dataset_id
+                # Preserve selection: shared state > restored bookmark > first dataset
+                current_selection <- as.integer(
+                    r$selected_dataset_id %||% get_restored_input("selected_dataset")
+                )
 
-                # Update dropdown choices
                 if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
-                    updateSelectInput(
-                        session,
-                        "selected_dataset",
-                        choices = c("No datasets" = ""),
-                        selected = ""
-                    )
+                    updateSelectInput(session, "selected_dataset", choices = c("No datasets" = ""), selected = "")
                 } else {
                     choices <- setNames(datasets$id, datasets$name)
-                    # Keep current selection if it still exists in the new list
-                    new_selected <- if (!is.null(current_selection) && current_selection %in% datasets$id) {
+                    new_selected <- if (isTRUE(current_selection %in% datasets$id)) {
                         current_selection
                     } else {
                         datasets$id[1]
@@ -196,24 +191,17 @@ sidebar_server <- function(id, r) {
                 models <- db_get_models_for_dataset(user_id, dataset_id)
                 values$user_models <- models
 
-                # Preserve current selection if it exists in the new model list
-                current_model <- r$selected_model_id
+                # Preserve selection: shared state > restored bookmark > none
+                current_model <- as.integer(r$selected_model_id %||% get_restored_input("selected_model"))
 
                 if (purrr::is_empty(models) || nrow(models) == 0) {
                     updateSelectInput(session, "selected_model", choices = c("No models" = ""), selected = "")
                     r$selected_model_id <- NULL
                 } else {
                     choices <- c("Select a model" = "", setNames(models$id, models$formula))
-                    # Keep current selection if valid, otherwise clear
-                    new_selected <- if (!is.null(current_model) && current_model %in% models$id) {
-                        as.character(current_model)
-                    } else {
-                        ""
-                    }
+                    new_selected <- if (isTRUE(current_model %in% models$id)) as.character(current_model) else ""
                     updateSelectInput(session, "selected_model", choices = choices, selected = new_selected)
-                    if (new_selected == "") {
-                        r$selected_model_id <- NULL
-                    }
+                    if (!nzchar(new_selected)) r$selected_model_id <- NULL
                 }
             },
             ignoreInit = FALSE,
