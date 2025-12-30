@@ -115,7 +115,7 @@ model_server <- function(
         # Trigger fit when button is clicked
         observeEvent(input$fit_btn, label = "model_fit_click", {
             req(has_data())
-            req(nchar(trimws(input$equation)) > 0)
+            req(nzchar(trimws(input$equation)))
             fit_task$invoke(values$data, input$equation)
         })
 
