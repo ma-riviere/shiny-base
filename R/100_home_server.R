@@ -85,7 +85,7 @@ home_server <- function(
                     on_click = \(dataset_id) {
                         r$selected_dataset_id <- dataset_id
                         if (!is.null(nav_select_callback)) {
-                            nav_select_callback("dataset")
+                            nav_select_callback("explore")
                         }
                     }
                 )

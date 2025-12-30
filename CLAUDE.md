@@ -71,6 +71,38 @@ shiny-base/
 
 3. **Restoring inputs before dynamic UI exists**: Shiny's native restoration handles timing. Manual restoration in `onFlushed` runs before `renderUI` outputs exist.
 
+4. **Checking `isolate(input$x)` for restored value in updateSelectInput observer**: Race condition. By the time the observer runs (with `ignoreInit = FALSE`), `updateSelectInput` overwrites the restored value before it can be read.
+
+## Bookmark Restoration for Dynamic Inputs
+
+**Problem:** Dropdowns with placeholder choices (`selectInput(..., choices = c("No data" = ""))`) that get real choices from DB via `updateSelectInput` don't restore properly. The observer calls `updateSelectInput` with new `selected=` before Shiny's restoration can apply.
+
+**Solution:** "Store and Forward" pattern via `session$userData`:
+
+```r
+# server.R - capture ALL input state during onRestore
+onRestore(function(state) {
+    session$userData$restored_state <- state$input
+})
+
+# In any module - use get_restored_input() helper from bookmarks.R
+observeEvent(watch("refresh_data"), {
+    data <- db_get_data()
+    # Priority: shared state > restored bookmark > fallback
+    current_val <- as.integer(r$selected_id %||% get_restored_input("input_id"))
+
+    if (purrr::is_empty(data)) {
+        updateSelectInput(session, "input_id", choices = c("No data" = ""), selected = "")
+    } else {
+        choices <- setNames(data$id, data$name)
+        selected <- if (isTRUE(current_val %in% data$id)) current_val else data$id[1]
+        updateSelectInput(session, "input_id", choices = choices, selected = selected)
+    }
+}, ignoreInit = FALSE)
+```
+
+**Why this works:** `onRestore` runs during session init, before modules are created (which happens after Auth0 gate). The helper `get_restored_input()` (in `shiny-utils/bookmarks.R`) auto-namespaces the input ID and returns NULL for empty values.
+
 ## Model Module (300_model)
 
 **Purpose:** Async linear model fitting with save/load functionality.
@@ -100,7 +132,7 @@ Uses `bslib::page_navbar()` with shared sidebar. Active tab via `input$nav` (aut
 home_server("home", nav_select_callback = \(page) nav_select("nav", page, session = session))
 
 # Child module
-observeEvent(input$click, nav_select_callback("dataset"))
+observeEvent(input$click, nav_select_callback("explore"))
 ```
 
 ---

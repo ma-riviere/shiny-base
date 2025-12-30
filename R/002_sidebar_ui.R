@@ -48,7 +48,7 @@ sidebar_ui <- function(id) {
         # ------ DATASET PARAMETERS SECTION ------------------------------------
         # Visible on dataset and model pages
         conditionalPanel(
-            condition = "input.nav === 'dataset' || input.nav === 'model'",
+            condition = "input.nav === 'explore' || input.nav === 'model'",
             div(
                 id = ns("dataset_params_section"),
                 h6(

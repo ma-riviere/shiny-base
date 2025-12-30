@@ -17,13 +17,13 @@ server <- function(input, output, session) {
     # ------ ERROR HANDLING ----------------------------------------------------
     setup_session_error_emails(session)
 
-    # Exclude inputs that cause restoration issues:
-    # - Auth0 params (code, state) to prevent token leakage (auth0r also excludes these but app's
-    #   call overwrites auth0r's, so we must include them here)
-    # - Action buttons with shinyActionButtonValue class
-    # - Upload modal inputs (file, button, name) to prevent re-upload on bookmark restore
-    # - Buttons that trigger modals (open_upload in home and dataset pages)
-    shiny::setBookmarkExclude(c(
+    # ------ BOOKMARK EXCLUDES -------------------------------------------------
+    # Inputs to exclude from bookmarks (used by both setBookmarkExclude and save_bookmark_on_disconnect):
+    # - Auth0 params (code, state) to prevent token leakage
+    # - Upload modal inputs (file, button) to prevent re-upload on restore
+    # - Buttons that trigger modals
+    # - Profile modal inputs (transient)
+    bookmark_exclude <- c(
         "code",
         "state",
         "._auth0logout_",
@@ -37,7 +37,8 @@ server <- function(input, output, session) {
         "profile-save_profile",
         "profile-profile_nickname",
         "profile-profile_language"
-    ))
+    )
+    shiny::setBookmarkExclude(bookmark_exclude)
 
     # ------ SESSION TRACKING & BOOKMARK ON DISCONNECT --------------------------
     # Track session in DB and save bookmark when user disconnects.
@@ -52,7 +53,7 @@ server <- function(input, output, session) {
                     error = \(e) log_warn("[SESSION] Failed to end session: {e$message}")
                 )
             }
-            save_bookmark_on_disconnect(session, input)
+            save_bookmark_on_disconnect(session, input, exclude = bookmark_exclude)
         })
     }
 
@@ -75,6 +76,15 @@ server <- function(input, output, session) {
         state_id <- basename(state$dir)
 
         register_user_bookmark(user$id, state_id)
+    })
+
+    # ------ BOOKMARK RESTORATION CAPTURE --------------------------------------
+    # Store entire state$input in session$userData during onRestore.
+    # Modules created later can access via: session$userData$restored_state[["ns-inputId"]] %||% default
+    # This is a general solution that works for any input without needing to enumerate them upfront.
+    onRestore(function(state) {
+        session$userData$restored_state <- state$input
+        log_debug("[SERVER] onRestore: captured {length(state$input)} input values")
     })
 
     # ------ EMAIL VERIFICATION GATE -------------------------------------------

@@ -21,11 +21,10 @@ model_server <- function(
 
         # ------ REACTIVE ------------------------------------------------------
 
-        # Load dataset when selection changes
+        # Load dataset when selection changes (ignoreInit = FALSE for bookmark restoration)
         observeEvent(
             selected_dataset_id(),
             label = "model_load_dataset",
-            ignoreInit = TRUE,
             ignoreNULL = FALSE,
             {
                 dataset_id <- selected_dataset_id()
@@ -75,18 +74,24 @@ model_server <- function(
             }
         )
 
-        # Load model when selected from dropdown (only when on model page)
-        observeEvent(selected_model_id(), label = "model_load_saved", {
-            req(identical(active_page(), "model"))
-            model_id <- selected_model_id()
-            req(!is.null(model_id), !is.na(model_id))
-            req(!identical(model_id, values$loaded_model_id)) # Skip if already loaded
-            model_load_saved(model_id, session, values, data = values$data)
-        })
+        # Load model when selected from dropdown (only when on model page and data loaded)
+        observeEvent(
+            list(selected_model_id(), values$data),
+            label = "model_load_saved",
+            {
+                req(identical(active_page(), "model"))
+                req(values$data) # Wait for dataset to load first
+                model_id <- selected_model_id()
+                req(!is.null(model_id), !is.na(model_id))
+                req(!identical(model_id, values$loaded_model_id))
+                model_load_saved(model_id, session, values, data = values$data)
+            }
+        )
 
         # Load pre-selected model when navigating TO model page
         observeEvent(active_page(), label = "model_page_enter", ignoreInit = TRUE, {
             req(identical(active_page(), "model"))
+            req(values$data) # Wait for dataset to load first
             req(is.null(values$fitted_model)) # Skip if already loaded
             model_id <- selected_model_id()
             req(!is.null(model_id), !is.na(model_id))

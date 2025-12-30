@@ -13,7 +13,7 @@ navbar_ui <- function(id) {
         ),
         bslib::nav_panel(
             title = tags$span(class = "i18n", `data-key` = "Explore", "Explore"),
-            value = "dataset",
+            value = "explore",
             dataset_ui("dataset")
         ),
         bslib::nav_panel(

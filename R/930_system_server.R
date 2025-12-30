@@ -68,7 +68,7 @@ system_server <- function(id, is_active) {
         # ------ OUTPUT: Log content -------------------------------------------
         output$log_content <- renderUI({
             content <- log_content()$content
-            if (is.null(content) || content == "") {
+            if (is.null(content) || !nzchar(content)) {
                 return(NULL)
             }
             lines <- strsplit(content, "\n", fixed = TRUE)[[1]]

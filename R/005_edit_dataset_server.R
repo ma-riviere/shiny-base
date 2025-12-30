@@ -24,7 +24,7 @@ edit_dataset_server <- function(id) {
             new_name <- trimws(input$new_dataset_name)
 
             # Validate name
-            if (purrr::is_empty(new_name) || new_name == "") {
+            if (purrr::is_empty(new_name) || !nzchar(new_name)) {
                 shinyWidgets::show_toast(
                     title = tr("Dataset name cannot be empty"),
                     type = "error",
