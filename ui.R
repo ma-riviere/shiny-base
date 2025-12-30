@@ -35,7 +35,8 @@ ui <- function(request) {
                     )
                 ),
                 tags$link(rel = "stylesheet", type = "text/css", href = "css/main.min.css"),
-                tags$script(src = sprintf("js/helpers-modal.js?v=%s", as.integer(Sys.time())))
+                tags$script(src = sprintf("js/helpers-modal.js?v=%s", as.integer(Sys.time()))),
+                tags$script(src = sprintf("js/helpers.js?v=%s", as.integer(Sys.time())))
             ),
             auth0r::use_auth0(),
             shinyjs::useShinyjs(),

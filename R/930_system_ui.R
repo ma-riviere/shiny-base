@@ -46,7 +46,18 @@ system_ui <- function(id) {
                 "white-space: pre-wrap;",
                 "word-break: break-all;"
             ),
-            verbatimTextOutput(ns("log_content"), placeholder = TRUE)
+            tags$style(HTML(
+                "
+                .log-level-fatal { color: #ff6b6b; font-weight: bold; }
+                .log-level-error { color: #ff6b6b; }
+                .log-level-warn { color: #ffd93d; }
+                .log-level-info { color: #6bcb77; }
+                .log-level-debug { color: #4d96ff; }
+                .log-level-trace { color: #9e9e9e; }
+                .log-timestamp { color: #9e9e9e; }
+            "
+            )),
+            htmlOutput(ns("log_content"))
         )
     )
 }
