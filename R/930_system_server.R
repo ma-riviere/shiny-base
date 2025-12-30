@@ -8,24 +8,6 @@ system_server <- function(id, is_active) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
-        # ------ HELPER: Get current log file ----------------------------------
-        # Returns the most recently modified log file in the log directory
-        get_current_log_file <- function() {
-            log_dir <- getOption("log_dir", "logs")
-            if (!dir.exists(log_dir)) {
-                return(NULL)
-            }
-
-            log_files <- list.files(log_dir, pattern = "^app_.*\\.log$", full.names = TRUE)
-            if (length(log_files) == 0) {
-                return(NULL)
-            }
-
-            # Get the most recently modified file
-            file_info <- file.info(log_files)
-            log_files[which.max(file_info$mtime)]
-        }
-
         # ------ REACTIVE: Log file content ------------------------------------
         # Poll every 10 seconds for log file changes (only while tab is visible)
         log_content <- reactivePoll(
@@ -84,18 +66,22 @@ system_server <- function(id, is_active) {
         })
 
         # ------ OUTPUT: Log content -------------------------------------------
-        output$log_content <- renderText(log_content()$content)
+        output$log_content <- renderUI({
+            content <- log_content()$content
+            if (is.null(content) || content == "") {
+                return(NULL)
+            }
+            lines <- strsplit(content, "\n", fixed = TRUE)[[1]]
+            colored_lines <- vapply(lines, colorize_log_line, character(1), USE.NAMES = FALSE)
+            HTML(paste(colored_lines, collapse = "<br>"))
+        })
 
         # ------ OBSERVER: Manual refresh --------------------------------------
         observeEvent(input$refresh_logs, trigger("refresh_logs"))
 
         # ------ OBSERVER: Scroll to bottom ------------------------------------
         observeEvent(input$scroll_to_bottom, label = "system_scroll_to_bottom", {
-            shinyjs::runjs(sprintf(
-                "document.getElementById('%s').scrollTop = document.getElementById('%s').scrollHeight;",
-                ns("log_container"),
-                ns("log_container")
-            ))
+            shinyjs::runjs(sprintf("scrollToBottom('%s')", ns("log_container")))
         })
     })
 }
