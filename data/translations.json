@@ -451,6 +451,18 @@
         {
             "en": "Model not found",
             "fr": "Modèle non trouvé"
+        },
+        {
+            "en": "Log Viewer",
+            "fr": "Visionneuse de logs"
+        },
+        {
+            "en": "Scroll to end",
+            "fr": "Aller à la fin"
+        },
+        {
+            "en": "Refresh",
+            "fr": "Actualiser"
         }
     ]
 }

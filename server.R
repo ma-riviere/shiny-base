@@ -5,11 +5,17 @@ server <- function(input, output, session) {
     # Track initialization steps; hide loader when all complete
     init_state <- reactiveValues(
         auth = FALSE, # Auth0 check complete (or disabled)
-        modules = FALSE # Modules initialized
+        modules = FALSE, # Modules initialized
+        blocked = FALSE # User blocked (unverified email, suspended, etc.)
     )
     restore_ready <- is_restore_ready(session)
 
     observe(label = "server_hide_loader", {
+        # Hide loader immediately if user is blocked (so they see the modal)
+        if (isTRUE(init_state$blocked)) {
+            waiter::waiter_hide()
+            return()
+        }
         req(init_state$auth, init_state$modules, restore_ready())
         waiter::waiter_hide()
     })
@@ -138,14 +144,14 @@ server <- function(input, output, session) {
             r = r
         )
 
-        # Admin module - always instantiate but gated by req(is_admin()) inside
+        # Admin module - always instantiate but gated by req(has_permission("view:admin")) inside
         admin_server("admin", active_page = reactive(input$nav))
 
-        # Dynamically inject admin nav panel only for admins (server-side rendering)
-        # This ensures the admin UI HTML is never sent to non-admin clients
+        # Dynamically inject admin nav panel only for users with view:admin permission
+        # This ensures the admin UI HTML is never sent to unauthorized clients
         # Uses once = TRUE to prevent duplicate insertion when language changes
         observe(label = "server_admin_nav_insert", {
-            req(is_admin(session))
+            req_permission("view:admin")
             bslib::nav_insert(
                 id = "nav",
                 nav = bslib::nav_panel(
@@ -182,6 +188,7 @@ server <- function(input, output, session) {
             req(session$userData$auth0_info)
 
             if (!isTRUE(session$userData$auth0_info$email_verified)) {
+                init_state$blocked <- TRUE
                 showModal(modalDialog(
                     title = "Email Verification Required",
                     p("Please verify your email address to access this application."),

@@ -1,0 +1,33 @@
+# Role-Based Access Control (RBAC) Configuration
+#
+# Format: action:resource (e.g., "view:admin", "write:dataset")
+# Use permission strings directly in code: has_permission("write:dataset")
+
+roles:
+    # Full access
+    admin: "*"
+
+    # Developer: can access admin panel (traces, system) but not auth0/users management
+    dev:
+        - "view:home"
+        - "view:explore"
+        - "view:model"
+        - "view:admin"
+        - "view:admin:traces"
+        - "view:admin:system"
+        - "read:dataset"
+        - "write:dataset"
+        - "create:dataset"
+        - "delete:dataset"
+        - "fit:model"
+        - "delete:model"
+
+    # Regular user: no admin panel, no delete
+    user:
+        - "view:home"
+        - "view:explore"
+        - "view:model"
+        - "read:dataset"
+        - "write:dataset"
+        - "create:dataset"
+        - "fit:model"

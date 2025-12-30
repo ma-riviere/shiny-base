@@ -48,9 +48,10 @@ options(
     # Caching (see R/shiny-utils/caching.R)
     cache_dir = "cache",
 
-    # Auth0 RBAC (see R/shiny-utils/auth.R)
+    # Auth0 RBAC (see R/shiny-utils/permissions.R)
     # Must match the namespace in your Auth0 Action that adds roles to the ID token
     auth0_roles_claim = "https://shiny-base.ma-riviere.com/roles",
+    permissions_file = "data/permissions.yaml",
 
     # Debug
     shiny.autoreload = if (is_prod) FALSE else TRUE
