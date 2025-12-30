@@ -5,7 +5,7 @@ dataset_ui <- function(id) {
         class = "page page-dataset",
         div(
             class = "page-header",
-            h1(class = "i18n", `data-key` = "Dataset Explorer", tr("Dataset Explorer")),
+            h1(class = "i18n", `data-key` = "Explore", tr("Explore")),
             p(
                 class = "lead",
                 uiOutput(ns("dataset_description"), inline = TRUE)

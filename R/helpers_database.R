@@ -106,12 +106,103 @@ db_update_dataset_name <- function(dataset_id, new_name) {
     )
 }
 
-# Delete a dataset by ID
+# Delete a dataset by ID (also deletes linked models)
 db_delete_dataset <- function(dataset_id) {
+    # Delete linked models first (manual cascade - SQLite PRAGMA foreign_keys doesn't persist across pool connections)
+    db_execute("DELETE FROM models WHERE dataset_id = {dataset_id}", dataset_id = dataset_id)
     db_execute("DELETE FROM datasets WHERE id = {dataset_id}", dataset_id = dataset_id)
 }
 
 # Parse dataset JSON data back to data frame
 db_parse_dataset_data <- function(data_json) {
     yyjsonr::read_json_str(data_json)
+}
+
+# ------ MODEL CRUD OPERATIONS ------------------------------------------------
+
+# Get models for a specific dataset (metadata only, no blob)
+#
+# @param user_id User ID
+# @param dataset_id Dataset ID
+# @return Data frame with model metadata (id, formula, created_at, updated_at)
+db_get_models_for_dataset <- function(user_id, dataset_id) {
+    dplyr::tbl(db_pool, "models") |>
+        dplyr::filter(user_id == !!user_id, dataset_id == !!dataset_id) |>
+        dplyr::select(id, formula, created_at, updated_at) |>
+        dplyr::arrange(dplyr::desc(updated_at)) |>
+        dplyr::collect()
+}
+
+# Get a single model with full blob
+#
+# @param model_id Model ID
+# @return Single row data frame or NULL if not found
+db_get_model <- function(model_id) {
+    result <- dplyr::tbl(db_pool, "models") |>
+        dplyr::filter(id == !!model_id) |>
+        dplyr::collect()
+    if (nrow(result) == 0) {
+        return(NULL)
+    }
+    return(result[1, ])
+}
+
+# Insert or update a model (upsert by user_id, dataset_id, formula)
+#
+# @param user_id User ID
+# @param dataset_id Dataset ID
+# @param formula Formula string (will be normalized)
+# @param model_obj Fitted model object (will be serialized)
+# @return Model ID (new or existing)
+db_upsert_model <- function(user_id, dataset_id, formula, model_obj) {
+    # Normalize formula (trim + collapse whitespace)
+    formula_clean <- gsub("\\s+", " ", trimws(formula))
+
+    # Serialize model to raw bytes
+    model_blob <- serialize(model_obj, NULL)
+
+    # Check if model exists
+    existing <- db_query(
+        "SELECT id FROM models WHERE user_id = {user_id} AND dataset_id = {dataset_id} AND formula = {formula}",
+        user_id = user_id,
+        dataset_id = dataset_id,
+        formula = formula_clean
+    )
+
+    if (nrow(existing) > 0) {
+        db_execute(
+            "UPDATE models SET model_blob = {model_blob}, updated_at = CURRENT_TIMESTAMP WHERE id = {id}",
+            model_blob = model_blob,
+            id = existing$id[1]
+        )
+        return(existing$id[1])
+    } else {
+        db_execute(
+            "INSERT INTO models (user_id, dataset_id, formula, model_blob)
+             VALUES ({user_id}, {dataset_id}, {formula}, {model_blob})",
+            user_id = user_id,
+            dataset_id = dataset_id,
+            formula = formula_clean,
+            model_blob = model_blob
+        )
+        # Get last inserted ID by re-querying (portable across SQLite/PostgreSQL)
+        result <- db_query(
+            "SELECT id FROM models WHERE user_id = {user_id} AND dataset_id = {dataset_id}
+             AND formula = {formula} ORDER BY id DESC LIMIT 1",
+            user_id = user_id,
+            dataset_id = dataset_id,
+            formula = formula_clean
+        )
+        return(result$id[1])
+    }
+}
+
+# Delete a model by ID
+db_delete_model <- function(model_id) {
+    db_execute("DELETE FROM models WHERE id = {model_id}", model_id = model_id)
+}
+
+# Deserialize model blob back to R object
+db_unserialize_model <- function(model_blob) {
+    unserialize(model_blob)
 }

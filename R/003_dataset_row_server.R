@@ -65,6 +65,7 @@ dataset_row_server <- function(
                     db_delete_dataset(row_id())
                     removeModal()
                     trigger("refresh_datasets")
+                    trigger("refresh_models")
 
                     # Navigate to home if callback provided (dataset page)
                     if (!is.null(nav_select_callback)) {

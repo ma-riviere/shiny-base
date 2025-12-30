@@ -1,13 +1,16 @@
 # Sidebar server module
-# Manages dataset selection dropdown, filters, and section visibility based on active page.
+# Manages dataset/model selection dropdowns and filters.
+# Section visibility is handled by conditionalPanel in sidebar_ui.R (browser-side).
 #
 # @param r Shared reactiveValues for cross-module state. Expected fields:
 #   - selected_dataset_id: Dataset ID selected from home page row click (read/write)
-sidebar_server <- function(id, active_page = reactive(NULL), r) {
+#   - selected_model_id: Model ID selected from model dropdown (read/write)
+sidebar_server <- function(id, r) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
         values <- reactiveValues(
             user_datasets = NULL,
+            user_models = NULL,
             row_count_filter = c(0, 100000),
             age_filter = c(Sys.Date() - 365, Sys.Date()),
             prev_max_rows = NULL # Track previous max to detect actual changes
@@ -38,6 +41,31 @@ sidebar_server <- function(id, active_page = reactive(NULL), r) {
                 }
             },
             label = "sidebar_sync_dropdown_to_shared"
+        )
+
+        # Sync model dropdown FROM shared state
+        observeEvent(
+            r$selected_model_id,
+            {
+                req(r$selected_model_id)
+                updateSelectInput(session, "selected_model", selected = as.character(r$selected_model_id))
+            },
+            ignoreNULL = TRUE,
+            ignoreInit = TRUE,
+            label = "sidebar_sync_model_shared_to_dropdown"
+        )
+
+        # Sync model dropdown TO shared state
+        observeEvent(
+            input$selected_model,
+            {
+                if (purrr::is_empty(input$selected_model) || input$selected_model == "") {
+                    r$selected_model_id <- NULL
+                } else {
+                    r$selected_model_id <- as.integer(input$selected_model)
+                }
+            },
+            label = "sidebar_sync_model_dropdown_to_shared"
         )
 
         # ------ REACTIVE ------------------------------------------------------
@@ -151,24 +179,49 @@ sidebar_server <- function(id, active_page = reactive(NULL), r) {
             label = "sidebar_update_slider_range"
         )
 
-        # Show/hide sections based on active page
-        observeEvent(active_page(), label = "sidebar_visibility_toggle", {
-            page <- active_page()
-            if (purrr::is_empty(page)) {
-                return()
-            }
+        # Load models for selected dataset
+        observeEvent(
+            list(watch("refresh_models"), r$selected_dataset_id),
+            {
+                user_id <- purrr::pluck(session$userData$user, "id")
+                dataset_id <- r$selected_dataset_id
 
-            if (page == "home") {
-                shinyjs::show("home_filter_section")
-                shinyjs::hide("dataset_params_section")
-            } else if (page == "dataset") {
-                shinyjs::hide("home_filter_section")
-                shinyjs::show("dataset_params_section")
-            } else {
-                shinyjs::hide("home_filter_section")
-                shinyjs::hide("dataset_params_section")
-            }
-        })
+                if (purrr::is_empty(user_id) || purrr::is_empty(dataset_id)) {
+                    values$user_models <- NULL
+                    updateSelectInput(session, "selected_model", choices = c("No models" = ""), selected = "")
+                    r$selected_model_id <- NULL
+                    return()
+                }
+
+                models <- db_get_models_for_dataset(user_id, dataset_id)
+                values$user_models <- models
+
+                # Preserve current selection if it exists in the new model list
+                current_model <- r$selected_model_id
+
+                if (purrr::is_empty(models) || nrow(models) == 0) {
+                    updateSelectInput(session, "selected_model", choices = c("No models" = ""), selected = "")
+                    r$selected_model_id <- NULL
+                } else {
+                    choices <- c("Select a model" = "", setNames(models$id, models$formula))
+                    # Keep current selection if valid, otherwise clear
+                    new_selected <- if (!is.null(current_model) && current_model %in% models$id) {
+                        as.character(current_model)
+                    } else {
+                        ""
+                    }
+                    updateSelectInput(session, "selected_model", choices = choices, selected = new_selected)
+                    if (new_selected == "") {
+                        r$selected_model_id <- NULL
+                    }
+                }
+            },
+            ignoreInit = FALSE,
+            label = "sidebar_refresh_models"
+        )
+
+        # Note: Section visibility is handled by conditionalPanel in sidebar_ui.R
+        # based on input.nav value (runs in browser, no server round-trip needed)
 
         return(values)
     })

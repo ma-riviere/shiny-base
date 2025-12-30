@@ -4,6 +4,9 @@ suppressPackageStartupMessages({
     library(DT) # Avoid Global error: object 'datatables_html' not found
 })
 
+# Setup async processing for ExtendedTask (model fitting)
+mirai::daemons(2)
+
 # ------ CONFIG ----------------------------------------------------------------
 
 is_prod <- Sys.getenv("ENV") == "prod"
@@ -25,11 +28,11 @@ options(
     language_cookie_expiration = 525600, # 1 year in minutes
     default_language = "en",
 
-    # Logging (see R/shiny-utils/logging.R)
+    # Logging (see R/shiny-utils/logging.R for LOG_* constants)
+    # Levels: LOG_OFF=0, LOG_FATAL=100, LOG_ERROR=200, LOG_WARN=300, LOG_INFO=400, LOG_DEBUG=500, LOG_TRACE=600
     log_dir = Sys.getenv("LOGS_DIR", "logs"),
-    log_console_threshold = if (is_prod) logger::INFO else logger::DEBUG,
-    log_file_threshold = logger::DEBUG,
-    log_as_json = if (is_prod) TRUE else FALSE,
+    log_console_threshold = if (is_prod) 400L else 500L, # INFO in prod, DEBUG in dev
+    log_file_threshold = 500L, # DEBUG
 
     # Email (see R/shiny-utils/error_handling.R for error email usage)
     email_to = Sys.getenv("EMAIL_TO"),
