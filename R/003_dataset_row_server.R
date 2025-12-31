@@ -35,8 +35,17 @@ dataset_row_server <- function(
             trigger("show_edit_dataset_modal")
         })
 
+        # ------ RBAC: Hide delete button if user lacks permission ---------------
+        observe(
+            label = paste0("row_", id, "_delete_toggle"),
+            {
+                shinyjs::toggle("delete", condition = can("delete:dataset"))
+            }
+        )
+
         # ------ DELETE --------------------------------------------------------
         observeEvent(input$delete, label = paste0("row_", id, "_delete"), {
+            req(can("delete:dataset"))
             req(my_data())
 
             showModal(modalDialog(

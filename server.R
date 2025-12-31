@@ -144,14 +144,14 @@ server <- function(input, output, session) {
             r = r
         )
 
-        # Admin module - always instantiate but gated by req(has_permission("view:admin")) inside
+        # Admin module - always instantiate but gated by req(can("view:admin")) inside
         admin_server("admin", active_page = reactive(input$nav))
 
         # Dynamically inject admin nav panel only for users with view:admin permission
         # This ensures the admin UI HTML is never sent to unauthorized clients
         # Uses once = TRUE to prevent duplicate insertion when language changes
         observe(label = "server_admin_nav_insert", {
-            req_permission("view:admin")
+            req(can("view:admin"))
             bslib::nav_insert(
                 id = "nav",
                 nav = bslib::nav_panel(

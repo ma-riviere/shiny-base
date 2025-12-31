@@ -37,7 +37,7 @@ shiny-base/
 │       ├── database.R, error_handling.R, i18n.R, loading.R
 │       ├── otel.R, sass.R, scheduler.R, sessions.R
 │       ├── triggers.R, users.R, validation.R
-│       ├── permissions.R # RBAC helpers (has_permission, req_permission)
+│       ├── permissions.R # RBAC helpers (can, get_user_roles)
 │       └── shinylogs.R   # (Unused) Session replay - see file for schema
 ├── www/                  # Static assets (css/, sass/, js/, html/, img/)
 ├── data/                 # translations.json, permissions.yaml
@@ -74,7 +74,7 @@ shiny-base/
 
 4. **Checking `isolate(input$x)` for restored value in updateSelectInput observer**: Race condition. By the time the observer runs (with `ignoreInit = FALSE`), `updateSelectInput` overwrites the restored value before it can be read.
 
-5. **Using `req()` or `req_permission()` at top level of `moduleServer()`**: Silent errors thrown by `req(FALSE)` propagate up when called outside reactive contexts, crashing `init_modules()` before `init_state` flags are set. Use `if (!has_permission(...)) return()` instead.
+5. **Using `req()` or `req(can())` at top level of `moduleServer()`**: Silent errors thrown by `req(FALSE)` propagate up when called outside reactive contexts, crashing `init_modules()` before `init_state` flags are set. Use `if (!can(...)) return()` instead.
 
 ## Bookmark Restoration for Dynamic Inputs
 
@@ -199,18 +199,18 @@ roles:
 
 ```r
 # Check permission (returns TRUE/FALSE)
-has_permission("write:dataset")
+can("write:dataset")
 
 # Gate server logic (silent stop if denied)
 observeEvent(input$save, {
-    req_permission("write:dataset")
+    req(can("write:dataset"))
     db_save(...)
 })
 
 # UI: toggle visibility/state
 observe({
-    shinyjs::toggle("delete_btn", condition = has_permission("delete:dataset"))
-    shinyjs::toggleState("save_btn", condition = has_permission("write:dataset"))
+    shinyjs::toggle("delete_btn", condition = can("delete:dataset"))
+    shinyjs::toggleState("save_btn", condition = can("write:dataset"))
 })
 
 # Check actual role if needed
@@ -220,7 +220,7 @@ observe({
 ## Key Files
 
 - `data/permissions.yaml`: Role-permission mapping (app-specific)
-- `R/shiny-utils/permissions.R`: `has_permission()`, `req_permission()`, `get_user_roles()` (reusable)
+- `R/shiny-utils/permissions.R`: `can()`, `get_user_roles()` (reusable)
 
 ## Dev Mode
 

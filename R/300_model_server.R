@@ -33,6 +33,7 @@ model_server <- function(
                 values$fitted_model <- NULL
                 values$metrics <- NULL
                 values$loaded_model_id <- NULL
+                updateTextInput(session, "equation", value = "")
                 shinyjs::disable("save_btn")
                 shinyjs::disable("delete_btn")
                 shinyjs::hide("results_section")

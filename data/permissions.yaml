@@ -1,7 +1,7 @@
 # Role-Based Access Control (RBAC) Configuration
 #
 # Format: action:resource (e.g., "view:admin", "write:dataset")
-# Use permission strings directly in code: has_permission("write:dataset")
+# Use permission strings directly in code: can("write:dataset")
 
 roles:
     # Full access
