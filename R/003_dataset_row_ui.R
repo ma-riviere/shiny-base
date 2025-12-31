@@ -49,12 +49,14 @@ dataset_row_ui <- function(id, clickable = TRUE) {
             icon("download"),
             onclick = "event.stopPropagation();"
         ),
-        actionButton(
-            ns("delete"),
-            label = NULL,
-            icon = icon("trash"),
-            class = "btn btn-sm btn-outline-danger btn-action-dataset",
-            title = "Delete dataset"
+        shinyjs::hidden(
+            actionButton(
+                ns("delete"),
+                label = NULL,
+                icon = icon("trash"),
+                class = "btn btn-sm btn-outline-danger btn-action-dataset",
+                title = "Delete dataset"
+            )
         )
     )
 

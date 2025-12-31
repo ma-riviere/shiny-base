@@ -1,6 +1,6 @@
 # Admin dashboard server module
 # Provides user session monitoring and system administration.
-# Access gated by has_permission("view:admin") - stops all logic if user lacks permission.
+# Access gated by can("view:admin") - stops all logic if user lacks permission.
 #
 # NOTE: Usage analytics moved to Matomo (see MATOMO.md)
 # Shiny OTEL handles performance tracing.
@@ -10,8 +10,8 @@
 admin_server <- function(id, active_page) {
     moduleServer(id, function(input, output, session) {
         # SECURITY GATE: Exit early if no admin permission.
-        # Use has_permission() (returns bool) not req_permission() (throws silent error).
-        if (!has_permission("view:admin")) {
+        # Use can() (returns bool) not req(can()) (throws silent error outside reactive context).
+        if (!can("view:admin")) {
             return()
         }
 
