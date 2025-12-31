@@ -1,6 +1,6 @@
 # Dataset row UI component
 # Renders a single dataset row with name, date, size, and action buttons
-dataset_row_ui <- function(id, clickable = TRUE) {
+dataset_row_ui <- function(id, clickable = TRUE, can_delete = FALSE) {
     ns <- NS(id)
 
     # ------ MAIN CONTENT ------------------------------------------------------
@@ -29,6 +29,15 @@ dataset_row_ui <- function(id, clickable = TRUE) {
     )
 
     # ------ ACTIONS CONTENT ---------------------------------------------------
+
+    delete_button <- actionButton(
+        ns("delete"),
+        label = NULL,
+        icon = icon("trash"),
+        class = "btn btn-sm btn-outline-danger btn-action-dataset",
+        title = "Delete dataset"
+    )
+
     # Buttons (edit, download, delete)
     # This acts as the second column in the outer grid
     actions_content <- div(
@@ -49,15 +58,7 @@ dataset_row_ui <- function(id, clickable = TRUE) {
             icon("download"),
             onclick = "event.stopPropagation();"
         ),
-        shinyjs::hidden(
-            actionButton(
-                ns("delete"),
-                label = NULL,
-                icon = icon("trash"),
-                class = "btn btn-sm btn-outline-danger btn-action-dataset",
-                title = "Delete dataset"
-            )
-        )
+        if (can_delete) delete_button
     )
 
     # ------ UI ----------------------------------------------------------------

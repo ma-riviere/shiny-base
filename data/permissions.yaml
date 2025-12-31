@@ -2,32 +2,37 @@
 #
 # Format: action:resource (e.g., "view:admin", "write:dataset")
 # Use permission strings directly in code: can("write:dataset")
+#
+# Verbs:
+#   view:   UI access (can see page/tab/element)
+#   write:  Data modification (create + update)
+#   delete: Data removal (always separate from write)
+#   <custom>: Domain-specific actions (fit, export, etc.)
+#
+# Wildcards & Denials:
+#   "*"              All permissions (admin only)
+#   "view:*"         All view permissions
+#   "view:admin:*"   All admin sub-pages
+#   "!view:admin:X"  Deny specific permission (overrides wildcards)
 
 roles:
-    # Full access
-    admin: "*"
+  admin: "*"
 
-    # Developer: can access admin panel (traces, system) but not auth0/users management
-    dev:
-        - "view:home"
-        - "view:explore"
-        - "view:model"
-        - "view:admin"
-        - "view:admin:traces"
-        - "view:admin:system"
-        - "read:dataset"
-        - "write:dataset"
-        - "create:dataset"
-        - "delete:dataset"
-        - "fit:model"
-        - "delete:model"
+  # Developer: full app access, admin panel (traces, system) but not auth0/users
+  dev:
+    - "view:*"
+    - "!view:admin:auth0"
+    - "write:dataset"
+    - "delete:dataset"
+    - "write:model"
+    - "delete:model"
+    - "fit:model"
 
-    # Regular user: no admin panel, no delete
-    user:
-        - "view:home"
-        - "view:explore"
-        - "view:model"
-        - "read:dataset"
-        - "write:dataset"
-        - "create:dataset"
-        - "fit:model"
+  # Regular user: no delete
+  user:
+    - "view:home"
+    - "view:explore"
+    - "view:model"
+    - "write:dataset"
+    - "write:model"
+    - "fit:model"

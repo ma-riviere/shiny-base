@@ -122,8 +122,6 @@ register_on_stop(
 # ------ BOOKMARKS -------------------------------------------------------------
 # Put after the DATABASE section: the pool needs to be active to be able to call bookmark_cleanup
 
-source("R/helpers_database.R", local = TRUE)
-
 # Run cleanup on startup
 bookmark_cleanup()
 

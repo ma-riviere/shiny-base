@@ -13,13 +13,14 @@ admin_ui <- function(id) {
             )
         ),
         # ------ SUB-TABS ------------------------------------------------------
+        # System first so it's the default (users tab is hidden for non-admin roles)
         bslib::navset_card_tab(
             id = ns("admin_tabs"),
-            # ------ AUTH0 / USERS TAB -----------------------------------------
+            # ------ SYSTEM TAB ------------------------------------------------
             bslib::nav_panel(
-                title = tags$span(class = "i18n", `data-key` = "Users", tr("Users")),
-                value = "users",
-                auth0_ui(ns("auth0"))
+                title = tags$span(class = "i18n", `data-key` = "System", tr("System")),
+                value = "system",
+                system_ui(ns("system"))
             ),
             # ------ OTEL TRACES TAB -------------------------------------------
             bslib::nav_panel(
@@ -27,11 +28,11 @@ admin_ui <- function(id) {
                 value = "otel",
                 otel_ui(ns("otel"))
             ),
-            # ------ SYSTEM TAB ------------------------------------------------
+            # ------ AUTH0 / USERS TAB -----------------------------------------
             bslib::nav_panel(
-                title = tags$span(class = "i18n", `data-key` = "System", tr("System")),
-                value = "system",
-                system_ui(ns("system"))
+                title = tags$span(class = "i18n", `data-key` = "Users", tr("Users")),
+                value = "users",
+                auth0_ui(ns("auth0"))
             )
         )
     )

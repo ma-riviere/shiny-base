@@ -1,4 +1,4 @@
-dataset_ui <- function(id) {
+explore_ui <- function(id) {
     ns <- NS(id)
     div(
         id = ns("main"),
@@ -14,7 +14,7 @@ dataset_ui <- function(id) {
         # ----- DATASET SUMMARY ------------------------------------------------
         div(
             class = "mb-4",
-            dataset_row_ui(ns("summary_row"), clickable = FALSE)
+            dataset_row_ui(ns("summary_row"), clickable = FALSE, can_delete = TRUE) # Hiding it server-side if needed
         ),
 
         # ----- DATA PREVIEW ---------------------------------------------------

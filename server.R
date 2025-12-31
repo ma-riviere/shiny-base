@@ -42,7 +42,18 @@ server <- function(input, output, session) {
         "navbar-open_profile",
         "profile-save_profile",
         "profile-profile_nickname",
-        "profile-profile_language"
+        "profile-profile_language",
+        "sidebar-admin_users_view",
+        "sidebar-admin_show_only_recent",
+        # Admin/role related inputs (modals, role management)
+        "admin-auth0-edit_role",
+        "admin-auth0-active_sessions-edit_role",
+        "admin-auth0-roles-add_role",
+        "admin-auth0-roles-new_role_name",
+        "admin-auth0-roles-new_role_description",
+        "admin-auth0-roles-confirm_add_role",
+        "admin-auth0-roles-delete_role",
+        "admin-auth0-roles-confirm_delete_role"
     )
     shiny::setBookmarkExclude(bookmark_exclude)
 
@@ -104,6 +115,7 @@ server <- function(input, output, session) {
         init(
             "refresh_datasets",
             "refresh_models",
+            "refresh_user_cards",
             "show_upload_modal",
             "show_edit_dataset_modal",
             "show_profile_modal",
@@ -128,13 +140,13 @@ server <- function(input, output, session) {
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
             age_filter = reactive(sidebar_module$age_filter),
-            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session),
+            nav_select_callback = \(page) bslib::nav_select("nav", page),
             r = r
         )
-        dataset_server(
-            "dataset",
+        explore_server(
+            "explore",
             selected_dataset_id = reactive(r$selected_dataset_id),
-            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
+            nav_select_callback = \(page) bslib::nav_select("nav", page)
         )
         model_server(
             "model",
@@ -145,26 +157,16 @@ server <- function(input, output, session) {
         )
 
         # Admin module - always instantiate but gated by req(can("view:admin")) inside
-        admin_server("admin", active_page = reactive(input$nav))
+        admin_server("admin", active_page = reactive(input$nav), r = r)
 
-        # Dynamically inject admin nav panel only for users with view:admin permission
-        # This ensures the admin UI HTML is never sent to unauthorized clients
-        # Uses once = TRUE to prevent duplicate insertion when language changes
-        observe(label = "server_admin_nav_insert", {
-            req(can("view:admin"))
-            bslib::nav_insert(
-                id = "nav",
-                nav = bslib::nav_panel(
-                    title = tags$span(class = "i18n", `data-key` = "Admin", tr("Admin")),
-                    value = "admin",
-                    admin_ui("admin")
-                ),
-                target = "model",
-                position = "after",
-                session = session
-            )
-        }) |>
-            bindEvent(TRUE, once = TRUE)
+        # Admin nav panel visibility:
+        # - Hidden by default via nav_hide() (runs for all users)
+        # - Shown via nav_show() only for users with view:admin permission
+        # Panel exists at page load (required for bookmark restoration).
+        bslib::nav_hide("nav", target = "admin")
+        if (can("view:admin")) {
+            bslib::nav_show("nav", target = "admin")
+        }
     }
 
     if (isTRUE(getOption("auth0_disable"))) {

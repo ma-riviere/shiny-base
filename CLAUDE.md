@@ -76,6 +76,8 @@ shiny-base/
 
 5. **Using `req()` or `req(can())` at top level of `moduleServer()`**: Silent errors thrown by `req(FALSE)` propagate up when called outside reactive contexts, crashing `init_modules()` before `init_state` flags are set. Use `if (!can(...)) return()` instead.
 
+6. **Using `purrr::pluck(session, "userData", ...)` inside modules**: `pluck` bypasses `SessionProxy`'s `$` dispatch that delegates to the parent session. Use `session$userData$...` instead.
+
 ## Bookmark Restoration for Dynamic Inputs
 
 **Problem:** Dropdowns with placeholder choices (`selectInput(..., choices = c("No data" = ""))`) that get real choices from DB via `updateSelectInput` don't restore properly. The observer calls `updateSelectInput` with new `selected=` before Shiny's restoration can apply.
@@ -132,7 +134,7 @@ Uses `bslib::page_navbar()` with shared sidebar. Active tab via `input$nav` (aut
 
 ```r
 # server.R
-home_server("home", nav_select_callback = \(page) nav_select("nav", page, session = session))
+home_server("home", nav_select_callback = \(page) nav_select("nav", page))
 
 # Child module
 observeEvent(input$click, nav_select_callback("explore"))
@@ -179,20 +181,42 @@ Modules instantiated only after `session$userData$auth0_info$email_verified`. Un
 
 # Role-Based Access Control (RBAC)
 
+## Permission Schema
+
+Format: `action:resource` (e.g., `view:admin`, `write:dataset`)
+
+| Verb | Purpose | Example |
+|------|---------|---------|
+| `view:` | UI access (page/tab/element) | `view:admin`, `view:explore` |
+| `write:` | Data modification (create + update) | `write:dataset` |
+| `delete:` | Data removal (always separate) | `delete:dataset` |
+| `<custom>:` | Domain-specific actions | `fit:model`, `export:report` |
+
+**Wildcards & Denials:**
+- `"*"` - All permissions (admin only)
+- `"view:*"` - All view permissions
+- `"view:admin:*"` - All admin sub-pages
+- `"!view:admin:auth0"` - Deny specific permission (overrides wildcards)
+
 ## Configuration
 
 Role-permission mapping in `data/permissions.yaml`:
 
 ```yaml
 roles:
-    admin: "*"                    # Wildcard = all permissions
+    admin: "*"
     dev:
-        - "view:admin"
-        - "view:admin:traces"     # Can see traces/system, but not users
+        - "view:*"
+        - "!view:admin:auth0"     # Deny auth0 tab despite view:*
+        - "write:dataset"
         - "delete:dataset"
+        - "fit:model"
     user:
         - "view:home"
-        - "write:dataset"         # No admin, no delete
+        - "view:explore"
+        - "view:model"
+        - "write:dataset"
+        - "fit:model"             # No admin, no delete
 ```
 
 ## Usage

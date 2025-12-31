@@ -115,7 +115,11 @@ home_server <- function(
             }
 
             # Render each dataset row using module UI
-            dataset_rows <- purrr::map(datasets$id, \(id) dataset_row_ui(ns(paste0("row_", id)), clickable = TRUE))
+            can_delete <- can("delete:dataset")
+            dataset_rows <- purrr::map(
+                datasets$id,
+                \(id) dataset_row_ui(ns(paste0("row_", id)), clickable = TRUE, can_delete = can_delete)
+            )
             tagList(dataset_rows)
         })
     })
