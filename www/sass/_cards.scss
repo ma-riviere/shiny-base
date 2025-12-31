@@ -15,6 +15,20 @@
     }
 }
 
+// Reusable accent style for card headers
+.card-header-accent {
+    background: linear-gradient(to right, rgba($primary, 0.05), $white);
+    border-bottom: 1px solid $border-color;
+    border-left: 4px solid $primary;
+    padding: $spacing-md $spacing-lg;
+    min-height: 4.5rem; // Ensure consistent height for headers with/without buttons
+
+    h5 {
+        color: $gray-900;
+        font-weight: 600;
+    }
+}
+
 .stat-card {
     display: flex;
     align-items: center;

@@ -146,13 +146,13 @@ otel_server <- function(id, is_active) {
         # Show busy state when tab opens (first active)
         observeEvent(is_active(), label = "otel_tab_open_busy", {
             req(is_active(), otel_available())
-            bslib::update_task_button("refresh", state = "busy", session = session)
+            bslib::update_task_button("refresh", state = "busy")
         })
 
         # Reset button after spans load
         observe(label = "otel_reset_busy", {
             spans_data() # Depend on spans loading
-            bslib::update_task_button("refresh", state = "ready", session = session)
+            bslib::update_task_button("refresh", state = "ready")
         })
 
         observeEvent(input$refresh, trigger("refresh_otel"), label = "otel_refresh")

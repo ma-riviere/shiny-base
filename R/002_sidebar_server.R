@@ -8,6 +8,12 @@
 sidebar_server <- function(id, r) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
+
+        # Hide admin users sidebar section for users without auth0 admin access
+        if (!can("view:admin:auth0")) {
+            shinyjs::hide("admin_users_section")
+        }
+
         values <- reactiveValues(
             user_datasets = NULL,
             user_models = NULL,
@@ -210,6 +216,27 @@ sidebar_server <- function(id, r) {
 
         # Note: Section visibility is handled by conditionalPanel in sidebar_ui.R
         # based on input.nav value (runs in browser, no server round-trip needed)
+
+        # ------ ADMIN USERS VIEW SYNC --------------------------------------------
+        # Sync admin users view to shared state for auth0 module
+        observeEvent(
+            input$admin_users_view,
+            {
+                r$admin_users_view <- input$admin_users_view
+            },
+            ignoreNULL = TRUE,
+            label = "sidebar_sync_admin_users_view"
+        )
+
+        # Sync "show only most recent" checkbox
+        observeEvent(
+            input$admin_show_only_recent,
+            {
+                r$admin_show_only_recent <- input$admin_show_only_recent
+            },
+            ignoreNULL = TRUE,
+            label = "sidebar_sync_admin_show_only_recent"
+        )
 
         return(values)
     })

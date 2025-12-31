@@ -1,4 +1,4 @@
-dataset_server <- function(
+explore_server <- function(
     id,
     selected_dataset_id = reactive(NULL),
     nav_select_callback = NULL
@@ -73,6 +73,8 @@ dataset_server <- function(
                     on_click = NULL,
                     nav_select_callback = nav_select_callback
                 )
+                # RBAC: hide delete button if user has no permission (hidden by default in UI)
+                if (!can("delete:dataset")) shinyjs::hide("summary_row-delete")
             },
             once = TRUE
         )

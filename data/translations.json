@@ -333,8 +333,32 @@
             "fr": "Aucune connexion récente"
         },
         {
+            "en": "View",
+            "fr": "Vue"
+        },
+        {
+            "en": "All Users",
+            "fr": "Tous les utilisateurs"
+        },
+        {
+            "en": "No users found",
+            "fr": "Aucun utilisateur trouvé"
+        },
+        {
+            "en": "connections",
+            "fr": "connexions"
+        },
+        {
+            "en": "Show only most recent",
+            "fr": "Afficher uniquement le plus récent"
+        },
+        {
             "en": "Connected:",
             "fr": "Connecté:"
+        },
+        {
+            "en": "Created:",
+            "fr": "Créé:"
         },
         {
             "en": "None",
@@ -347,6 +371,26 @@
         {
             "en": "Roles",
             "fr": "Rôles"
+        },
+        {
+            "en": "Change Role",
+            "fr": "Changer le rôle"
+        },
+        {
+            "en": "Edit role",
+            "fr": "Modifier le rôle"
+        },
+        {
+            "en": "Role updated",
+            "fr": "Rôle mis à jour"
+        },
+        {
+            "en": "Role set to user",
+            "fr": "Rôle défini sur utilisateur"
+        },
+        {
+            "en": "Failed to update role",
+            "fr": "Échec de la mise à jour du rôle"
         },
         {
             "en": "Traces",
@@ -463,6 +507,22 @@
         {
             "en": "Refresh",
             "fr": "Actualiser"
+        },
+        {
+            "en": "Available variables:",
+            "fr": "Variables disponibles :"
+        },
+        {
+            "en": "Also defined in app",
+            "fr": "Également défini dans l'appli"
+        },
+        {
+            "en": "Exists in Auth0",
+            "fr": "Existe dans Auth0"
+        },
+        {
+            "en": "Missing in Auth0",
+            "fr": "Manquant dans Auth0"
         }
     ]
 }

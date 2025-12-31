@@ -14,14 +14,21 @@ navbar_ui <- function(id) {
         bslib::nav_panel(
             title = tags$span(class = "i18n", `data-key` = "Explore", "Explore"),
             value = "explore",
-            dataset_ui("dataset")
+            explore_ui("explore")
         ),
         bslib::nav_panel(
             title = tags$span(class = "i18n", `data-key` = "Model", "Model"),
             value = "model",
             model_ui("model")
         ),
-        # Admin panel is injected dynamically via nav_insert() in server.R for admins only
+        # Admin panel: hidden via CSS by default (.nav-admin-hidden in main.scss),
+        # shown via JS for users with view:admin permission in server.R.
+        # Must exist at page load for bookmark restoration to work.
+        bslib::nav_panel(
+            title = tags$span(class = "i18n", `data-key` = "Admin", tr("Admin")),
+            value = "admin",
+            admin_ui("admin")
+        ),
         # Right side: language selector and user menu
         bslib::nav_spacer(),
         bslib::nav_item(navbar_language_selector(ns)),

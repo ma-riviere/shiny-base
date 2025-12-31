@@ -350,7 +350,7 @@
       "RemoteUsername": "ma-riviere",
       "RemoteRepo": "auth0r",
       "RemoteRef": "main",
-      "RemoteSha": "785eb366f23c5225bd6f71f5c107958adf367229"
+      "RemoteSha": "82166600d2243142ed8a43df7fcdb375c2cd6117"
     },
     "backports": {
       "Package": "backports",
