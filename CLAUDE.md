@@ -41,7 +41,6 @@ shiny-base/
 │       └── admin/        # Admin dashboard modules (reusable)
 │           ├── 900_admin_ui.R, 900_admin_server.R
 │           ├── 910_auth0_ui.R, 910_auth0_server.R, 910_auth0_fn.R
-│           ├── 911_active_sessions_ui.R, 911_active_sessions_server.R
 │           ├── 912_roles_section_ui.R, 912_roles_section_server.R
 │           ├── 920_otel_ui.R, 920_otel_server.R
 │           └── 930_system_ui.R, 930_system_server.R, 930_system_fn.R
