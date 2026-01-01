@@ -15,3 +15,5 @@ TODO.md
 tests.qmd
 server-info.txt
 database/*.db
+www/css/main.min.css
+www/css/.sass_cache_keys
