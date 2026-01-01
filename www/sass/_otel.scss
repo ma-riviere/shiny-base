@@ -1,5 +1,5 @@
 // OTel Trace Viewer Styles
-// Row-based trace display with timeline visualization
+// Table-based trace display with adaptive columns
 
 .otel-container {
     font-family: var(--bs-font-monospace);
@@ -7,26 +7,29 @@
     border: 1px solid var(--bs-border-color);
     border-radius: var(--bs-border-radius);
     overflow: hidden;
+    overflow-y: auto;
+    max-height: 600px;
+    background-color: var(--bs-body-bg);
+}
+
+.otel-table {
+    display: table;
+    width: 100%;
+    border-collapse: separate; /* allows sticky header to work better with borders */
+    border-spacing: 0;
 }
 
 .otel-header {
-    display: flex;
-    background: var(--bs-tertiary-bg);
-    border-bottom: 1px solid var(--bs-border-color);
+    display: table-header-group;
     font-weight: 600;
-    padding: 0.5rem 0;
 }
 
 .otel-rows {
-    max-height: 600px;
-    overflow-y: auto;
+    display: table-row-group;
 }
 
 .otel-row {
-    display: flex;
-    align-items: center;
-    padding: 0.35rem 0;
-    border-bottom: 1px solid var(--bs-border-color-translucent);
+    display: table-row;
     transition: background-color 0.15s;
 }
 
@@ -48,28 +51,68 @@
 }
 
 .otel-col {
-    padding: 0 0.5rem;
-    flex-shrink: 0;
+    display: table-cell;
+    padding: 0.35rem 0.5rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
 }
 
+/* Header cells need special handling for sticky positioning */
+.otel-header .otel-col {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bs-tertiary-bg);
+    border-bottom: 1px solid var(--bs-border-color);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+/* Adaptive Column Widths */
+
 .otel-col-time {
-    width: 80px;
+    white-space: nowrap;
+    width: 1%; /* Shrink to fit content */
     color: var(--bs-secondary-color);
 }
 
 .otel-col-session {
-    width: 70px;
+    white-space: nowrap;
+    width: 1%; /* Shrink to fit content */
     color: var(--bs-secondary-color);
     font-size: 0.75rem;
 }
 
 .otel-col-span {
-    flex: 1;
-    min-width: 200px;
+    /* Truncate long span names */
+    max-width: 0; /* Creates limits for text-overflow to work in table */
+    width: auto;  /* Takes remaining space */
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
 }
+
+.otel-col-origin {
+    white-space: nowrap;
+    width: 1%;
+    color: var(--bs-secondary-color);
+    font-size: 0.8rem;
+}
+
+.otel-col-duration {
+    white-space: nowrap;
+    width: 1%;
+    text-align: right;
+    color: var(--bs-secondary-color);
+}
+
+.otel-col-timeline {
+    width: 180px; /* Fixed width for timeline */
+    min-width: 180px;
+    padding-right: 1rem;
+}
+
+/* Content Styles */
 
 .otel-indent {
     color: var(--bs-secondary-color);
@@ -77,23 +120,6 @@
 
 .otel-span-name {
     color: var(--bs-body-color);
-}
-
-.otel-col-origin {
-    width: 100px;
-    color: var(--bs-secondary-color);
-    font-size: 0.8rem;
-}
-
-.otel-col-duration {
-    width: 80px;
-    text-align: right;
-    color: var(--bs-secondary-color);
-}
-
-.otel-col-timeline {
-    width: 180px;
-    padding-right: 1rem;
 }
 
 .otel-timeline-track {
