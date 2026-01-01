@@ -61,7 +61,7 @@ enableBookmarking(store = "server")
 
 # ------ SHINY-UTILS -----------------------------------------------------------
 
-source(here::here("R", "shiny-utils", "init.R"))
+source(here::here("R", "shiny-utils", "init.R"), chdir = TRUE)
 
 load_subfolders("R")
 
