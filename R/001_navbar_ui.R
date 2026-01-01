@@ -21,9 +21,7 @@ navbar_ui <- function(id) {
             value = "model",
             model_ui("model")
         ),
-        # Admin panel: hidden via CSS by default (.nav-admin-hidden in main.scss),
-        # shown via JS for users with view:admin permission in server.R.
-        # Must exist at page load for bookmark restoration to work.
+        # Only shown for users with view:admin permission
         bslib::nav_panel(
             title = tags$span(class = "i18n", `data-key` = "Admin", tr("Admin")),
             value = "admin",
@@ -35,6 +33,8 @@ navbar_ui <- function(id) {
         navbar_user_menu(ns)
     )
 }
+
+# ----- NAVBAR COMPONENTS ------------------------------------------------------
 
 navbar_language_selector <- function(ns) {
     selectInput(
