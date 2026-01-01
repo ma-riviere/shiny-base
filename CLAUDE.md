@@ -30,15 +30,21 @@ shiny-base/
 │   ├── 1xx_*             # Home module
 │   ├── 2xx_*             # Dataset (Explore) module
 │   ├── 3xx_*             # Model module (async fitting via ExtendedTask)
-│   ├── 9xx_*             # Admin module (always last)
 │   ├── helpers_*.R       # Non-module functions (includes model DB ops)
 │   └── shiny-utils/      # Reusable utilities (git submodule)
 │       ├── logging.R, auth0.R, bookmarks.R, caching.R
 │       ├── database.R, error_handling.R, i18n.R, loading.R
 │       ├── otel.R, sass.R, scheduler.R, sessions.R
-│       ├── triggers.R, users.R, validation.R
+│       ├── triggers.R, users.R, utils.R, validation.R
 │       ├── permissions.R # RBAC helpers (can, get_user_roles)
-│       └── shinylogs.R   # (Unused) Session replay - see file for schema
+│       ├── shinylogs.R   # (Unused) Session replay - see file for schema
+│       └── admin/        # Admin dashboard modules (reusable)
+│           ├── 900_admin_ui.R, 900_admin_server.R
+│           ├── 910_auth0_ui.R, 910_auth0_server.R, 910_auth0_fn.R
+│           ├── 911_active_sessions_ui.R, 911_active_sessions_server.R
+│           ├── 912_roles_section_ui.R, 912_roles_section_server.R
+│           ├── 920_otel_ui.R, 920_otel_server.R
+│           └── 930_system_ui.R, 930_system_server.R, 930_system_fn.R
 ├── www/                  # Static assets (css/, sass/, js/, html/, img/)
 ├── data/                 # translations.json, permissions.yaml
 ├── database/             # schema-base.sql (users, sessions, bookmarks), schema.sql (app-specific)
@@ -249,6 +255,63 @@ observe({
 ## Dev Mode
 
 When `ENV=dev`, all users are treated as admin (bypass for local development).
+
+---
+
+# Admin Panel
+
+Reusable admin dashboard in `R/shiny-utils/admin/`. Provides system monitoring, OTel traces, and user/role management.
+
+## Tabs
+
+| Tab | Module | Purpose |
+|-----|--------|---------|
+| System | `admin_system_*` | Log viewer with auto-refresh |
+| Traces | `admin_otel_*` | OTel trace viewer (dev only, disabled in prod) |
+| Users | `admin_auth0_*` | Active sessions, all users, role management |
+
+## Usage
+
+```r
+# ui.R
+admin_ui(ns("admin"))
+
+# server.R
+admin_server("admin", active_page = reactive(input$nav), r = r)
+```
+
+## Required Globals
+
+- `auth0_mgmt`: Auth0 Management API client (from auth0r)
+- `is_prod`: Boolean for production environment check
+- `OTEL_TRACER_PROVIDER`: OTel tracer provider (for traces tab)
+- `.ROLE_PERMISSIONS`: Loaded from `data/permissions.yaml`
+
+## Dependencies
+
+Uses functions from shiny-utils:
+- `can()`, `get_user_roles()` from permissions.R
+- `tr()` from i18n.R (app provides translations)
+- `db_get_active_sessions()` from sessions.R
+- `db_get_all_users()` from users.R
+- `extract_profile_info()` from auth0.R
+- `format_relative_time()` from utils.R
+- `otel_*` functions from otel.R
+- `log_*` functions from logging.R
+- `watch()`, `trigger()` from triggers.R
+
+## Translation Keys
+
+App must provide these translation keys:
+- Admin Dashboard, System administration and monitoring
+- System, Traces, Users, Log Viewer, No log file, Scroll to end, Refresh
+- Currently Connected, All Users, Role Management, No active sessions
+- Auth0 Roles, App Roles, Create New Role, Role Name, Description (optional)
+- Change Role, Save, Cancel, Delete, Create
+- just now, %.0f min ago, %.1f hours ago, %.0f days ago
+- Connected:, Created:, connections
+- Role updated, Role set to user, Role created, Role deleted
+- Failed to update role, Failed to create role:, Role name is required
 
 ---
 
