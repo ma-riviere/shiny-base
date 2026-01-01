@@ -59,23 +59,11 @@ options(
 
 enableBookmarking(store = "server")
 
-# ------ SUB-DIRS --------------------------------------------------------------
-# Sourcing R files from all sub-directories in R/
-# Load shiny-utils first (contains logging, database, etc.), then other directories
-if (dir.exists("R/shiny-utils/")) {
-    void_ <- lapply(
-        list.files(path = "R/shiny-utils/", pattern = "\\.[Rr]$", full.names = TRUE, recursive = TRUE),
-        source
-    )
-}
+# ------ SHINY-UTILS -----------------------------------------------------------
 
-void_ <- lapply(
-    {
-        r_subdirs <- list.dirs("R", full.names = TRUE, recursive = FALSE)
-        r_subdirs[basename(r_subdirs) != "shiny-utils"]
-    },
-    \(d) lapply(list.files(path = d, pattern = "\\.[Rr]$", full.names = TRUE, recursive = TRUE), source)
-)
+source(here::here("R", "shiny-utils", "init.R"))
+
+load_subfolders("R")
 
 # ------ LOGGING ---------------------------------------------------------------
 # Initialize logging early so it's available for all subsequent initialization
