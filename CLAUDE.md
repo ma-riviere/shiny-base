@@ -81,6 +81,8 @@ shiny-base/
 
 6. **Using `purrr::pluck(session, "userData", ...)` inside modules**: `pluck` bypasses `SessionProxy`'s `$` dispatch that delegates to the parent session. Use `session$userData$...` instead.
 
+7. **Playwright storage state for Auth0 session persistence**: Auth0r stores sessions server-side in R memory, not in browser cookies. The `auth0_state` cookie is a one-time CSRF token consumed during OAuth callback, not a session cookie. Use serial mode with shared page and login-per-describe instead.
+
 ## Bookmark Restoration for Dynamic Inputs
 
 **Problem:** Dropdowns with placeholder choices (`selectInput(..., choices = c("No data" = ""))`) that get real choices from DB via `updateSelectInput` don't restore properly. The observer calls `updateSelectInput` with new `selected=` before Shiny's restoration can apply.
@@ -383,6 +385,19 @@ Mark `init_state$auth` and `init_state$modules` as TRUE at appropriate points.
 
 # Testing
 
+## Tool Selection
+
+| Use case | Tool |
+|----------|------|
+| Auth0 flow, multi-page navigation | Playwright |
+| Visual regression, UI debugging | Playwright |
+| One-off UI checks during development | Playwright (`test:ui` mode) |
+| Module reactive logic, internal state | shinytest2 |
+| Testing `exportTestValues()` reactives | shinytest2 |
+| R package / testthat integration | shinytest2 |
+
+**Playwright** tests what the user sees (DOM). **shinytest2** can access internal Shiny state via `get_values()` and `exportTestValues()`.
+
 ## Running the App Locally
 
 ```bash
@@ -392,95 +407,208 @@ R -e "shiny::runApp(port = 9090)"
 
 ## Auth0 Bypass
 
-For quick local testing without Auth0 login, set in `.Renviron`:
-
-```bash
-BYPASS_AUTH0=TRUE
-```
-
-With `BYPASS_AUTH0=FALSE` (default), the app requires Auth0 authentication.
+For quick local testing without Auth0 login, set `BYPASS_AUTH0=TRUE`.
 
 ## Automated Browser Testing (Playwright)
 
-E2E tests in `tests/e2e/` using Playwright.
+E2E tests in `tests/e2e/` using `@playwright/test` (official test runner).
 
 **Prerequisites:**
 - App running on port 9090
-- `BYPASS_AUTH0=FALSE` in `.Renviron`
-- Dependencies installed: `npm --prefix tests/e2e install`
+- Dependencies: `npm --prefix tests/e2e install`
+- For Auth0 tests: `BYPASS_AUTH0=FALSE` in `.Renviron` (default)
 
-**Run all tests (from project root):**
+### Running Tests
 
 ```bash
-npm --prefix tests/e2e install  # First time only
+# Default: run as dev role
 npm --prefix tests/e2e test
 
-# With options
-ROLE=admin DEBUG=1 npm --prefix tests/e2e test
+# Run as specific role
+npm --prefix tests/e2e run test:admin
+npm --prefix tests/e2e run test:user
 
-# Run specific tests only
-TESTS=auth-login,explore-dataset npm --prefix tests/e2e test
+# Run all roles
+npm --prefix tests/e2e run test:all
+
+# Interactive UI mode (great for debugging)
+npm --prefix tests/e2e run test:ui
+
+# Debug mode (step through tests)
+npm --prefix tests/e2e run test:debug
+
+# Show browser window (headless by default)
+npm --prefix tests/e2e run test:headed
+
+# Run specific test file
+npx --prefix tests/e2e playwright test auth-login.spec.js
+
+# Run specific test by name
+npx --prefix tests/e2e playwright test -g "should be authenticated"
+
+# View last test report
+npm --prefix tests/e2e run report
 ```
 
-**Run single test:**
+**Auth0 bypass:** Tests automatically skip Auth0 login if `BYPASS_AUTH0=TRUE` in `.Renviron` or if running in CI (`process.env.CI`).
+
+**CI:** See `.github/workflows/e2e.yml`.
+
+### Writing Tests
+
+Tests use `@playwright/test` with Shiny-specific fixtures:
+
+```js
+const { test, expect } = require('./helpers/fixtures');
+const { waitForShiny, waitForWaiterHide } = require('./helpers');
+const { PAGES, SELECTORS } = require('./app-config');
+
+test.describe('Feature', () => {
+
+    test('example test', async ({ page, shiny }) => {
+        await page.goto('/');
+        await shiny.waitForReady();  // Wait for Shiny + waiter
+
+        // Built-in Playwright assertions (auto-retry)
+        await expect(page.locator('.navbar')).toBeVisible();
+        await expect(page.locator('#output')).toHaveText('Expected');
+
+        // Custom Shiny assertions
+        await expect(page).toBeOnPage(PAGES.HOME);
+        await expect(page).toHaveURLNotContaining('auth0.com');
+
+        // Navigation
+        await shiny.navigateTo(PAGES.EXPLORE);
+        await expect(page).toBeOnPage(PAGES.EXPLORE);
+    });
+
+});
+```
+
+### Auth0 Authentication Pattern
+
+Tests use serial mode with a shared browser context to maintain Auth0 sessions:
+
+```js
+const { login, getConfig, waitForShiny, waitForWaiterHide } = require('./helpers');
+
+test.describe.configure({ mode: 'serial' });
+
+test.describe('Feature requiring auth', () => {
+    let sharedPage;
+    const config = getConfig();
+
+    test.beforeAll(async ({ browser }) => {
+        const context = await browser.newContext();
+        sharedPage = await context.newPage();
+
+        if (!config.bypassAuth0) {
+            await login(sharedPage, { role: 'dev' });
+        } else {
+            await sharedPage.goto(config.targetUrl);
+        }
+        await waitForShiny(sharedPage);
+        await waitForWaiterHide(sharedPage);
+    });
+
+    test.afterAll(async () => {
+        await sharedPage.context().close();
+    });
+
+    test('uses shared page', async () => {
+        await expect(sharedPage.locator('.navbar')).toBeVisible();
+    });
+});
+```
+
+**Why this pattern?** Auth0r stores authenticated sessions server-side in R memory, not in browser cookies. Playwright's storage state only captures cookies/localStorage, but the actual session lives in R's session object. Sequential tests reusing the same page avoid re-authentication.
+
+### File Structure
+
+```
+tests/e2e/
+├── playwright.config.js   # Test runner config (projects per role)
+├── global-setup.js        # Ensures app is running
+├── app-config.js          # App-specific: PAGES, SELECTORS, flows
+├── helpers/
+│   ├── fixtures.js        # Playwright Test fixtures + custom matchers
+│   ├── index.js           # Unified exports
+│   ├── config.js          # .Renviron parsing, ensureAppRunning(), bypassAuth0
+│   ├── auth.js            # Auth0 login flow
+│   ├── shiny.js           # waitForShiny, waitForReactivity, etc.
+│   ├── navigation.js      # navigateTo, getCurrentPage, etc.
+│   ├── ui.js              # clickButton, selectDropdown, etc.
+│   └── assertions.js      # Legacy assertions (prefer expect())
+└── *.spec.js              # Test files
+```
+
+### Key Helpers
+
+**Shiny fixture** (available as `shiny` in tests):
+- `shiny.waitForReady()` - Wait for Shiny connected + waiter hidden
+- `shiny.waitForReactivity(buffer)` - Wait after UI action
+- `shiny.navigateTo(page)` - Navigate to navbar page
+- `shiny.getCurrentPage()` - Get active page value
+- `shiny.getInputValue(id)` - Read Shiny input
+- `shiny.setInputValue(id, value)` - Set Shiny input programmatically
+
+**Custom expect matchers:**
+- `expect(page).toBeOnPage('explore')` - Assert current navbar page
+- `expect(page).toHaveURLNotContaining('auth0.com')` - Assert URL excludes
+- `expect(locator).notToBeRecalculating()` - Assert output not recalculating
+
+**Legacy helpers** (still work, but prefer `expect()`):
+- `assertText`, `assertVisible`, `assertEnabled`, etc.
+
+**UI helpers:**
+- `clickButton(page, id)`, `clickTaskButton(page, id, opts)`
+- `fillInput(page, id, value)`, `selectDropdown(page, id, value)`
+- `closeModal(page)`, `waitForModal(page)`
+
+### Visual Debugging
 
 ```bash
-node tests/e2e/auth-login.js
+# Interactive mode - see tests run, pause, inspect
+npm --prefix tests/e2e run test:ui
+
+# Debug mode - step through with inspector
+npm --prefix tests/e2e run test:debug
+
+# Take screenshot mid-test
+await page.screenshot({ path: '/tmp/debug.png', fullPage: true });
+
+# Visual regression (saves baseline, compares on reruns)
+await expect(page).toHaveScreenshot('modal-open.png');
+
+# View trace after failure
+npx playwright show-trace test-results/trace.zip
 ```
 
-**Available tests:**
-- `auth-login.js` - Verify Auth0 login flow
+### Projects (Roles)
 
-**Environment flags:**
-- `DEBUG=1` - Enable screenshots on failure
-- `CI=1` - Headless mode, no slowMo (auto-set by GitHub Actions)
-- `ROLE=admin|dev|user` - Which role to test (default: dev)
-- `TESTS=name1,name2` - Run specific tests only
+Config defines 3 projects: `dev`, `admin`, `user`. Each uses different storage state (login session).
 
-**Local run (no skill needed):**
-```bash
-cd tests/e2e && npm install && npm test
-```
-
-**CI:** See `.github/workflows/e2e.yml` - runs with `BYPASS_AUTH0=TRUE` in headless mode.
-
-### E2E Script Guidelines
-
-**Prefer text assertions over screenshots** to minimize token usage when Claude reads test output.
-
-| Approach | Token cost | When to use |
-|----------|------------|-------------|
-| Text assertions + console.log | Low | Default. Pass/fail with context. |
-| Accessibility snapshots | Medium | Debugging page structure, finding elements. |
-| Screenshots on error | High | Visual debugging, catch blocks only. |
-
-**Accessibility snapshots** return a text-based tree of the page structure - useful when you need to see "what's on the page" without the token cost of images:
+Skip tests per role:
 ```js
-const snapshot = await page.accessibility.snapshot();
-console.log(JSON.stringify(snapshot, null, 2));
+test('admin only feature', async ({ page }, testInfo) => {
+    if (testInfo.project.name !== 'admin') test.skip();
+    // ...
+});
 ```
 
-**Pattern:**
+### Nav Link Selectors
+
+Bslib's navbar creates both tab links and tab panels with `data-value` attributes. Use `.nav-link[data-value="..."]` to target only the link:
+
 ```js
-// Good: text assertion with clear failure message
-const title = await page.title();
-if (!title.includes('Expected')) {
-    throw new Error(`Title mismatch: got "${title}"`);
-}
-console.log('✓ Title verified');
+// Correct: targets only the nav link
+await expect(page.locator('.nav-link[data-value="home"]')).toBeVisible();
 
-// Good: screenshot only on error
-catch (error) {
-    await page.screenshot({ path: '/tmp/test-error.png' });
-    throw error;
-}
-
-// Avoid: routine screenshots (wastes tokens when read)
-await page.screenshot({ path: '/tmp/step1.png' });
+// Wrong: matches both link AND panel (strict mode violation)
+await expect(page.locator('[data-value="home"]')).toBeVisible();
 ```
 
-**Important:** Always stop/kill the app when you're done.
-
+**Stop the app when done:**
 ```bash
 lsof -ti:9090 | xargs kill
 ```

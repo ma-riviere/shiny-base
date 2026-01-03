@@ -44,13 +44,17 @@ function getConfig() {
 
     const renviron = loadRenviron(renvironPath);
 
+    // Skip Auth0 login if BYPASS_AUTH0=TRUE in .Renviron or running in CI
+    const bypassAuth0 = renviron.BYPASS_AUTH0 === 'TRUE' || !!process.env.CI;
+
     return {
         projectRoot,
-        targetUrl: `http://127.0.0.1:${renviron.APP_PORT || 9090}`,
+        targetUrl: `http://localhost:${renviron.APP_PORT || 9090}`,
+        bypassAuth0,
         credentials: {
             admin: { email: renviron.AUTH0_USER_ADMIN, password: renviron.AUTH0_PWD },
             dev: { email: renviron.AUTH0_USER_DEV, password: renviron.AUTH0_PWD },
-            user: { email: renviron.AUTH0_USER, password: renviron.AUTH0_PWD }
+            user: { email: renviron.AUTH0_USER_USER, password: renviron.AUTH0_PWD }
         }
     };
 }

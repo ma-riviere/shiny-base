@@ -56,7 +56,12 @@ async function login(page, options = {}) {
     // Wait for redirect back to app
     await page.waitForURL(url => !url.toString().includes('auth0.com'), { timeout: 30000 });
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(3000); // Wait for Shiny to initialize
+
+    // Wait for Shiny to be fully connected (ensures all session cookies are set)
+    await page.waitForFunction(
+        () => window.Shiny && window.Shiny.shinyapp && window.Shiny.shinyapp.isConnected(),
+        { timeout: 30000 }
+    );
 
     // Verify we're back in the app
     const finalUrl = page.url();
