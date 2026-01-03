@@ -140,13 +140,13 @@ server <- function(input, output, session) {
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
             age_filter = reactive(sidebar_module$age_filter),
-            nav_select_callback = \(page) bslib::nav_select("nav", page),
+            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session),
             r = r
         )
         explore_server(
             "explore",
             selected_dataset_id = reactive(r$selected_dataset_id),
-            nav_select_callback = \(page) bslib::nav_select("nav", page)
+            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
         )
         model_server(
             "model",
