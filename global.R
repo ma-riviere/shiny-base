@@ -54,7 +54,9 @@ options(
     permissions_file = "data/permissions.yaml",
 
     # Debug
-    shiny.autoreload = if (is_prod) FALSE else TRUE
+    # DISABLED: autoreload was causing app restarts during E2E tests (file writes to bookmarks/logs)
+    shiny.autoreload = FALSE,
+    shiny.autoreload.pattern = "\\.(R|css|scss|js|html?|json|ya?ml)$"
 )
 
 enableBookmarking(store = "server")

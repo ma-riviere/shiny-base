@@ -11,8 +11,7 @@
  *          Example: TESTS=auth-login,explore-dataset
  */
 const { chromium } = require('playwright');
-const { getConfig, ensureAppRunning } = require('./helpers/config');
-const { login } = require('./helpers/auth');
+const { getConfig, ensureAppRunning, login } = require('./helpers');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,7 +24,7 @@ const isCI = process.env.CI === 'true' || process.env.CI === '1';
 function discoverTests(dir) {
     const files = fs.readdirSync(dir);
     return files
-        .filter(f => f.endsWith('.js') && f !== 'run-all.js')
+        .filter(f => f.endsWith('.js') && f !== 'run-all.js' && f !== 'app-config.js')
         .filter(f => !testsFilter || testsFilter.some(t => f.includes(t)))
         .map(f => ({
             name: f.replace('.js', ''),
