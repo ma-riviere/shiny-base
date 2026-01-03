@@ -523,6 +523,62 @@
         {
             "en": "Missing in Auth0",
             "fr": "Manquant dans Auth0"
+        },
+        {
+            "en": "No roles defined in Auth0",
+            "fr": "Aucun rôle défini dans Auth0"
+        },
+        {
+            "en": "No roles defined in permissions.yaml",
+            "fr": "Aucun rôle défini dans permissions.yaml"
+        },
+        {
+            "en": "Create New Role",
+            "fr": "Créer un nouveau rôle"
+        },
+        {
+            "en": "Role Name",
+            "fr": "Nom du rôle"
+        },
+        {
+            "en": "Description (optional)",
+            "fr": "Description (facultatif)"
+        },
+        {
+            "en": "Create",
+            "fr": "Créer"
+        },
+        {
+            "en": "Role name is required",
+            "fr": "Le nom du rôle est requis"
+        },
+        {
+            "en": "Role created",
+            "fr": "Rôle créé"
+        },
+        {
+            "en": "Failed to create role:",
+            "fr": "Échec de la création du rôle :"
+        },
+        {
+            "en": "Delete Role",
+            "fr": "Supprimer le rôle"
+        },
+        {
+            "en": "Are you sure you want to delete the role '%s'?",
+            "fr": "Êtes-vous sûr de vouloir supprimer le rôle '%s' ?"
+        },
+        {
+            "en": "This will remove the role from all users.",
+            "fr": "Ceci supprimera le rôle de tous les utilisateurs."
+        },
+        {
+            "en": "Role deleted",
+            "fr": "Rôle supprimé"
+        },
+        {
+            "en": "Failed to delete role:",
+            "fr": "Échec de la suppression du rôle :"
         }
     ]
 }
