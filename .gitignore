@@ -6,7 +6,7 @@
 .Ruserdata
 .vscode/
 .ansible/
-.claude/
+.claude/settings.local.json
 cache/
 shiny_bookmarks/
 logs/
@@ -17,3 +17,7 @@ server-info.txt
 database/*.db
 www/css/main.min.css
 www/css/.sass_cache_keys
+
+# E2E tests (Playwright)
+tests/e2e/node_modules/
+tests/e2e/package-lock.json

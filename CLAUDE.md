@@ -2,8 +2,6 @@
 
 Base template for Shiny apps with Auth0 authentication and server-side bookmarking.
 
-**Auth0 credentials:** `ma.riviere987@gmail.com` / `auth0test&15`
-
 **LLM Resource:** When unsure about Shiny-related issues, consult/brainstorm with the Shiny NotebookLM (skill).
 
 ---
@@ -382,6 +380,110 @@ Uses `waiter` package for full-page overlay during initialization. `R/shiny-util
 Mark `init_state$auth` and `init_state$modules` as TRUE at appropriate points.
 
 ---
+
+# Testing
+
+## Running the App Locally
+
+```bash
+# Port 9090 is required (only callback URL registered in Auth0)
+R -e "shiny::runApp(port = 9090)"
+```
+
+## Auth0 Bypass
+
+For quick local testing without Auth0 login, set in `.Renviron`:
+
+```bash
+BYPASS_AUTH0=TRUE
+```
+
+With `BYPASS_AUTH0=FALSE` (default), the app requires Auth0 authentication.
+
+## Automated Browser Testing (Playwright)
+
+E2E tests in `tests/e2e/` using Playwright.
+
+**Prerequisites:**
+- App running on port 9090
+- `BYPASS_AUTH0=FALSE` in `.Renviron`
+- Dependencies installed: `npm --prefix tests/e2e install`
+
+**Run all tests (from project root):**
+
+```bash
+npm --prefix tests/e2e install  # First time only
+npm --prefix tests/e2e test
+
+# With options
+ROLE=admin DEBUG=1 npm --prefix tests/e2e test
+
+# Run specific tests only
+TESTS=auth-login,explore-dataset npm --prefix tests/e2e test
+```
+
+**Run single test:**
+
+```bash
+node tests/e2e/auth-login.js
+```
+
+**Available tests:**
+- `auth-login.js` - Verify Auth0 login flow
+
+**Environment flags:**
+- `DEBUG=1` - Enable screenshots on failure
+- `CI=1` - Headless mode, no slowMo (auto-set by GitHub Actions)
+- `ROLE=admin|dev|user` - Which role to test (default: dev)
+- `TESTS=name1,name2` - Run specific tests only
+
+**Local run (no skill needed):**
+```bash
+cd tests/e2e && npm install && npm test
+```
+
+**CI:** See `.github/workflows/e2e.yml` - runs with `BYPASS_AUTH0=TRUE` in headless mode.
+
+### E2E Script Guidelines
+
+**Prefer text assertions over screenshots** to minimize token usage when Claude reads test output.
+
+| Approach | Token cost | When to use |
+|----------|------------|-------------|
+| Text assertions + console.log | Low | Default. Pass/fail with context. |
+| Accessibility snapshots | Medium | Debugging page structure, finding elements. |
+| Screenshots on error | High | Visual debugging, catch blocks only. |
+
+**Accessibility snapshots** return a text-based tree of the page structure - useful when you need to see "what's on the page" without the token cost of images:
+```js
+const snapshot = await page.accessibility.snapshot();
+console.log(JSON.stringify(snapshot, null, 2));
+```
+
+**Pattern:**
+```js
+// Good: text assertion with clear failure message
+const title = await page.title();
+if (!title.includes('Expected')) {
+    throw new Error(`Title mismatch: got "${title}"`);
+}
+console.log('✓ Title verified');
+
+// Good: screenshot only on error
+catch (error) {
+    await page.screenshot({ path: '/tmp/test-error.png' });
+    throw error;
+}
+
+// Avoid: routine screenshots (wastes tokens when read)
+await page.screenshot({ path: '/tmp/step1.png' });
+```
+
+**Important:** Always stop/kill the app when you're done.
+
+```bash
+lsof -ti:9090 | xargs kill
+```
 
 # Development Notes
 
