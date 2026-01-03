@@ -1,0 +1,13 @@
+{
+    "name": "shiny-base-e2e",
+    "private": true,
+    "scripts": {
+        "test": "node run-all.js",
+        "test:debug": "DEBUG=1 node run-all.js",
+        "test:admin": "ROLE=admin node run-all.js",
+        "setup": "npx playwright install chromium"
+    },
+    "dependencies": {
+        "playwright": "^1.40.0"
+    }
+}
