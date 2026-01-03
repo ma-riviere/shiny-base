@@ -22,8 +22,8 @@ module.exports = defineConfig({
     // Retry on CI only
     retries: process.env.CI ? 2 : 0,
 
-    // Parallel execution
-    workers: process.env.CI ? 1 : 1, // Sequential for now (shared login state)
+    // Parallel execution: one worker per role (dev, admin, user)
+    workers: process.env.CI ? 3 : 3,
 
     // Reporter
     reporter: process.env.CI

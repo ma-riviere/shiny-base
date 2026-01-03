@@ -23,7 +23,15 @@ test.describe('Authentication & RBAC - Dev role', () => {
     let sharedPage;
     const config = getConfig();
 
-    test.beforeAll(async ({ browser }) => {
+    // Only run for 'dev' project
+    test.beforeEach(({ }, testInfo) => {
+        test.skip(testInfo.project.name !== 'dev', 'Skipping: not dev project');
+    });
+
+    test.beforeAll(async ({ browser }, testInfo) => {
+        // Skip setup for non-matching projects
+        if (testInfo.project.name !== 'dev') return;
+
         // Create a context and page that will be shared across tests
         const context = await browser.newContext();
         sharedPage = await context.newPage();
@@ -38,7 +46,8 @@ test.describe('Authentication & RBAC - Dev role', () => {
         await waitForWaiterHide(sharedPage);
     });
 
-    test.afterAll(async () => {
+    test.afterAll(async ({ }, testInfo) => {
+        if (testInfo.project.name !== 'dev' || !sharedPage) return;
         await sharedPage.context().close();
     });
 
@@ -90,11 +99,14 @@ test.describe('RBAC - Admin role', () => {
     let sharedPage;
     const config = getConfig();
 
+    // Only run for 'admin' project
+    test.beforeEach(({ }, testInfo) => {
+        test.skip(testInfo.project.name !== 'admin', 'Skipping: not admin project');
+    });
+
     test.beforeAll(async ({ browser }, testInfo) => {
-        if (testInfo.project.name !== 'admin') {
-            test.skip();
-            return;
-        }
+        // Skip setup for non-matching projects
+        if (testInfo.project.name !== 'admin') return;
 
         const context = await browser.newContext();
         sharedPage = await context.newPage();
@@ -108,20 +120,16 @@ test.describe('RBAC - Admin role', () => {
         await waitForWaiterHide(sharedPage);
     });
 
-    test.afterAll(async () => {
-        if (sharedPage) {
-            await sharedPage.context().close();
-        }
+    test.afterAll(async ({ }, testInfo) => {
+        if (testInfo.project.name !== 'admin' || !sharedPage) return;
+        await sharedPage.context().close();
     });
 
-    test('should see admin tab', async ({ }, testInfo) => {
-        if (testInfo.project.name !== 'admin') test.skip();
+    test('should see admin tab', async () => {
         await expect(sharedPage.locator(`.nav-link[data-value="${PAGES.ADMIN}"]`)).toBeVisible();
     });
 
-    test('should see ALL admin sub-tabs including users', async ({ }, testInfo) => {
-        if (testInfo.project.name !== 'admin') test.skip();
-
+    test('should see ALL admin sub-tabs including users', async () => {
         await navigateTo(sharedPage, PAGES.ADMIN);
 
         await expect(sharedPage.locator(SELECTORS.admin.systemTab)).toBeVisible();
@@ -138,11 +146,14 @@ test.describe('RBAC - User role', () => {
     let sharedPage;
     const config = getConfig();
 
+    // Only run for 'user' project
+    test.beforeEach(({ }, testInfo) => {
+        test.skip(testInfo.project.name !== 'user', 'Skipping: not user project');
+    });
+
     test.beforeAll(async ({ browser }, testInfo) => {
-        if (testInfo.project.name !== 'user') {
-            test.skip();
-            return;
-        }
+        // Skip setup for non-matching projects
+        if (testInfo.project.name !== 'user') return;
 
         const context = await browser.newContext();
         sharedPage = await context.newPage();
@@ -156,14 +167,12 @@ test.describe('RBAC - User role', () => {
         await waitForWaiterHide(sharedPage);
     });
 
-    test.afterAll(async () => {
-        if (sharedPage) {
-            await sharedPage.context().close();
-        }
+    test.afterAll(async ({ }, testInfo) => {
+        if (testInfo.project.name !== 'user' || !sharedPage) return;
+        await sharedPage.context().close();
     });
 
-    test('should NOT see admin tab', async ({ }, testInfo) => {
-        if (testInfo.project.name !== 'user') test.skip();
+    test('should NOT see admin tab', async () => {
         await expect(sharedPage.locator(`.nav-link[data-value="${PAGES.ADMIN}"]`)).not.toBeVisible();
     });
 
