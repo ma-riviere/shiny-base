@@ -1,0 +1,18 @@
+{
+    "name": "shiny-base",
+    "private": true,
+    "scripts": {
+        "test": "npm --prefix tests/e2e test",
+        "test:dev": "npm --prefix tests/e2e run test:dev",
+        "test:admin": "npm --prefix tests/e2e run test:admin",
+        "test:user": "npm --prefix tests/e2e run test:user",
+        "test:headed": "npm --prefix tests/e2e run test:headed",
+        "test:dev:headed": "npm --prefix tests/e2e run test:dev:headed",
+        "test:admin:headed": "npm --prefix tests/e2e run test:admin:headed",
+        "test:user:headed": "npm --prefix tests/e2e run test:user:headed",
+        "test:ui": "npm --prefix tests/e2e run test:ui",
+        "test:debug": "npm --prefix tests/e2e run test:debug",
+        "test:report": "npm --prefix tests/e2e run report",
+        "test:setup": "npm --prefix tests/e2e run setup"
+    }
+}
