@@ -91,38 +91,6 @@ sidebar_ui <- function(id) {
                 )
             )
         ),
-        # ------ ADMIN USERS SECTION ----------------------------------------------
-        # Visible only on admin page, users sub-tab
-        conditionalPanel(
-            condition = "input.nav === 'admin' && input['admin-admin_tabs'] === 'users'",
-            div(
-                id = ns("admin_users_section"),
-                h6(
-                    class = "text-uppercase text-muted fw-semibold mb-3 i18n",
-                    `data-key` = "View",
-                    tr("View")
-                ),
-                radioButtons(
-                    ns("admin_users_view"),
-                    label = NULL,
-                    choiceNames = list(
-                        tags$span(class = "i18n", `data-key` = "Currently Connected", tr("Currently Connected")),
-                        tags$span(class = "i18n", `data-key` = "All Users", tr("All Users"))
-                    ),
-                    choiceValues = c("connected", "all"),
-                    selected = "connected"
-                ),
-                checkboxInput(
-                    ns("admin_show_only_recent"),
-                    label = tags$span(
-                        class = "i18n",
-                        `data-key` = "Show only most recent",
-                        tr("Show only most recent")
-                    ),
-                    value = FALSE
-                )
-            )
-        ),
         # ------ FOOTER --------------------------------------------------------
         div(
             class = "mt-auto pt-3 border-top",

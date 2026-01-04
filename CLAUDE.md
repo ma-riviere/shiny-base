@@ -276,7 +276,7 @@ Reusable admin dashboard in `R/shiny-utils/admin/`. Provides system monitoring, 
 admin_ui(ns("admin"))
 
 # server.R
-admin_server("admin", active_page = reactive(input$nav), r = r)
+admin_server("admin", active_page = reactive(input$nav))
 ```
 
 ## Required Globals
