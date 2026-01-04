@@ -64,7 +64,7 @@ navbar_server <- function(id) {
                     purrr::pluck(auth_info, "email") %||%
                     "User"
             } else {
-                "Unknown"
+                "Guest"
             }
         })
     })

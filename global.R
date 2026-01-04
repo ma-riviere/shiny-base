@@ -124,6 +124,12 @@ schedule_task("bookmark_cleanup", bookmark_cleanup, interval_seconds = 30 * 60)
 # Runs every 10 minutes. Heartbeat is every 5 min, so 15 min = 3 missed heartbeats.
 schedule_task("session_cleanup", session_cleanup, interval_seconds = 10 * 60)
 
+# ------ GUEST USERS -----------------------------------------------------------
+
+# Clean up guest users (and their linked records via CASCADE) on startup.
+# Guest users are created during tests when Auth0 is bypassed.
+db_delete_guest_users()
+
 # ------ LOGS ------------------------------------------------------------------
 
 # Run logs cleanup on startup only (logs are only created on app start)

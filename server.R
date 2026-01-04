@@ -157,7 +157,7 @@ server <- function(input, output, session) {
         )
 
         # Admin module - always instantiate but gated by req(can("view:admin")) inside
-        admin_server("admin", active_page = reactive(input$nav), r = r)
+        admin_server("admin", active_page = reactive(input$nav))
 
         # Admin nav panel visibility:
         # - Hidden by default via nav_hide() (runs for all users)
@@ -171,7 +171,7 @@ server <- function(input, output, session) {
 
     if (isTRUE(getOption("auth0_disable"))) {
         init_state$auth <- TRUE
-        session$userData$user <- db_get_or_create_temp_user(session$token)
+        session$userData$user <- db_get_or_create_guest_user(session$token)
         init_modules()
         init_state$modules <- TRUE
         # Resolve language without Auth0 (cookie -> browser -> default)
