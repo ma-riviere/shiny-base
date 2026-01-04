@@ -11,6 +11,7 @@
         "test:user": "npx playwright test --project=user",
         "test:user:headed": "npx playwright test --project=user --headed",
         "test:ui": "npx playwright test --ui",
+        "test:workflow": "npx playwright test workflow-dataset-model.spec.js --project=dev",
         "test:debug": "npx playwright test --debug",
         "report": "npx playwright show-report",
         "setup": "npx playwright install chromium",
