@@ -33,18 +33,6 @@
             "fr": "E-mail"
         },
         {
-            "en": "Save",
-            "fr": "Enregistrer"
-        },
-        {
-            "en": "Cancel",
-            "fr": "Annuler"
-        },
-        {
-            "en": "Delete",
-            "fr": "Supprimer"
-        },
-        {
             "en": "Confirm Delete",
             "fr": "Confirmer la suppression"
         },
@@ -285,48 +273,8 @@
             "fr": "Ignorer"
         },
         {
-            "en": "just now",
-            "fr": "à l'instant"
-        },
-        {
-            "en": "%.0f min ago",
-            "fr": "il y a %.0f min"
-        },
-        {
-            "en": "%.1f hours ago",
-            "fr": "il y a %.1f h"
-        },
-        {
-            "en": "Admin",
-            "fr": "Admin"
-        },
-        {
-            "en": "Admin Dashboard",
-            "fr": "Tableau de bord admin"
-        },
-        {
-            "en": "System administration and monitoring.",
-            "fr": "Administration système et surveillance."
-        },
-        {
-            "en": "Users",
-            "fr": "Utilisateurs"
-        },
-        {
-            "en": "System",
-            "fr": "Système"
-        },
-        {
-            "en": "Currently Connected",
-            "fr": "Actuellement connectés"
-        },
-        {
             "en": "Recently Connected",
             "fr": "Connexions récentes"
-        },
-        {
-            "en": "No active sessions",
-            "fr": "Aucune session active"
         },
         {
             "en": "No recent connections",
@@ -337,104 +285,12 @@
             "fr": "Vue"
         },
         {
-            "en": "All Users",
-            "fr": "Tous les utilisateurs"
-        },
-        {
-            "en": "No users found",
-            "fr": "Aucun utilisateur trouvé"
-        },
-        {
-            "en": "connections",
-            "fr": "connexions"
-        },
-        {
-            "en": "Show only most recent",
-            "fr": "Afficher uniquement le plus récent"
-        },
-        {
-            "en": "Connected:",
-            "fr": "Connecté:"
-        },
-        {
-            "en": "Created:",
-            "fr": "Créé:"
-        },
-        {
             "en": "None",
             "fr": "Aucun"
         },
         {
-            "en": "%.0f days ago",
-            "fr": "il y a %.0f jours"
-        },
-        {
             "en": "Roles",
             "fr": "Rôles"
-        },
-        {
-            "en": "Change Role",
-            "fr": "Changer le rôle"
-        },
-        {
-            "en": "Edit role",
-            "fr": "Modifier le rôle"
-        },
-        {
-            "en": "Role updated",
-            "fr": "Rôle mis à jour"
-        },
-        {
-            "en": "Role set to user",
-            "fr": "Rôle défini sur utilisateur"
-        },
-        {
-            "en": "Failed to update role",
-            "fr": "Échec de la mise à jour du rôle"
-        },
-        {
-            "en": "Traces",
-            "fr": "Traces"
-        },
-        {
-            "en": "No spans",
-            "fr": "Aucun span"
-        },
-        {
-            "en": "No traces captured yet",
-            "fr": "Aucune trace capturée"
-        },
-        {
-            "en": "Interact with the app to generate traces",
-            "fr": "Interagissez avec l'app pour générer des traces"
-        },
-        {
-            "en": "OTel not configured",
-            "fr": "OTel non configuré"
-        },
-        {
-            "en": "To enable OpenTelemetry tracing:",
-            "fr": "Pour activer le traçage OpenTelemetry :"
-        },
-        {
-            "en": "Clear traces",
-            "fr": "Effacer les traces"
-        },
-        {
-            "en": "Trace viewer disabled in production",
-            "fr": "Visualiseur de traces désactivé en production"
-        },
-        {
-            "en": "The in-app trace viewer is only available in development mode.",
-            "fr": "Le visualiseur de traces intégré n'est disponible qu'en mode développement."
-        },
-        {
-            "en": "For production tracing, use an external OTLP backend:",
-            "fr": "Pour le traçage en production, utilisez un backend OTLP externe :"
-        },
-        {
-            "en": "Configure via OTEL_EXPORTER_OTLP_ENDPOINT in .Renviron",
-            "fr": "Configurer via OTEL_EXPORTER_OTLP_ENDPOINT dans .Renviron"
         },
         {
             "en": "Model",
@@ -509,88 +365,8 @@
             "fr": "Données du modèle corrompues"
         },
         {
-            "en": "Log Viewer",
-            "fr": "Visionneuse de logs"
-        },
-        {
-            "en": "Scroll to end",
-            "fr": "Aller à la fin"
-        },
-        {
-            "en": "Refresh",
-            "fr": "Actualiser"
-        },
-        {
             "en": "Available variables:",
             "fr": "Variables disponibles :"
-        },
-        {
-            "en": "Also defined in app",
-            "fr": "Également défini dans l'appli"
-        },
-        {
-            "en": "Exists in Auth0",
-            "fr": "Existe dans Auth0"
-        },
-        {
-            "en": "Missing in Auth0",
-            "fr": "Manquant dans Auth0"
-        },
-        {
-            "en": "No roles defined in Auth0",
-            "fr": "Aucun rôle défini dans Auth0"
-        },
-        {
-            "en": "No roles defined in permissions.yaml",
-            "fr": "Aucun rôle défini dans permissions.yaml"
-        },
-        {
-            "en": "Create New Role",
-            "fr": "Créer un nouveau rôle"
-        },
-        {
-            "en": "Role Name",
-            "fr": "Nom du rôle"
-        },
-        {
-            "en": "Description (optional)",
-            "fr": "Description (facultatif)"
-        },
-        {
-            "en": "Create",
-            "fr": "Créer"
-        },
-        {
-            "en": "Role name is required",
-            "fr": "Le nom du rôle est requis"
-        },
-        {
-            "en": "Role created",
-            "fr": "Rôle créé"
-        },
-        {
-            "en": "Failed to create role:",
-            "fr": "Échec de la création du rôle :"
-        },
-        {
-            "en": "Delete Role",
-            "fr": "Supprimer le rôle"
-        },
-        {
-            "en": "Are you sure you want to delete the role '%s'?",
-            "fr": "Êtes-vous sûr de vouloir supprimer le rôle '%s' ?"
-        },
-        {
-            "en": "This will remove the role from all users.",
-            "fr": "Ceci supprimera le rôle de tous les utilisateurs."
-        },
-        {
-            "en": "Role deleted",
-            "fr": "Rôle supprimé"
-        },
-        {
-            "en": "Failed to delete role:",
-            "fr": "Échec de la suppression du rôle :"
         }
     ]
 }

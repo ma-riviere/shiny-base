@@ -218,16 +218,9 @@ admin_server("admin", active_page = reactive(input$nav))
 
 ## Translation Keys
 
-App must provide these translation keys in `data/translations.json`:
-- Admin Dashboard, System administration and monitoring
-- System, Traces, Users, Log Viewer, No log file, Scroll to end, Refresh
-- Currently Connected, All Users, Role Management, No active sessions
-- Auth0 Roles, App Roles, Create New Role, Role Name, Description (optional)
-- Change Role, Save, Cancel, Delete, Create
-- just now, %.0f min ago, %.1f hours ago, %.0f days ago
-- Connected:, Created:, connections
-- Role updated, Role set to user, Role created, Role deleted
-- Failed to update role, Failed to create role:, Role name is required
+Admin panel translations are bundled in `shinyutils` (`inst/translations.json`).
+App-specific translations go in `data/translations.json`. App translations override
+package translations for duplicate keys.
 
 ---
 
