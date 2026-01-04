@@ -1,5 +1,5 @@
 -- App-specific schema for shiny-base
--- Base tables (users, sessions, bookmarks) are in R/shiny-utils/schema-base.sql
+-- Base tables (users, sessions, bookmarks) are in database/schema-base.sql
 
 -- Datasets table
 -- Stores uploaded datasets as JSON

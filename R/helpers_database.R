@@ -1,7 +1,7 @@
 # Dataset CRUD operations
 #
 # App-specific database operations for the datasets table.
-# Base operations (users, sessions, bookmarks) are in R/shiny-utils/.
+# Base operations (users, sessions, bookmarks) are in shinyutils package.
 
 # Get all datasets for a user (metadata only, no data column)
 # Supports pagination with limit and offset parameters.

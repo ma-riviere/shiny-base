@@ -442,7 +442,7 @@
         },
         {
             "en": "Fit linear models to your data",
-            "fr": "Ajuster des modèles linéaires à vos données"
+            "fr": "Fit des modèles linéaires à vos données"
         },
         {
             "en": "Model Equation",
@@ -450,7 +450,7 @@
         },
         {
             "en": "Fit",
-            "fr": "Ajuster"
+            "fr": "Fit"
         },
         {
             "en": "Enter an R formula (e.g., y ~ x1 + x2, y ~ poly(x, 2))",
@@ -474,19 +474,27 @@
         },
         {
             "en": "Model fitted successfully",
-            "fr": "Modèle ajusté avec succès"
+            "fr": "Modèle fité avec succès"
         },
         {
             "en": "Model fitting failed",
-            "fr": "Échec de l'ajustement du modèle"
+            "fr": "Échec du fit du modèle"
         },
         {
             "en": "Model saved",
             "fr": "Modèle enregistré"
         },
         {
+            "en": "Model deleted",
+            "fr": "Modèle supprimé"
+        },
+        {
             "en": "Error saving model",
             "fr": "Erreur lors de l'enregistrement du modèle"
+        },
+        {
+            "en": "Error deleting model",
+            "fr": "Erreur lors de la suppression du modèle"
         },
         {
             "en": "Error loading model",
@@ -495,6 +503,10 @@
         {
             "en": "Model not found",
             "fr": "Modèle non trouvé"
+        },
+        {
+            "en": "Model data corrupted",
+            "fr": "Données du modèle corrompues"
         },
         {
             "en": "Log Viewer",
