@@ -14,6 +14,7 @@ memoise
 ggplot2
 sodium
 ma-riviere/auth0r
+ma-riviere/shinyutils
 shiny.i18n
 cookies
 blastula

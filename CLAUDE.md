@@ -11,6 +11,7 @@ Base template for Shiny apps with Auth0 authentication and server-side bookmarki
 ## Tech Stack
 
 - **Framework**: Shiny + bslib (Bootstrap 5)
+- **Utilities**: `shinyutils` package (private, see `~/dev/projects/R/_packages/shinyutils/CLAUDE.md`)
 - **Database**: PostgreSQL (prod) / SQLite (dev/test) via `pool`
 - **Auth**: Auth0 via `ma-riviere/auth0r`
 - **Email**: `blastula` via Brevo SMTP
@@ -20,7 +21,7 @@ Base template for Shiny apps with Auth0 authentication and server-side bookmarki
 
 ```
 shiny-base/
-├── global.R              # App-wide init, options, database pool
+├── global.R              # App-wide init, options, shinyutils config
 ├── ui.R                  # Main UI, wraps Auth0, base-level modules
 ├── server.R              # Main server, module instantiation, bookmarking
 ├── R/                    # Modules and helpers
@@ -28,20 +29,7 @@ shiny-base/
 │   ├── 1xx_*             # Home module
 │   ├── 2xx_*             # Dataset (Explore) module
 │   ├── 3xx_*             # Model module (async fitting via ExtendedTask)
-│   ├── helpers_*.R       # Non-module functions (includes model DB ops)
-│   └── shiny-utils/      # Reusable utilities (git submodule)
-│       ├── logging.R, auth0.R, bookmarks.R, caching.R
-│       ├── database.R, error_handling.R, i18n.R, loading.R
-│       ├── otel.R, sass.R, scheduler.R, sessions.R
-│       ├── triggers.R, users.R, utils.R, validation.R
-│       ├── permissions.R # RBAC helpers (can, get_user_roles)
-│       ├── shinylogs.R   # (Unused) Session replay - see file for schema
-│       └── admin/        # Admin dashboard modules (reusable)
-│           ├── 900_admin_ui.R, 900_admin_server.R
-│           ├── 910_auth0_ui.R, 910_auth0_server.R, 910_auth0_fn.R
-│           ├── 912_roles_section_ui.R, 912_roles_section_server.R
-│           ├── 920_otel_ui.R, 920_otel_server.R
-│           └── 930_system_ui.R, 930_system_server.R, 930_system_fn.R
+│   └── helpers_*.R       # Non-module functions (includes model DB ops)
 ├── www/                  # Static assets (css/, sass/, js/, html/, img/)
 ├── data/                 # translations.json, permissions.yaml
 ├── database/             # schema-base.sql (users, sessions, bookmarks), schema.sql (app-specific)
@@ -50,6 +38,8 @@ shiny-base/
 ├── .Renviron             # Environment variables
 └── shiny_bookmarks/      # Server-side bookmark storage
 ```
+
+**Note:** Reusable utilities (logging, database, RBAC, admin panel, etc.) are in the `shinyutils` package.
 
 ---
 
@@ -111,7 +101,7 @@ observeEvent(watch("refresh_data"), {
 }, ignoreInit = FALSE)
 ```
 
-**Why this works:** `onRestore` runs during session init, before modules are created (which happens after Auth0 gate). The helper `get_restored_input()` (in `shiny-utils/bookmarks.R`) auto-namespaces the input ID and returns NULL for empty values.
+**Why this works:** `onRestore` runs during session init, before modules are created (which happens after Auth0 gate). The helper `get_restored_input()` (from `shinyutils`) auto-namespaces the input ID and returns NULL for empty values.
 
 ## Model Module (300_model)
 
@@ -186,24 +176,9 @@ Modules instantiated only after `session$userData$auth0_info$email_verified`. Un
 
 # Role-Based Access Control (RBAC)
 
-## Permission Schema
+Uses `shinyutils::can()` and `shinyutils::get_user_roles()`. See shinyutils CLAUDE.md for full documentation.
 
-Format: `action:resource` (e.g., `view:admin`, `write:dataset`)
-
-| Verb | Purpose | Example |
-|------|---------|---------|
-| `view:` | UI access (page/tab/element) | `view:admin`, `view:explore` |
-| `write:` | Data modification (create + update) | `write:dataset` |
-| `delete:` | Data removal (always separate) | `delete:dataset` |
-| `<custom>:` | Domain-specific actions | `fit:model`, `export:report` |
-
-**Wildcards & Denials:**
-- `"*"` - All permissions (admin only)
-- `"view:*"` - All view permissions
-- `"view:admin:*"` - All admin sub-pages
-- `"!view:admin:auth0"` - Deny specific permission (overrides wildcards)
-
-## Configuration
+## App-Specific Configuration
 
 Role-permission mapping in `data/permissions.yaml`:
 
@@ -212,7 +187,7 @@ roles:
     admin: "*"
     dev:
         - "view:*"
-        - "!view:admin:auth0"     # Deny auth0 tab despite view:*
+        - "!view:admin:auth0"
         - "write:dataset"
         - "delete:dataset"
         - "fit:model"
@@ -221,53 +196,15 @@ roles:
         - "view:explore"
         - "view:model"
         - "write:dataset"
-        - "fit:model"             # No admin, no delete
+        - "fit:model"
 ```
 
-## Usage
-
-```r
-# Check permission (returns TRUE/FALSE)
-can("write:dataset")
-
-# Gate server logic (silent stop if denied)
-observeEvent(input$save, {
-    req(can("write:dataset"))
-    db_save(...)
-})
-
-# UI: toggle visibility/state
-observe({
-    shinyjs::toggle("delete_btn", condition = can("delete:dataset"))
-    shinyjs::toggleState("save_btn", condition = can("write:dataset"))
-})
-
-# Check actual role if needed
-"admin" %in% get_user_roles()
-```
-
-## Key Files
-
-- `data/permissions.yaml`: Role-permission mapping (app-specific)
-- `R/shiny-utils/permissions.R`: `can()`, `get_user_roles()` (reusable)
-
-## Dev Mode
-
-When `ENV=dev`, all users are treated as admin (bypass for local development).
 
 ---
 
 # Admin Panel
 
-Reusable admin dashboard in `R/shiny-utils/admin/`. Provides system monitoring, OTel traces, and user/role management.
-
-## Tabs
-
-| Tab | Module | Purpose |
-|-----|--------|---------|
-| System | `admin_system_*` | Log viewer with auto-refresh |
-| Traces | `admin_otel_*` | OTel trace viewer (dev only, disabled in prod) |
-| Users | `admin_auth0_*` | Active sessions, all users, role management |
+Uses `shinyutils::admin_ui()` and `shinyutils::admin_server()`. See shinyutils for full documentation.
 
 ## Usage
 
@@ -279,29 +216,9 @@ admin_ui(ns("admin"))
 admin_server("admin", active_page = reactive(input$nav))
 ```
 
-## Required Globals
-
-- `auth0_mgmt`: Auth0 Management API client (from auth0r)
-- `is_prod`: Boolean for production environment check
-- `OTEL_TRACER_PROVIDER`: OTel tracer provider (for traces tab)
-- `.ROLE_PERMISSIONS`: Loaded from `data/permissions.yaml`
-
-## Dependencies
-
-Uses functions from shiny-utils:
-- `can()`, `get_user_roles()` from permissions.R
-- `tr()` from i18n.R (app provides translations)
-- `db_get_active_sessions()` from sessions.R
-- `db_get_all_users()` from users.R
-- `extract_profile_info()` from auth0.R
-- `format_relative_time()` from utils.R
-- `otel_*` functions from otel.R
-- `log_*` functions from logging.R
-- `watch()`, `trigger()` from triggers.R
-
 ## Translation Keys
 
-App must provide these translation keys:
+App must provide these translation keys in `data/translations.json`:
 - Admin Dashboard, System administration and monitoring
 - System, Traces, Users, Log Viewer, No log file, Scroll to end, Refresh
 - Currently Connected, All Users, Role Management, No active sessions
@@ -316,40 +233,40 @@ App must provide these translation keys:
 
 # Session Tracking
 
-## Lifecycle
+Uses `shinyutils` session functions. See shinyutils CLAUDE.md for lifecycle details.
 
-| Event | Action | Where |
-|-------|--------|-------|
-| Login | INSERT (ended_at = NULL) | server.R |
-| Every 5 min | UPDATE updated_at | server.R (heartbeat) |
-| Tab close | UPDATE ended_at, end_reason = 'disconnect' | session$onSessionEnded |
-| Every 10 min | Mark stale as 'timeout' | global.R (scheduled) |
+## App Integration (server.R)
 
-## Detection
+| Event | Call |
+|-------|------|
+| Login | `db_session_start(user_id, session_id)` |
+| Every 5 min | `db_session_heartbeat(session_id)` |
+| Tab close | `db_session_end(session_id, "disconnect")` |
 
-- **Active**: `ended_at IS NULL AND updated_at > now() - 15 min`
-- **Stale/Crashed**: `ended_at IS NULL AND updated_at <= now() - 15 min`
-- **Ended**: `ended_at IS NOT NULL`
-
-**Why heartbeat?** `session$onSessionEnded` only fires on graceful disconnects. Crashes/force-closes leave orphan records. 15 min = 3 missed heartbeats = definitely dead.
+Scheduled cleanup in global.R: `schedule_task("session_cleanup", session_cleanup, interval_seconds = 600)`
 
 ---
 
 # Logging & Observability
 
-## Application Logging
+Uses `shinyutils` logging functions. See shinyutils CLAUDE.md for details.
 
-`R/shiny-utils/logging.R`: `log_info()`, `log_debug()`, `log_error()`. Console (DEBUG in dev, INFO in prod) + JSON files in `logs/` (3-day retention).
+## App Configuration
+
+Logging options in global.R:
+- `log_dir`: Directory for log files (default: "logs")
+- `log_console_threshold`: Console verbosity (LOG_DEBUG in dev, LOG_INFO in prod)
+- `log_file_threshold`: File verbosity (LOG_DEBUG)
 
 ## OpenTelemetry
 
-**Local trace viewer** in Admin → Traces (dev only). Config in `.Renviron`:
+Config in `.Renviron`:
 ```bash
 OTEL_TRACES_EXPORTER=otelsdk::tracer_provider_memory
 OTEL_R_EXPORTER_MEMORY_TRACES_BUFFER_SIZE=5000
 ```
 
-**Production**: Use external OTLP backend (Grafana, Jaeger, Logfire).
+Local trace viewer in Admin → Traces (dev only). Production: use external OTLP backend.
 
 See: https://shiny.posit.co/r/articles/improve/opentelemetry/
 
@@ -357,29 +274,22 @@ See: https://shiny.posit.co/r/articles/improve/opentelemetry/
 
 # Utilities Reference
 
-## Database
+All utilities are in the `shinyutils` package. See shinyutils CLAUDE.md for full API.
 
-- Pool setup: `R/shiny-utils/database.R`
-- Schema: `database/schema-base.sql` (users, sessions, bookmarks), `database/schema.sql` (app-specific)
-- CRUD: `R/shiny-utils/users.R`, `sessions.R`, `bookmarks.R`; `R/helpers_database.R` (app-specific)
+## App-Specific Files
 
-## Scheduler
-
-`R/shiny-utils/scheduler.R`: Tasks self-reschedule via `later`. Tracked by ID, errors logged without stopping. Call `cancel_all_tasks()` in `onStop()`.
-
-## Email
-
-`R/shiny-utils/error_handling.R`: `send_error_email()`, `setup_session_error_emails()`, `setup_global_error_emails()`. Requires `SEND_ERROR_EMAILS=TRUE` and `EMAIL_TO` in .Renviron.
+- **Schema**: `database/schema-base.sql` (users, sessions, bookmarks), `database/schema.sql` (app tables)
+- **App CRUD**: `R/helpers_database.R` (dataset/model operations)
+- **Translations**: `data/translations.json`
+- **Permissions**: `data/permissions.yaml`
 
 ## i18n
 
-Resolution hierarchy: Auth0 `user_metadata.language` → Cookie → Browser preference → App default (`getOption("default_language")`).
+Resolution hierarchy: Auth0 `user_metadata.language` → Cookie → Browser preference → App default.
 
 ## App Loader
 
-Uses `waiter` package for full-page overlay during initialization. `R/shiny-utils/loading.R` provides `is_restore_ready()` for bookmark detection.
-
-Mark `init_state$auth` and `init_state$modules` as TRUE at appropriate points.
+Uses `waiter` package for full-page overlay. Mark `init_state$auth` and `init_state$modules` as TRUE at appropriate points.
 
 ---
 

@@ -16,8 +16,8 @@ const PAGES = {
     HOME: 'home',
     EXPLORE: 'explore',
     MODEL: 'model',
-    ADMIN: 'admin',  // From shiny-utils, but still app-specific in terms of visibility
-    // Admin sub-tabs (from shiny-utils/admin_panel/900_admin_ui.R)
+    ADMIN: 'admin',  // From shinyutils package, but still app-specific in terms of visibility
+    // Admin sub-tabs (from shinyutils::admin_ui)
     ADMIN_SYSTEM: 'system',
     ADMIN_OTEL: 'otel',
     ADMIN_USERS: 'users'  // Auth0 users management (hidden for non-admin roles)
@@ -41,7 +41,7 @@ const SELECTORS = {
     home: {
         // Add app-specific home selectors here
     },
-    // Admin module (from shiny-utils/admin_panel)
+    // Admin module (from shinyutils package)
     admin: {
         tabsNav: '#admin_panel-admin_tabs',
         systemTab: '.nav-link[data-value="system"]',

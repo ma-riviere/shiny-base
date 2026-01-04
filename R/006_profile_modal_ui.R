@@ -1,6 +1,6 @@
 # Profile UI components
 # Profile modal for current user (editable)
-# Uses extract_profile_info() from shiny-utils/auth0.R
+# Uses shinyutils::extract_profile_info()
 
 # Profile modal UI (editable, for current user)
 profile_modal_ui <- function(ns, auth_info) {

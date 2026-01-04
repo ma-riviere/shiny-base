@@ -2,7 +2,7 @@
  * Navigation helpers for E2E tests.
  *
  * Generic helpers for bslib page_navbar navigation.
- * Works with any app using shiny-utils patterns (auth0, admin panel, etc.).
+ * Works with any app using shinyutils patterns (auth0, admin panel, etc.).
  *
  * Usage:
  *   const { navigateTo, getCurrentPage } = require('./helpers/navigation');
@@ -10,7 +10,7 @@
  */
 const { waitForReactivity, waitForWaiterHide } = require('./shiny');
 
-// Shared pages from shiny-utils (available in all apps using shiny-base template)
+// Shared pages from shinyutils (available in all apps using shiny-base template)
 const SHARED_PAGES = {
     ADMIN: 'admin'
 };

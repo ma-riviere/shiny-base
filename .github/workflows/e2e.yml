@@ -1,0 +1,68 @@
+# E2E tests with Playwright
+# Runs on push to main and PRs
+
+name: E2E Tests
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+    workflow_dispatch: # Manual trigger
+
+jobs:
+    e2e:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Setup R
+              uses: r-lib/actions/setup-r@v2
+              with:
+                  use-public-rspm: true
+
+            - name: Install R dependencies
+              uses: r-lib/actions/setup-r-dependencies@v2
+              with:
+                  extra-packages: any::shiny
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            - name: Install Playwright
+              working-directory: tests/e2e
+              run: |
+                  npm ci
+                  npx playwright install chromium --with-deps
+
+            - name: Create test .Renviron
+              run: |
+                  cat > .Renviron << 'EOF'
+                  APP_PORT=9090
+                  BYPASS_AUTH0=TRUE
+                  ENV=test
+                  EOF
+
+            - name: Start Shiny app
+              run: |
+                  R -e "shiny::runApp(port = 9090, launch.browser = FALSE)" &
+                  sleep 10  # Wait for app to start
+
+            - name: Run E2E tests
+              working-directory: tests/e2e
+              run: npm test
+              env:
+                  # Headless in CI
+                  CI: true
+
+            - name: Upload screenshots on failure
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: e2e-screenshots
+                  path: /tmp/e2e-*.png
+                  retention-days: 7
