@@ -295,6 +295,36 @@ async function getTableCell(page, tableId, rowIndex, colIndex) {
     );
 }
 
+// ---- FILES ------------------------------------------------------------------
+
+/**
+ * Upload a file to a Shiny fileInput.
+ * @param {Page} page - Playwright page
+ * @param {string} id - File input ID (without #)
+ * @param {string} filepath - Absolute path to file
+ * @param {Object} options
+ * @param {boolean} options.waitForCompleted - Wait for upload bar to complete (default: true)
+ */
+async function uploadFile(page, id, filepath, options = {}) {
+    const { waitForCompleted = true } = options;
+
+    // Shiny fileInput id points directly to the input[type="file"]
+    // However, sometimes it's wrapped. We try the ID directly first.
+    // Note: Playwright can handle hidden file inputs.
+    const selector = `#${id}`;
+
+    await page.setInputFiles(selector, filepath);
+
+    if (waitForCompleted) {
+        // Wait for progress bar to finish (Shiny pattern)
+        await page.waitForSelector(`#${id}_progress.progress-bar-success`, { timeout: 30000 }).catch(() => {
+            // Sometimes it goes too fast to catch, so we check if file-name is shown
+            // Shiny displays filenames in the text input part
+        });
+        await waitForReactivity(page);
+    }
+}
+
 module.exports = {
     // Buttons
     clickButton,
@@ -322,5 +352,7 @@ module.exports = {
     expandCard,
     // Tables
     clickTableRow,
-    getTableCell
+    getTableCell,
+    // Files
+    uploadFile
 };

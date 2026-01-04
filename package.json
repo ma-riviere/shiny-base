@@ -11,6 +11,7 @@
         "test:admin:headed": "npm --prefix tests/e2e run test:admin:headed",
         "test:user:headed": "npm --prefix tests/e2e run test:user:headed",
         "test:ui": "npm --prefix tests/e2e run test:ui",
+        "test:workflow": "npm --prefix tests/e2e run test:workflow",
         "test:debug": "npm --prefix tests/e2e run test:debug",
         "test:report": "npm --prefix tests/e2e run report",
         "test:setup": "npm --prefix tests/e2e run setup"

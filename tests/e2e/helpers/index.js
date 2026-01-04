@@ -24,6 +24,9 @@ module.exports = {
     // UI interactions
     ...require('./ui'),
 
+    // Data generation
+    ...require('./data'),
+
     // Assertions (legacy - prefer expect() from fixtures.js)
     ...require('./assertions')
 };

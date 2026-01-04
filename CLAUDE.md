@@ -400,7 +400,10 @@ R -e "shiny::runApp(port = 9090)"
 **CI:** `.github/workflows/e2e.yml`
 
 **App config:** `tests/e2e/app-config.js` defines PAGES and SELECTORS for this app.
-
+**Key Tests:**
+- `workflow-dataset-model.spec.js`: E2E workflow testing dataset upload, model fitting, saving, and deletion.
+- Run: `npm run test:workflow`
+ 
 # Development Notes
 
 ## Disabling Auth0
