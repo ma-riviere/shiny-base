@@ -1,0 +1,13 @@
+// Sidebar toggle indicator - pulse when sidebar has content but is closed
+@keyframes sidebar-pulse {
+    0% { box-shadow: 0 0 0 0 rgba($primary, 0.6); }
+    70% { box-shadow: 0 0 0 8px rgba($primary, 0); }
+    100% { box-shadow: 0 0 0 0 rgba($primary, 0); }
+}
+
+// Only animate when sidebar is hidden (closed)
+:has(#sidebar-sidebar[hidden]) .sidebar-has-content {
+    animation: sidebar-pulse 2s ease-in-out 3;
+    position: relative;
+    z-index: 1050;
+}

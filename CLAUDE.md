@@ -319,7 +319,7 @@ Automatically set in test mode.
 ## Static Asset Cache Busting
 
 ```r
-tags$script(src = sprintf("js/helpers.js?v=%s", as.integer(Sys.time())))
+tags$script(src = sprintf("js/app.js?v=%s", as.integer(Sys.time())))
 ```
 
 For production, use fixed version or file hash.
