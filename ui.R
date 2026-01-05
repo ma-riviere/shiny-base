@@ -1,11 +1,10 @@
 ui <- function(request) {
+    theme <- bslib::bs_theme(version = 5, bootswatch = "flatly")
+
     bslib::page_navbar(
         id = "nav",
         title = tags$span(class = "i18n", `data-key` = "Shiny Base", tr("Shiny Base")),
-        theme = bslib::bs_theme(
-            version = 5,
-            bootswatch = "flatly"
-        ),
+        theme = theme,
         fillable = TRUE,
         navbar_options = bslib::navbar_options(
             position = "static-top",
@@ -13,14 +12,7 @@ ui <- function(request) {
             underline = FALSE
         ),
         header = tagList(
-            waiter::use_waiter(),
-            waiter::waiter_show_on_load(
-                html = tagList(
-                    waiter::spin_fading_circles(),
-                    tags$p(tr("Loading..."), style = "color: #666; margin-top: 16px;")
-                ),
-                color = "#ffffff"
-            ),
+            shinyutils::use_hex_loader(tr("Loading"), theme = theme),
             # Will be relocated/injected in <head> by Shiny
             tags$head(
                 # Google Fonts with preconnect for better performance
@@ -35,8 +27,8 @@ ui <- function(request) {
                     )
                 ),
                 tags$link(rel = "stylesheet", type = "text/css", href = "css/main.min.css"),
-                tags$script(src = sprintf("js/helpers-modal.js?v=%s", as.integer(Sys.time()))),
-                tags$script(src = sprintf("js/helpers.js?v=%s", as.integer(Sys.time())))
+                shinyutils::use_js_helpers(),
+                tags$script(src = sprintf("js/app.js?v=%s", as.integer(Sys.time())))
             ),
             auth0r::use_auth0(),
             shinyjs::useShinyjs(),

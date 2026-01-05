@@ -133,6 +133,22 @@ server <- function(input, output, session) {
 
         navbar_server("navbar")
         sidebar_module <- sidebar_server("sidebar", r = r)
+
+        # Auto-close sidebar on pages without sidebar content, pulse toggle when content available
+        # CSS handles showing animation only when sidebar is closed (via :has(#sidebar-sidebar[hidden]))
+        pages_with_sidebar <- c("home", "explore", "model")
+        sidebar_toggle_selector <- "button[aria-controls='sidebar-sidebar']"
+        observeEvent(input$nav, label = "server_sidebar_auto_close", {
+            if (input$nav %in% pages_with_sidebar) {
+                # Remove then re-add class to restart animation
+                shinyjs::removeClass(selector = sidebar_toggle_selector, class = "sidebar-has-content")
+                shinyjs::delay(10, shinyjs::addClass(selector = sidebar_toggle_selector, class = "sidebar-has-content"))
+            } else {
+                bslib::sidebar_toggle("sidebar-sidebar", open = FALSE)
+                shinyjs::removeClass(selector = sidebar_toggle_selector, class = "sidebar-has-content")
+            }
+        })
+
         profile_modal_server("profile")
         upload_dataset_server("upload")
         edit_dataset_server("edit_dataset")

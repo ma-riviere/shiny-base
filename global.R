@@ -62,6 +62,10 @@ options(
     shiny.autoreload.pattern = "\\.(R|css|scss|js|html?|json|ya?ml)$"
 )
 
+# ------ CSS -------------------------------------------------------------------
+
+shinyutils::compile_sass() # Defaults: www/sass/main.scss -> www/css/main.min.css
+
 # ------ LOGGING ---------------------------------------------------------------
 # Initialize logging early so it's available for all subsequent initialization
 
