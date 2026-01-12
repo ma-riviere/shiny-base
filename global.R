@@ -23,7 +23,7 @@ options(
     session_timeout_minutes = 15,
 
     # Bookmarks
-    bookmark_dir = "shiny_bookmarks",
+    bookmark_dir = Sys.getenv("BOOKMARK_DIR", "shiny_bookmarks"),
     bookmark_expiry_minutes = 30,
 
     # i18n (shinyutils::init_i18n merges pkg + app translations)

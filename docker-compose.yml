@@ -1,0 +1,110 @@
+services:
+  traefik:
+    image: traefik:v2.11
+    networks:
+      - traefik-net
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--providers.docker.swarmmode=true"
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.forwardedHeaders.trustedIPs=172.16.0.0/12"
+      - "--entrypoints.websecure.forwardedHeaders.trustedIPs=172.16.0.0/12"
+      - "--certificatesresolvers.le.acme.email=ssl@ma-riviere.com"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.tlschallenge=true"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/letsencrypt
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  shiny:
+    image: ${REGISTRY_IMAGE:-ghcr.io/ma-riviere/docker-shiny}:${IMAGE_TAG:-main}
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-net"
+        # Create middleware to redirect HTTP to HTTPS
+        - "traefik.http.routers.shiny-http.rule=Host(`shiny-base.ma-riviere.com`)"
+        - "traefik.http.middlewares.https-redirect.redirectscheme.scheme=https"
+        - "traefik.http.middlewares.https-redirect.redirectscheme.permanent=true"
+        - "traefik.http.routers.shiny-http.entrypoints=web"
+        - "traefik.http.routers.shiny-http.middlewares=https-redirect"
+        # Configure TLS
+        - "traefik.http.routers.shiny-https.rule=Host(`shiny-base.ma-riviere.com`)"
+        - "traefik.http.routers.shiny-https.entrypoints=websecure"
+        - "traefik.http.routers.shiny-https.tls=true"
+        - "traefik.http.routers.shiny-https.tls.certresolver=le"
+        # Create middleware to redirect www to non-www
+        - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https?://www\\.(.+)"
+        - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://$${1}"
+        - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
+        - "traefik.http.routers.shiny-https.middlewares=www-redirect"
+        # Load balancer on port 3838
+        - "traefik.http.services.shiny.loadbalancer.server.port=3838"
+        # Sticky sessions
+        - "traefik.http.services.shiny.loadbalancer.sticky.cookie=true"
+        - "traefik.http.services.shiny.loadbalancer.sticky.cookie.name=shiny_session"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - traefik-net
+    environment:
+      - SHINY_LOG_LEVEL=INFO
+      - APP_URL=https://shiny-base.ma-riviere.com/
+      - AUTH0_USER=ma-riviere
+      - AUTH0_CLIENT_ID=f8fSHxplILtlB2tC9XC6WdBJd3B5fzkm
+      - ENV=prod
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=shiny-base-db
+      - POSTGRES_USER=shiny-base
+      - BOOKMARK_DIR=/var/lib/shiny-server/bookmarks
+    secrets:
+      - AUTH0_CLIENT_SECRET
+      - POSTGRES_PASSWORD
+    healthcheck:
+      # Use HEAD request to avoid spawning R processes for auth-protected apps
+      test: ["CMD-SHELL", "curl -sf --head http://localhost:3838/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - shiny_server_logs:/var/log/shiny-server
+      - shinylogs:/srv/shiny-server/shinylogs
+
+volumes:
+  shiny_server_logs:
+    driver: local
+  shinylogs:
+    driver: local
+  traefik-certificates:
+    driver: local
+
+networks:
+  traefik-net:
+    name: traefik-net
+
+secrets:
+  AUTH0_CLIENT_SECRET:
+    external: true
+  POSTGRES_PASSWORD:
+    external: true
