@@ -64,7 +64,8 @@ navbar_server <- function(id) {
                     purrr::pluck(auth_info, "email") %||%
                     "User"
             } else {
-                "Guest"
+                # Use guest user's auth0_sub (e.g., "guest_6142f68686ff") if available
+                purrr::pluck(session$userData$user, "auth0_sub") %||% "Guest"
             }
         })
     })

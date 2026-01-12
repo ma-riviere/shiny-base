@@ -14,7 +14,7 @@ mirai::daemons(max(parallelly::availableCores() - 1, 1))
 
 options(
     # Auth0
-    auth0_disable = isTRUE(getOption("shiny.testmode")),
+    auth0_disable = isTRUE(getOption("shiny.testmode")) || isTRUE(as.logical(Sys.getenv("BYPASS_AUTH0", "FALSE"))),
 
     # Database
     db_path_dev = "database/dev.db",
