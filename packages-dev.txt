@@ -36,6 +36,7 @@ dbplyr
 R6
 httr2
 data.table
+parallelly
 mirai
 butcher
 digest
