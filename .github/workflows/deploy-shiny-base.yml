@@ -76,18 +76,62 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.CICD_GITHUB_PAT }}
-      - name: Install test packages
+
+      - name: Detect test suites
+        id: detect-tests
+        run: |
+          if [ -d "tests/testthat" ]; then
+            echo "has_shinytest2=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_shinytest2=false" >> $GITHUB_OUTPUT
+          fi
+          if [ -d "tests/e2e" ]; then
+            echo "has_e2e=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_e2e=false" >> $GITHUB_OUTPUT
+          fi
+
+      # ---- shinytest2 ----
+      - name: Install R test packages
+        if: steps.detect-tests.outputs.has_shinytest2 == 'true'
         run: R -e 'renv::restore(prompt = FALSE)'
-      - name: Run tests
+
+      - name: Run shinytest2 tests
+        if: steps.detect-tests.outputs.has_shinytest2 == 'true'
         run: |
           echo "SHINYTEST2_APP_DRIVER_TEST_ON_CRAN=1" >> .Renviron
-          R -e 'shinytest2::test_app(reporter = testthat::JunitReporter$new(file = paste0(Sys.getenv("GITHUB_WORKSPACE"), "/junit_result.xml")))'
+          R -e 'shinytest2::test_app(reporter = testthat::JunitReporter$new(file = "junit_shinytest2.xml"))'
+
+      # ---- Playwright e2e ----
+      - name: Install Node.js
+        if: steps.detect-tests.outputs.has_e2e == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Playwright dependencies
+        if: steps.detect-tests.outputs.has_e2e == 'true'
+        working-directory: tests/e2e
+        run: |
+          npm ci
+          npx playwright install chromium --with-deps
+
+      - name: Run Playwright e2e tests
+        if: steps.detect-tests.outputs.has_e2e == 'true'
+        working-directory: tests/e2e
+        env:
+          CI: true
+        run: npx playwright test --reporter=junit
+
+      # ---- Results ----
       - name: Publish test results
         if: always()
         uses: mikepenz/action-junit-report@v4
         with:
-          report_paths: "junit_result.xml"
-          check_name: "Shiny Test Results"
+          report_paths: |
+            junit_shinytest2.xml
+            tests/e2e/results.xml
+          check_name: "Test Results"
           include_passed: true
 
   build:
