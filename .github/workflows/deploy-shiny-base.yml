@@ -1,208 +1,209 @@
 name: CI/CD Pipeline
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      run_tests:
-        description: "Force run tests"
-        required: false
-        type: boolean
-        default: false
-      force_rebuild:
-        description: "Force rebuild of Docker image"
-        required: false
-        type: boolean
-        default: false
-      force_deploy:
-        description: "Force deploy to production"
-        required: false
-        type: boolean
-        default: false
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            run_tests:
+                description: "Force run tests"
+                required: false
+                type: boolean
+                default: false
+            force_rebuild:
+                description: "Force rebuild of Docker image"
+                required: false
+                type: boolean
+                default: false
+            force_deploy:
+                description: "Force deploy to production"
+                required: false
+                type: boolean
+                default: false
 
 jobs:
-  format-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Air
-        uses: posit-dev/setup-air@v1
-      - name: Check R code formatting and syntax
-        run: air format . --check
+    format-check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Install Air
+              uses: posit-dev/setup-air@v1
+            - name: Check R code formatting and syntax
+              run: air format . --check
 
-  check-r-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      r_changed: ${{ steps.check.outputs.r_changed }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Check for R file changes
-        id: check
-        run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.R$' || echo "")
-          else
-            CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '\.R$' || echo "")
-          fi
-          if [ -n "$CHANGED" ]; then
-            echo "r_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "r_changed=false" >> $GITHUB_OUTPUT
-          fi
+    check-r-changes:
+        runs-on: ubuntu-latest
+        outputs:
+            r_changed: ${{ steps.check.outputs.r_changed }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - name: Check for R file changes
+              id: check
+              run: |
+                  if [ "${{ github.event_name }}" == "pull_request" ]; then
+                    CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.R$' || echo "")
+                  else
+                    CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '\.R$' || echo "")
+                  fi
+                  if [ -n "$CHANGED" ]; then
+                    echo "r_changed=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "r_changed=false" >> $GITHUB_OUTPUT
+                  fi
 
-  tests:
-    runs-on: ubuntu-latest
-    needs: check-r-changes
-    if: |
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true') ||
-      (github.event_name != 'workflow_dispatch' && needs.check-r-changes.outputs.r_changed == 'true')
-    permissions:
-      contents: read
-      checks: write
-      pull-requests: write
-    container:
-      image: ghcr.io/ma-riviere/docker-shiny:4.5
-      options: --user root
-    env:
-      RENV_PROFILE: "dev-4.5"
-      RENV_PATHS_CACHE: /opt/renv/cache
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          token: ${{ secrets.CICD_GITHUB_PAT }}
-
-      - name: Detect test suites
-        id: detect-tests
-        run: |
-          if [ -d "tests/testthat" ]; then
-            echo "has_shinytest2=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_shinytest2=false" >> $GITHUB_OUTPUT
-          fi
-          if [ -d "tests/e2e" ]; then
-            echo "has_e2e=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_e2e=false" >> $GITHUB_OUTPUT
-          fi
-
-      # ---- shinytest2 ----
-      - name: Install R test packages
-        if: steps.detect-tests.outputs.has_shinytest2 == 'true'
-        run: R -e 'renv::restore(prompt = FALSE)'
-
-      - name: Run shinytest2 tests
-        if: steps.detect-tests.outputs.has_shinytest2 == 'true'
-        run: |
-          echo "SHINYTEST2_APP_DRIVER_TEST_ON_CRAN=1" >> .Renviron
-          R -e 'shinytest2::test_app(reporter = testthat::JunitReporter$new(file = "junit_shinytest2.xml"))'
-
-      # ---- Playwright e2e ----
-      - name: Install Node.js
-        if: steps.detect-tests.outputs.has_e2e == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Playwright dependencies
-        if: steps.detect-tests.outputs.has_e2e == 'true'
-        working-directory: tests/e2e
-        run: |
-          npm ci
-          npx playwright install chromium --with-deps
-
-      - name: Run Playwright e2e tests
-        if: steps.detect-tests.outputs.has_e2e == 'true'
-        working-directory: tests/e2e
+    tests:
+        runs-on: ubuntu-latest
+        needs: check-r-changes
+        if: |
+            (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true') ||
+            (github.event_name != 'workflow_dispatch' && needs.check-r-changes.outputs.r_changed == 'true')
+        permissions:
+            contents: read
+            checks: write
+            pull-requests: write
+        container:
+            image: ghcr.io/ma-riviere/docker-shiny:4.5
+            options: --user root
         env:
-          CI: true
-        run: npx playwright test --reporter=junit
+            RENV_PROFILE: "dev-4.5"
+            RENV_PATHS_CACHE: /opt/renv/cache
+            GITHUB_PAT: ${{ secrets.CICD_GITHUB_PAT }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+                  token: ${{ secrets.CICD_GITHUB_PAT }}
 
-      # ---- Results ----
-      - name: Publish test results
-        if: always()
-        uses: mikepenz/action-junit-report@v4
-        with:
-          report_paths: |
-            junit_shinytest2.xml
-            tests/e2e/results.xml
-          check_name: "Test Results"
-          include_passed: true
+            - name: Detect test suites
+              id: detect-tests
+              run: |
+                  if [ -d "tests/testthat" ]; then
+                    echo "has_shinytest2=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "has_shinytest2=false" >> $GITHUB_OUTPUT
+                  fi
+                  if [ -d "tests/e2e" ]; then
+                    echo "has_e2e=true" >> $GITHUB_OUTPUT
+                  else
+                    echo "has_e2e=false" >> $GITHUB_OUTPUT
+                  fi
 
-  build:
-    if: |
-      !cancelled() &&
-      github.ref == 'refs/heads/main' &&
-      (
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true') ||
-        (github.event_name != 'workflow_dispatch' && needs.format-check.result == 'success' && needs.tests.result == 'success')
-      )
-    needs: [format-check, tests]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          token: ${{ secrets.CICD_GITHUB_PAT }}
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-      - name: Build and push
-        run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
-          docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            # ---- shinytest2 ----
+            - name: Install R test packages
+              if: steps.detect-tests.outputs.has_shinytest2 == 'true'
+              run: R -e 'renv::restore(prompt = FALSE)'
 
-  deploy:
-    if: |
-      !cancelled() &&
-      github.ref == 'refs/heads/main' &&
-      (
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true') ||
-        (github.event_name != 'workflow_dispatch' && needs.build.result == 'success')
-      )
-    needs: [build]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          token: ${{ secrets.CICD_GITHUB_PAT }}
-      - name: Load configuration
-        run: |
-          echo "DEPLOYMENT_USER=shiny" >> $GITHUB_ENV
-          echo "PORTS_SSH=2222" >> $GITHUB_ENV
-          echo "DEPLOYMENT_SERVER=shiny-base.ma-riviere.com" >> $GITHUB_ENV
-          echo "PROJECT_APP_NAME=shiny-base" >> $GITHUB_ENV
-      - name: Deploy to production
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
-          IMAGE_TAG: ${{ github.ref_name }}
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          scp -o StrictHostKeyChecking=no -P 2222 docker-compose.yml shiny@${DEPLOYMENT_SERVER}:~/
-          ssh -o StrictHostKeyChecking=no -p 2222 shiny@${DEPLOYMENT_SERVER} "
-            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.CICD_GITHUB_PAT }}
-            export REGISTRY_IMAGE=${REGISTRY_IMAGE}
-            export IMAGE_TAG=${IMAGE_TAG}
-            docker pull \${REGISTRY_IMAGE}:\${IMAGE_TAG}
-            docker stack deploy --with-registry-auth -c docker-compose.yml shiny-base"
+            - name: Run shinytest2 tests
+              if: steps.detect-tests.outputs.has_shinytest2 == 'true'
+              run: |
+                  echo "SHINYTEST2_APP_DRIVER_TEST_ON_CRAN=1" >> .Renviron
+                  R -e 'shinytest2::test_app(reporter = testthat::JunitReporter$new(file = "junit_shinytest2.xml"))'
+
+            # ---- Playwright e2e ----
+            - name: Install Node.js
+              if: steps.detect-tests.outputs.has_e2e == 'true'
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            - name: Install Playwright dependencies
+              if: steps.detect-tests.outputs.has_e2e == 'true'
+              working-directory: tests/e2e
+              run: |
+                  npm ci
+                  npx playwright install chromium --with-deps
+
+            - name: Run Playwright e2e tests
+              if: steps.detect-tests.outputs.has_e2e == 'true'
+              working-directory: tests/e2e
+              env:
+                  CI: true
+              run: npx playwright test --reporter=junit
+
+            # ---- Results ----
+            - name: Publish test results
+              if: always()
+              uses: mikepenz/action-junit-report@v4
+              with:
+                  report_paths: |
+                      junit_shinytest2.xml
+                      tests/e2e/results.xml
+                  check_name: "Test Results"
+                  include_passed: true
+
+    build:
+        if: |
+            !cancelled() &&
+            github.ref == 'refs/heads/main' &&
+            (
+              (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true') ||
+              (github.event_name != 'workflow_dispatch' && needs.format-check.result == 'success' && needs.tests.result == 'success')
+            )
+        needs: [format-check, tests]
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+                  token: ${{ secrets.CICD_GITHUB_PAT }}
+            - name: Log in to GHCR
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Extract metadata
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                  images: ghcr.io/${{ github.repository }}
+            - name: Build and push
+              run: |
+                  docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
+                  docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+
+    deploy:
+        if: |
+            !cancelled() &&
+            github.ref == 'refs/heads/main' &&
+            (
+              (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true') ||
+              (github.event_name != 'workflow_dispatch' && needs.build.result == 'success')
+            )
+        needs: [build]
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  submodules: true
+                  token: ${{ secrets.CICD_GITHUB_PAT }}
+            - name: Load configuration
+              run: |
+                  echo "DEPLOYMENT_USER=shiny" >> $GITHUB_ENV
+                  echo "PORTS_SSH=2222" >> $GITHUB_ENV
+                  echo "DEPLOYMENT_SERVER=shiny-base.ma-riviere.com" >> $GITHUB_ENV
+                  echo "PROJECT_APP_NAME=shiny-base" >> $GITHUB_ENV
+            - name: Deploy to production
+              env:
+                  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+                  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
+                  IMAGE_TAG: ${{ github.ref_name }}
+              run: |
+                  mkdir -p ~/.ssh
+                  chmod 700 ~/.ssh
+                  echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+                  chmod 600 ~/.ssh/id_ed25519
+                  scp -o StrictHostKeyChecking=no -P 2222 docker-compose.yml shiny@${DEPLOYMENT_SERVER}:~/
+                  ssh -o StrictHostKeyChecking=no -p 2222 shiny@${DEPLOYMENT_SERVER} "
+                    docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.CICD_GITHUB_PAT }}
+                    export REGISTRY_IMAGE=${REGISTRY_IMAGE}
+                    export IMAGE_TAG=${IMAGE_TAG}
+                    docker pull \${REGISTRY_IMAGE}:\${IMAGE_TAG}
+                    docker stack deploy --with-registry-auth -c docker-compose.yml shiny-base"
