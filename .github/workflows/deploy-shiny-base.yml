@@ -72,6 +72,7 @@ jobs:
             RENV_PROFILE: "dev-4.5"
             RENV_PATHS_CACHE: /opt/renv/cache
             GITHUB_PAT: ${{ secrets.CICD_GITHUB_PAT }}
+            BYPASS_AUTH0: "TRUE"
         steps:
             - uses: actions/checkout@v4
               with:
