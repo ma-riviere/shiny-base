@@ -5,8 +5,9 @@ services:
       - traefik-net
     command:
       - "--log.level=DEBUG"
-      - "--api.insecure=true"
+      - "--api=true"
       - "--api.dashboard=true"
+      - "--api.insecure=false"
       - "--providers.docker.swarmmode=true"
       - "--providers.docker.endpoint=unix:///var/run/docker.sock"
       - "--providers.docker.exposedbydefault=false"
@@ -20,7 +21,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - traefik-certificates:/letsencrypt
@@ -28,9 +28,27 @@ services:
       placement:
         constraints:
           - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-net"
+        # Traefik dashboard routing (HTTPS only with basic auth)
+        - "traefik.http.routers.traefik-http.rule=Host(`traefik.shiny-base.ma-riviere.com`)"
+        - "traefik.http.routers.traefik-http.entrypoints=web"
+        - "traefik.http.routers.traefik-http.middlewares=https-redirect"
+        - "traefik.http.routers.traefik-https.rule=Host(`traefik.shiny-base.ma-riviere.com`)"
+        - "traefik.http.routers.traefik-https.entrypoints=websecure"
+        - "traefik.http.routers.traefik-https.tls=true"
+        - "traefik.http.routers.traefik-https.tls.certresolver=le"
+        - "traefik.http.routers.traefik-https.service=api@internal"
+        # Basic auth middleware (reuse Jaeger credentials)
+        - "traefik.http.middlewares.traefik-auth.basicauth.users={{< jaeger.basic_auth >}}"
+        - "traefik.http.routers.traefik-https.middlewares=traefik-auth"
+        - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
   shiny:
     image: ${REGISTRY_IMAGE:-ghcr.io/ma-riviere/docker-shiny}:${IMAGE_TAG:-main}
+    env_file:
+      - /opt/shiny/.Renviron.prod
     deploy:
       replicas: 2
       update_config:
@@ -68,28 +86,68 @@ services:
     networks:
       - traefik-net
     environment:
-      - SHINY_LOG_LEVEL=INFO
-      - APP_URL=https://shiny-base.ma-riviere.com/
-      - AUTH0_USER=ma-riviere
-      - AUTH0_CLIENT_ID=f8fSHxplILtlB2tC9XC6WdBJd3B5fzkm
-      - ENV=prod
-      - POSTGRES_HOST=host.docker.internal
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=shiny-base-db
-      - POSTGRES_USER=shiny-base
-      - BOOKMARK_DIR=/var/lib/shiny-server/bookmarks
-    secrets:
-      - AUTH0_CLIENT_SECRET
-      - POSTGRES_PASSWORD
+      # All env vars (including secrets) loaded from /opt/shiny/.Renviron.prod via env_file
     healthcheck:
       # Use HEAD request to avoid spawning R processes for auth-protected apps
-      test: ["CMD-SHELL", "curl -sf --head http://localhost:3838/ || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf --head http://localhost:3838/ || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
     volumes:
       - shiny_server_logs:/var/log/shiny-server
       - shinylogs:/srv/shiny-server/shinylogs
+
+  netdata:
+    image: netdata/netdata:stable
+    hostname: "shiny-base-server"
+    pid: host
+    networks:
+      - traefik-net
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - netdata-config:/etc/netdata
+      - netdata-lib:/var/lib/netdata
+      - netdata-cache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/log:/host/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - NETDATA_CLAIM_TOKEN=
+      - NETDATA_CLAIM_ROOMS=
+      - DOCKER_HOST=/var/run/docker.sock
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=traefik-net"
+        # Route to Netdata UI via subdomain
+        - "traefik.http.routers.netdata-http.rule=Host(`monitoring.shiny-base.ma-riviere.com`)"
+        - "traefik.http.routers.netdata-http.entrypoints=web"
+        - "traefik.http.routers.netdata-http.middlewares=https-redirect"
+        - "traefik.http.routers.netdata-https.rule=Host(`monitoring.shiny-base.ma-riviere.com`)"
+        - "traefik.http.routers.netdata-https.entrypoints=websecure"
+        - "traefik.http.routers.netdata-https.tls=true"
+        - "traefik.http.routers.netdata-https.tls.certresolver=le"
+        # Basic auth middleware (reuse Jaeger credentials)
+        - "traefik.http.middlewares.netdata-auth.basicauth.users={{< jaeger.basic_auth >}}"
+        - "traefik.http.routers.netdata-https.middlewares=netdata-auth"
+        # Service port
+        - "traefik.http.services.netdata.loadbalancer.server.port=19999"
 
 volumes:
   shiny_server_logs:
@@ -98,13 +156,13 @@ volumes:
     driver: local
   traefik-certificates:
     driver: local
+  netdata-config:
+    driver: local
+  netdata-lib:
+    driver: local
+  netdata-cache:
+    driver: local
 
 networks:
   traefik-net:
     name: traefik-net
-
-secrets:
-  AUTH0_CLIENT_SECRET:
-    external: true
-  POSTGRES_PASSWORD:
-    external: true
