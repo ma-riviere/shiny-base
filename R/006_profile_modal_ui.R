@@ -34,12 +34,20 @@ profile_modal_ui <- function(ns, auth_info) {
                 class = "profile-info-section",
                 div(
                     class = "mb-3",
-                    tags$label(class = "form-label i18n", `data-key` = "Email", tr("Email")),
+                    tags$label(
+                        class = "form-label i18n",
+                        `data-key` = "Email",
+                        tr("Email")
+                    ),
                     tags$div(class = "form-control-plaintext", info$email)
                 ),
                 div(
                     class = "mb-3",
-                    tags$label(class = "form-label i18n", `data-key` = "Roles", tr("Roles")),
+                    tags$label(
+                        class = "form-label i18n",
+                        `data-key` = "Roles",
+                        tr("Roles")
+                    ),
                     tags$div(class = "form-control-plaintext", info$roles_text)
                 ),
                 div(

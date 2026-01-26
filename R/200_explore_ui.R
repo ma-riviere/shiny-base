@@ -55,7 +55,11 @@ explore_ui <- function(id) {
                             ns("open_upload"),
                             tagList(
                                 bsicons::bs_icon("upload"),
-                                tags$span(class = "i18n", `data-key` = "Upload Dataset", tr("Upload Dataset"))
+                                tags$span(
+                                    class = "i18n",
+                                    `data-key` = "Upload Dataset",
+                                    tr("Upload Dataset")
+                                )
                             ),
                             class = "btn-primary"
                         ),
@@ -63,7 +67,11 @@ explore_ui <- function(id) {
                             ns("go_home"),
                             tagList(
                                 bsicons::bs_icon("house"),
-                                tags$span(class = "i18n", `data-key` = "Go to Home", tr("Go to Home"))
+                                tags$span(
+                                    class = "i18n",
+                                    `data-key` = "Go to Home",
+                                    tr("Go to Home")
+                                )
                             ),
                             class = "btn-outline-secondary"
                         )

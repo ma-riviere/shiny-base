@@ -29,7 +29,11 @@ sidebar_server <- function(id, r) {
             r$selected_dataset_id,
             {
                 req(r$selected_dataset_id)
-                updateSelectInput(session, "selected_dataset", selected = as.character(r$selected_dataset_id))
+                updateSelectInput(
+                    session,
+                    "selected_dataset",
+                    selected = as.character(r$selected_dataset_id)
+                )
             },
             ignoreNULL = TRUE,
             ignoreInit = TRUE,
@@ -40,7 +44,10 @@ sidebar_server <- function(id, r) {
         observeEvent(
             input$selected_dataset,
             {
-                if (purrr::is_empty(input$selected_dataset) || !nzchar(input$selected_dataset)) {
+                if (
+                    purrr::is_empty(input$selected_dataset) ||
+                        !nzchar(input$selected_dataset)
+                ) {
                     r$selected_dataset_id <- NULL
                 } else {
                     r$selected_dataset_id <- as.integer(input$selected_dataset)
@@ -54,7 +61,11 @@ sidebar_server <- function(id, r) {
             r$selected_model_id,
             {
                 req(r$selected_model_id)
-                updateSelectInput(session, "selected_model", selected = as.character(r$selected_model_id))
+                updateSelectInput(
+                    session,
+                    "selected_model",
+                    selected = as.character(r$selected_model_id)
+                )
             },
             ignoreNULL = TRUE,
             ignoreInit = TRUE,
@@ -92,7 +103,12 @@ sidebar_server <- function(id, r) {
                 )
 
                 if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
-                    updateSelectInput(session, "selected_dataset", choices = c("No datasets" = ""), selected = "")
+                    updateSelectInput(
+                        session,
+                        "selected_dataset",
+                        choices = c("No datasets" = ""),
+                        selected = ""
+                    )
                 } else {
                     choices <- setNames(datasets$id, datasets$name)
                     new_selected <- if (isTRUE(current_selection %in% datasets$id)) {
@@ -189,7 +205,12 @@ sidebar_server <- function(id, r) {
 
                 if (purrr::is_empty(user_id) || purrr::is_empty(dataset_id)) {
                     values$user_models <- NULL
-                    updateSelectInput(session, "selected_model", choices = c("No models" = ""), selected = "")
+                    updateSelectInput(
+                        session,
+                        "selected_model",
+                        choices = c("No models" = ""),
+                        selected = ""
+                    )
                     r$selected_model_id <- NULL
                     return()
                 }
@@ -198,15 +219,34 @@ sidebar_server <- function(id, r) {
                 values$user_models <- models
 
                 # Preserve selection: shared state > restored bookmark > none
-                current_model <- as.integer(r$selected_model_id %||% get_restored_input("selected_model"))
+                current_model <- as.integer(
+                    r$selected_model_id %||% get_restored_input("selected_model")
+                )
 
                 if (purrr::is_empty(models) || nrow(models) == 0) {
-                    updateSelectInput(session, "selected_model", choices = c("No models" = ""), selected = "")
+                    updateSelectInput(
+                        session,
+                        "selected_model",
+                        choices = c("No models" = ""),
+                        selected = ""
+                    )
                     r$selected_model_id <- NULL
                 } else {
-                    choices <- c("Select a model" = "", setNames(models$id, models$formula))
-                    new_selected <- if (isTRUE(current_model %in% models$id)) as.character(current_model) else ""
-                    updateSelectInput(session, "selected_model", choices = choices, selected = new_selected)
+                    choices <- c(
+                        "Select a model" = "",
+                        setNames(models$id, models$formula)
+                    )
+                    new_selected <- if (isTRUE(current_model %in% models$id)) {
+                        as.character(current_model)
+                    } else {
+                        ""
+                    }
+                    updateSelectInput(
+                        session,
+                        "selected_model",
+                        choices = choices,
+                        selected = new_selected
+                    )
                     if (!nzchar(new_selected)) r$selected_model_id <- NULL
                 }
             },

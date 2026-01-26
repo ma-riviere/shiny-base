@@ -141,11 +141,23 @@ server <- function(input, output, session) {
         observeEvent(input$nav, label = "server_sidebar_auto_close", {
             if (input$nav %in% pages_with_sidebar) {
                 # Remove then re-add class to restart animation
-                shinyjs::removeClass(selector = sidebar_toggle_selector, class = "sidebar-has-content")
-                shinyjs::delay(10, shinyjs::addClass(selector = sidebar_toggle_selector, class = "sidebar-has-content"))
+                shinyjs::removeClass(
+                    selector = sidebar_toggle_selector,
+                    class = "sidebar-has-content"
+                )
+                shinyjs::delay(
+                    10,
+                    shinyjs::addClass(
+                        selector = sidebar_toggle_selector,
+                        class = "sidebar-has-content"
+                    )
+                )
             } else {
                 bslib::sidebar_toggle("sidebar-sidebar", open = FALSE)
-                shinyjs::removeClass(selector = sidebar_toggle_selector, class = "sidebar-has-content")
+                shinyjs::removeClass(
+                    selector = sidebar_toggle_selector,
+                    class = "sidebar-has-content"
+                )
             }
         })
 
@@ -156,13 +168,17 @@ server <- function(input, output, session) {
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
             age_filter = reactive(sidebar_module$age_filter),
-            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session),
+            nav_select_callback = \(page) {
+                bslib::nav_select("nav", page, session = session)
+            },
             r = r
         )
         explore_server(
             "explore",
             selected_dataset_id = reactive(r$selected_dataset_id),
-            nav_select_callback = \(page) bslib::nav_select("nav", page, session = session)
+            nav_select_callback = \(page) {
+                bslib::nav_select("nav", page, session = session)
+            }
         )
         model_server(
             "model",
@@ -195,7 +211,10 @@ server <- function(input, output, session) {
         # (e.g., from bookmark restoration)
         observe(label = "server_resolve_lang_no_auth", {
             current_lang <- input[["navbar-language"]]
-            if (purrr::is_empty(current_lang) || current_lang == getOption("default_language", "en")) {
+            if (
+                purrr::is_empty(current_lang) ||
+                    current_lang == getOption("default_language", "en")
+            ) {
                 resolved_lang <- resolve_language(NULL, session)
                 apply_language(resolved_lang, session)
             }
@@ -231,7 +250,9 @@ server <- function(input, output, session) {
                             auth0_sub
                         )
                     },
-                    error = \(e) log_warn("[SESSION] Failed to start session: {e$message}")
+                    error = \(e) {
+                        log_warn("[SESSION] Failed to start session: {e$message}")
+                    }
                 )
             }
 
@@ -283,7 +304,10 @@ server <- function(input, output, session) {
 
             # Only apply if input doesn't already have a non-default value
             current_lang <- input[["navbar-language"]]
-            if (purrr::is_empty(current_lang) || current_lang == getOption("default_language", "en")) {
+            if (
+                purrr::is_empty(current_lang) ||
+                    current_lang == getOption("default_language", "en")
+            ) {
                 resolved_lang <- resolve_language(session$userData$auth0_info, session)
                 apply_language(resolved_lang, session)
             }
@@ -326,7 +350,10 @@ server <- function(input, output, session) {
 
             # Get user and check for recent bookmark
             user <- db_get_or_create_user(auth0_sub)
-            last_bookmark <- db_get_user_recent_bookmark(user$id, max_age_minutes = 30)
+            last_bookmark <- db_get_user_recent_bookmark(
+                user$id,
+                max_age_minutes = 30
+            )
             if (is.null(last_bookmark)) {
                 return()
             }
@@ -334,7 +361,11 @@ server <- function(input, output, session) {
             # Calculate age of bookmark in minutes
             created_time <- as.POSIXct(last_bookmark$created_at, tz = "UTC")
             current_time <- Sys.time()
-            age_minutes <- as.numeric(difftime(current_time, created_time, units = "mins"))
+            age_minutes <- as.numeric(difftime(
+                current_time,
+                created_time,
+                units = "mins"
+            ))
             age_text <- if (age_minutes < 1) {
                 tr("just now")
             } else if (age_minutes < 60) {
