@@ -85,8 +85,7 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - traefik-net
-    environment:
-      # All env vars (including secrets) loaded from /opt/shiny/.Renviron.prod via env_file
+    # All env vars (including secrets) loaded from /opt/shiny/.Renviron.prod via env_file
     healthcheck:
       # Use HEAD request to avoid spawning R processes for auth-protected apps
       test:
