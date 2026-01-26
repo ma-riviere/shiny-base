@@ -16,8 +16,14 @@ model_server <- function(
             loaded_model_id = NULL # Track if current model is saved (for delete)
         )
 
-        has_data <- reactive(!purrr::is_empty(values$data), label = "model_has_data")
-        has_model <- reactive(!purrr::is_empty(values$fitted_model), label = "model_has_fitted")
+        has_data <- reactive(
+            !purrr::is_empty(values$data),
+            label = "model_has_data"
+        )
+        has_model <- reactive(
+            !purrr::is_empty(values$fitted_model),
+            label = "model_has_fitted"
+        )
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -96,7 +102,13 @@ model_server <- function(
             req(is.null(values$fitted_model)) # Skip if already loaded
             model_id <- selected_model_id()
             req(!is.null(model_id), !is.na(model_id))
-            model_load_saved(model_id, session, values, data = values$data, silent_fail = TRUE)
+            model_load_saved(
+                model_id,
+                session,
+                values,
+                data = values$data,
+                silent_fail = TRUE
+            )
         })
 
         # ------ MODEL FITTING (ASYNC) -----------------------------------------
@@ -287,6 +299,9 @@ model_server <- function(
         })
 
         # Show/hide empty state based on data presence
-        observe(shinyjs::toggle("empty_state", condition = !has_data()), label = "model_empty_toggle")
+        observe(
+            shinyjs::toggle("empty_state", condition = !has_data()),
+            label = "model_empty_toggle"
+        )
     })
 }

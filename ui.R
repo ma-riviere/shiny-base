@@ -3,7 +3,11 @@ ui <- function(request) {
 
     bslib::page_navbar(
         id = "nav",
-        title = tags$span(class = "i18n", `data-key` = "Shiny Base", tr("Shiny Base")),
+        title = tags$span(
+            class = "i18n",
+            `data-key` = "Shiny Base",
+            tr("Shiny Base")
+        ),
         theme = theme,
         fillable = TRUE,
         navbar_options = bslib::navbar_options(
@@ -17,7 +21,11 @@ ui <- function(request) {
             tags$head(
                 # Google Fonts with preconnect for better performance
                 tags$link(rel = "preconnect", href = "https://fonts.googleapis.com"),
-                tags$link(rel = "preconnect", href = "https://fonts.gstatic.com", crossorigin = NA),
+                tags$link(
+                    rel = "preconnect",
+                    href = "https://fonts.gstatic.com",
+                    crossorigin = NA
+                ),
                 tags$link(
                     rel = "stylesheet",
                     href = paste0(
@@ -26,7 +34,11 @@ ui <- function(request) {
                         "family=Open+Sans:wght@300..800&display=swap"
                     )
                 ),
-                tags$link(rel = "stylesheet", type = "text/css", href = "css/main.min.css"),
+                tags$link(
+                    rel = "stylesheet",
+                    type = "text/css",
+                    href = "css/main.min.css"
+                ),
                 shinyutils::use_js_helpers(),
                 tags$script(src = sprintf("js/app.js?v=%s", as.integer(Sys.time())))
             ),

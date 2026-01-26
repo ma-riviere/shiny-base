@@ -20,7 +20,10 @@ home_ui <- function(id) {
                 div(class = "stat-icon", bsicons::bs_icon("database")),
                 div(
                     class = "stat-content",
-                    span(class = "stat-value", textOutput(ns("dataset_count"), inline = TRUE)),
+                    span(
+                        class = "stat-value",
+                        textOutput(ns("dataset_count"), inline = TRUE)
+                    ),
                     span(
                         class = "stat-label i18n",
                         `data-key` = "Datasets",
@@ -41,7 +44,11 @@ home_ui <- function(id) {
                         ns("open_upload"),
                         tagList(
                             bsicons::bs_icon("upload"),
-                            tags$span(class = "i18n", `data-key` = "Upload Dataset", tr("Upload Dataset"))
+                            tags$span(
+                                class = "i18n",
+                                `data-key` = "Upload Dataset",
+                                tr("Upload Dataset")
+                            )
                         ),
                         class = "btn-primary"
                     )

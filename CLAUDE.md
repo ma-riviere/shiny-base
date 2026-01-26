@@ -35,7 +35,8 @@ shiny-base/
 ├── database/             # schema-base.sql (users, sessions, bookmarks), schema.sql (app-specific)
 ├── tests/                # shinytest2, testthat
 ├── _auth0.yml            # Auth0 configuration
-├── .Renviron             # Environment variables
+├── .Renviron             # Local dev environment variables
+├── .Renviron.prod        # Production environment (secrets, gitignored)
 └── shiny_bookmarks/      # Server-side bookmark storage
 ```
 
@@ -56,6 +57,22 @@ shiny-base/
 **Choice:** Save state in `session$onSessionEnded()` without notification.
 
 **Trade-off:** User cannot be notified (WebSocket closed), but state persists for next session.
+
+## Environment Variables Strategy
+
+**Choice:** Single `.Renviron.prod` file for all production config (including secrets) instead of Docker Swarm secrets.
+
+**Why:**
+- Simpler mental model: one file for all runtime config
+- No Docker secrets infrastructure needed (config.yml → Ansible → Docker secrets → entrypoint script)
+- Sufficient security for personal/small-team projects with SSH-key-only access
+
+**Security notes:**
+- `.Renviron.prod` is gitignored
+- File copied to server with `0640` permissions during Ansible provisioning
+- Docker loads via `env_file` directive
+
+**Not for:** Production apps with compliance requirements (use Docker/Kubernetes secrets instead).
 
 ## Failed Approaches (DO NOT RETRY)
 

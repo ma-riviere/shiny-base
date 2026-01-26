@@ -60,36 +60,40 @@ dataset_row_server <- function(
             ))
         })
 
-        observeEvent(input$confirm_delete, label = paste0("row_", id, "_confirm_delete"), {
-            tryCatch(
-                {
-                    db_delete_dataset(row_id())
-                    removeModal()
-                    trigger("refresh_datasets")
-                    trigger("refresh_models")
+        observeEvent(
+            input$confirm_delete,
+            label = paste0("row_", id, "_confirm_delete"),
+            {
+                tryCatch(
+                    {
+                        db_delete_dataset(row_id())
+                        removeModal()
+                        trigger("refresh_datasets")
+                        trigger("refresh_models")
 
-                    # Navigate to home if callback provided (dataset page)
-                    if (!is.null(nav_select_callback)) {
-                        nav_select_callback("home")
+                        # Navigate to home if callback provided (dataset page)
+                        if (!is.null(nav_select_callback)) {
+                            nav_select_callback("home")
+                        }
+
+                        shinyWidgets::show_toast(
+                            title = tr("Dataset deleted successfully"),
+                            type = "success",
+                            timer = 3000,
+                            position = "bottom-end"
+                        )
+                    },
+                    error = \(e) {
+                        shinyWidgets::show_toast(
+                            title = paste(tr("Error deleting dataset:"), e$message),
+                            type = "error",
+                            timer = 5000,
+                            position = "bottom-end"
+                        )
                     }
-
-                    shinyWidgets::show_toast(
-                        title = tr("Dataset deleted successfully"),
-                        type = "success",
-                        timer = 3000,
-                        position = "bottom-end"
-                    )
-                },
-                error = \(e) {
-                    shinyWidgets::show_toast(
-                        title = paste(tr("Error deleting dataset:"), e$message),
-                        type = "error",
-                        timer = 5000,
-                        position = "bottom-end"
-                    )
-                }
-            )
-        })
+                )
+            }
+        )
 
         # ------ DOWNLOAD ------------------------------------------------------
         output$download <- downloadHandler(

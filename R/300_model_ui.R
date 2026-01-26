@@ -93,7 +93,10 @@ model_ui <- function(id) {
                                 div(
                                     class = "metric-card p-3 border rounded",
                                     tags$small(class = "text-muted", "R-squared"),
-                                    div(class = "h4 mb-0", textOutput(ns("r_squared"), inline = TRUE))
+                                    div(
+                                        class = "h4 mb-0",
+                                        textOutput(ns("r_squared"), inline = TRUE)
+                                    )
                                 )
                             ),
                             div(

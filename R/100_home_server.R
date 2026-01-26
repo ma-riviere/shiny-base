@@ -62,7 +62,11 @@ home_server <- function(
         })
 
         # Open upload modal
-        observeEvent(input$open_upload, trigger("show_upload_modal"), label = "home_open_upload")
+        observeEvent(
+            input$open_upload,
+            trigger("show_upload_modal"),
+            label = "home_open_upload"
+        )
 
         # Initialize row module servers ONCE per new dataset ID
         observeEvent(values$datasets, label = "home_init_row_modules", {
@@ -118,7 +122,13 @@ home_server <- function(
             can_delete <- can("delete:dataset")
             dataset_rows <- purrr::map(
                 datasets$id,
-                \(id) dataset_row_ui(ns(paste0("row_", id)), clickable = TRUE, can_delete = can_delete)
+                \(id) {
+                    dataset_row_ui(
+                        ns(paste0("row_", id)),
+                        clickable = TRUE,
+                        can_delete = can_delete
+                    )
+                }
             )
             tagList(dataset_rows)
         })

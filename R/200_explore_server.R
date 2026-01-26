@@ -11,7 +11,10 @@ explore_server <- function(
             data = NULL
         )
 
-        has_data <- reactive(!purrr::is_empty(values$data), label = "dataset_has_data")
+        has_data <- reactive(
+            !purrr::is_empty(values$data),
+            label = "dataset_has_data"
+        )
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -80,7 +83,11 @@ explore_server <- function(
         )
 
         # Upload modal trigger
-        observeEvent(input$open_upload, trigger("show_upload_modal"), label = "dataset_open_upload")
+        observeEvent(
+            input$open_upload,
+            trigger("show_upload_modal"),
+            label = "dataset_open_upload"
+        )
 
         # ------ OUTPUT --------------------------------------------------------
 
@@ -116,7 +123,10 @@ explore_server <- function(
         })
 
         # Show/hide empty state based on data presence
-        observe(shinyjs::toggle("empty_state", condition = !has_data()), label = "dataset_empty_toggle")
+        observe(
+            shinyjs::toggle("empty_state", condition = !has_data()),
+            label = "dataset_empty_toggle"
+        )
 
         # Navigate to home page
         observeEvent(input$go_home, label = "dataset_go_home", {
