@@ -166,8 +166,12 @@ jobs:
               with:
                   images: ghcr.io/${{ github.repository }}
             - name: Build and push
+              env:
+                  GITHUB_PAT: ${{ secrets.CICD_GITHUB_PAT }}
               run: |
-                  docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
+                  docker build \
+                    --secret id=GITHUB_PAT,env=GITHUB_PAT \
+                    -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
                   docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
 
     deploy:
