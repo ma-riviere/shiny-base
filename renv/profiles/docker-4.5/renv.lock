@@ -3788,13 +3788,13 @@
         "shinyjs",
         "shinyvalidate",
         "shinyWidgets",
-        "yaml"
+        "yaml",
+        "yyjsonr"
       ],
       "Suggests": [
         "auth0r",
         "blastula",
         "cachem",
-        "jsonlite",
         "memoise",
         "otel",
         "otelsdk",
@@ -3810,7 +3810,7 @@
       "RemoteUsername": "ma-riviere",
       "RemoteRepo": "shinyutils",
       "RemoteRef": "main",
-      "RemoteSha": "c597c2202b51122579836adaa7e99dfa476350fc"
+      "RemoteSha": "050d29dfe57c7d08b2bece671b2a77bc7214f972"
     },
     "shinyvalidate": {
       "Package": "shinyvalidate",
