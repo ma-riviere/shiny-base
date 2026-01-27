@@ -85,7 +85,8 @@ services:
       - "host.docker.internal:host-gateway"
     networks:
       - traefik-net
-    # All env vars (including secrets) loaded from /opt/shiny/.Renviron.prod via env_file
+    environment:
+      - RENV_PROFILE=docker-4.5
     healthcheck:
       # Use HEAD request to avoid spawning R processes for auth-protected apps
       test:
@@ -142,8 +143,8 @@ services:
         - "traefik.http.routers.netdata-https.entrypoints=websecure"
         - "traefik.http.routers.netdata-https.tls=true"
         - "traefik.http.routers.netdata-https.tls.certresolver=le"
-        # Basic auth middleware (reuse Jaeger credentials)
-        - "traefik.http.middlewares.netdata-auth.basicauth.users={{< jaeger.basic_auth >}}"
+        # Basic auth middleware
+        - "traefik.http.middlewares.netdata-auth.basicauth.users=admin:$$apr1$$ebf77506$$MVQjMUiEvhPVk.FoQ/yKj1"
         - "traefik.http.routers.netdata-https.middlewares=netdata-auth"
         # Service port
         - "traefik.http.services.netdata.loadbalancer.server.port=19999"
