@@ -3810,7 +3810,7 @@
       "RemoteUsername": "ma-riviere",
       "RemoteRepo": "shinyutils",
       "RemoteRef": "main",
-      "RemoteSha": "1f69fcec6ac195e486a6af38cd182847e24677f6"
+      "RemoteSha": "c597c2202b51122579836adaa7e99dfa476350fc"
     },
     "shinyvalidate": {
       "Package": "shinyvalidate",
