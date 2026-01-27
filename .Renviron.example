@@ -1,14 +1,17 @@
-ENV=dev
+ENV=dev/prod
+
+##########
+# COMMON #
+##########
 
 # App
 APP_URL=http://127.0.0.1
 APP_PORT=9090
 DATA_DIR=data
 LOGS_DIR=logs
+BOOKMARK_DIR=bookmarks
 
 # Auth0
-BYPASS_AUTH0=FALSE
-
 AUTH0_USER=ma-riviere
 AUTH0_TENANT=ma-riviere
 AUTH0_REGION=eu.auth0.com
@@ -16,31 +19,44 @@ AUTH0_CLIENT_ID=
 AUTH0_CLIENT_SECRET=
 AUTH0_COOKIE_KEY=
 
-# Auth0 users (for E2E tests)
-AUTH0_USER_ADMIN=
-AUTH0_USER_DEV=
-AUTH0_USER_USER=
-AUTH0_PWD=
-
-# Postgres
-POSTGRES_HOST=
-POSTGRES_PORT=
-POSTGRES_DB=
-POSTGRES_USER=
-POSTGRES_PASSWORD=
+BYPASS_AUTH0=FALSE
 
 # Email (Brevo)
 EMAIL_TO=
 EMAIL_FROM=shiny@ma-riviere.com
 SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
-SMTP_USER=xxxxxx@smtp-brevo.com
+SMTP_USER=
 SMTP_KEY=
 
 SEND_ERROR_EMAILS=TRUE
 
-# OTel - Memory exporter for in-app trace viewer (dev mode)
+# Otel
+# Memory exporter for in-app trace viewer (dev mode)
 # Format: <package>::<provider> -> uses otelsdk::tracer_provider_memory$new()
 ## Other option: otlp/file for jsonl (with OTEL_EXPORTER_OTLP_TRACES_FILE & OTEL_EXPORTER_OTLP_TRACES_FILE_ALIAS)
 OTEL_TRACES_EXPORTER=otelsdk::tracer_provider_memory
 OTEL_R_EXPORTER_MEMORY_TRACES_BUFFER_SIZE=5000
+
+#######
+# DEV #
+#######
+
+# Auth0 users (for E2E tests) - Dev only
+AUTH0_USER_ADMIN=
+AUTH0_USER_DEV=
+AUTH0_USER_USER=
+AUTH0_PWD=
+
+########
+# PROD #
+########
+
+SHINY_LOG_LEVEL=INFO
+
+# Postgres - Prod only
+POSTGRES_HOST=
+POSTGRES_PORT=
+POSTGRES_DB=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
