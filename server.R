@@ -405,8 +405,8 @@ server <- function(input, output, session) {
                     timerProgressBar: true,
                     customClass: { popup: 'toast-no-close' }
                 });",
-                jsonlite::toJSON(tr("Welcome Back"), auto_unbox = TRUE),
-                jsonlite::toJSON(toast_html, auto_unbox = TRUE)
+                yyjsonr::write_json_str(tr("Welcome Back"), auto_unbox = TRUE),
+                yyjsonr::write_json_str(toast_html, auto_unbox = TRUE)
             ))
         },
         ignoreInit = TRUE

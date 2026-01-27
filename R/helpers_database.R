@@ -80,21 +80,17 @@ db_get_dataset <- function(dataset_id) {
     return(result[1, ])
 }
 
-# Create a new dataset. Returns the new dataset ID.
-# Note: Requires db_with_con because we need the same connection for INSERT + get-last-ID.
+# Create a new dataset. Returns number of rows affected (1 on success).
 db_create_dataset <- function(user_id, name, data_df) {
     data_json <- yyjsonr::write_json_str(data_df)
 
-    db_with_con(db_pool, \(con) {
-        sql <- glue::glue_sql(
-            "INSERT INTO datasets (user_id, name, data) VALUES ({user_id}, {name}, {data_json})",
-            .con = con
-        )
-        pool::dbExecute(con, sql)
-
-        # Get the inserted ID (SQLite-specific; PostgreSQL would use RETURNING clause)
-        pool::dbGetQuery(con, "SELECT last_insert_rowid() as id")$id
-    })
+    db_execute(
+        "INSERT INTO datasets (user_id, name, data) VALUES ({user_id}, {name}, {data_json})",
+        user_id = user_id,
+        name = name,
+        data_json = data_json,
+        pool = db_pool
+    )
 }
 
 # Update a dataset name by ID

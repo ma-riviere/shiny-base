@@ -1,4 +1,5 @@
 ENV=dev/prod
+RENV_CONFIG_STARTUP_QUIET=TRUE
 
 ##########
 # COMMON #
