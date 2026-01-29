@@ -153,7 +153,7 @@ server <- function(input, output, session) {
                     )
                 )
             } else {
-                bslib::sidebar_toggle("sidebar-sidebar", open = FALSE)
+                bslib::toggle_sidebar("sidebar-sidebar", open = FALSE)
                 shinyjs::removeClass(
                     selector = sidebar_toggle_selector,
                     class = "sidebar-has-content"
