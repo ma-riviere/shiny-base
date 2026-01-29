@@ -4647,7 +4647,7 @@
       "RemoteUsername": "ma-riviere",
       "RemoteRepo": "shinyutils",
       "RemoteRef": "main",
-      "RemoteSha": "56366e85dbda91965f3c816762105301b3588c8d"
+      "RemoteSha": "46fb4ff2641c5e9a1ce77ffbbb11ab2e7c7e8180"
     },
     "shinyvalidate": {
       "Package": "shinyvalidate",
