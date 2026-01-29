@@ -42,6 +42,10 @@ shiny-base/
 
 **Note:** Reusable utilities (logging, database, RBAC, admin panel, etc.) are in the `shinyutils` package.
 
+## Deployment
+
+See `deploy-shiny/` submodule for IaC (Hetzner Cloud + Docker Swarm + Traefik). Provisioning (`./deploy-shiny/setup.sh`) auto-configures GitHub secrets (`SSH_PRIVATE_KEY`, `CICD_GITHUB_PAT`). Requires `GITHUB_PAT` env var with `repo` scope.
+
 ---
 
 # Architecture Decisions
