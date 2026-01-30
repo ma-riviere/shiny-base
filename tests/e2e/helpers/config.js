@@ -30,7 +30,8 @@ function loadRenviron(filepath) {
 }
 
 /**
- * Get app configuration from .Renviron.
+ * Get app configuration from .Renviron or environment variables.
+ * In CI, .Renviron is optional - uses env vars and defaults.
  * @returns {Object} Config with projectRoot, targetUrl, credentials
  */
 function getConfig() {
@@ -38,18 +39,26 @@ function getConfig() {
     const projectRoot = process.env.PROJECT_ROOT || path.resolve(__dirname, '../../..');
 
     const renvironPath = path.join(projectRoot, '.Renviron');
-    if (!fs.existsSync(renvironPath)) {
+    const hasRenviron = fs.existsSync(renvironPath);
+
+    // In CI, .Renviron is optional - use env vars and defaults
+    if (!hasRenviron && !process.env.CI) {
         throw new Error(`Cannot find .Renviron at ${renvironPath}. Set PROJECT_ROOT if running from different location.`);
     }
 
-    const renviron = loadRenviron(renvironPath);
+    const renviron = hasRenviron ? loadRenviron(renvironPath) : {};
 
-    // Skip Auth0 login if BYPASS_AUTH0=TRUE in .Renviron or running in CI
-    const bypassAuth0 = renviron.BYPASS_AUTH0 === 'TRUE' || !!process.env.CI;
+    // Skip Auth0 login if BYPASS_AUTH0=TRUE in .Renviron/env or running in CI
+    const bypassAuth0 = renviron.BYPASS_AUTH0 === 'TRUE' ||
+        process.env.BYPASS_AUTH0 === 'TRUE' ||
+        !!process.env.CI;
+
+    // APP_PORT: .Renviron > env var > default 9090
+    const appPort = renviron.APP_PORT || process.env.APP_PORT || 9090;
 
     return {
         projectRoot,
-        targetUrl: `http://localhost:${renviron.APP_PORT || 9090}`,
+        targetUrl: `http://localhost:${appPort}`,
         bypassAuth0,
         credentials: {
             admin: { email: renviron.AUTH0_USER_ADMIN, password: renviron.AUTH0_PWD },
