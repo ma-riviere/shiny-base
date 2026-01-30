@@ -86,6 +86,7 @@ test.describe('Authentication & RBAC - Dev role', () => {
     });
 
     test('should NOT see users sub-tab (requires real admin role)', async () => {
+        test.skip(config.bypassAuth0, 'Skipping: RBAC tests require Auth0');
         // Dev mode doesn't grant access to Auth0 users management
         await expect(sharedPage.locator(SELECTORS.admin.usersTab)).not.toBeVisible();
     });
