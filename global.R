@@ -77,7 +77,7 @@ shinyutils::setup_global_error_emails()
 # Will return NULL if auth0 is disabled (e.g. auth0_disable = TRUE or BYPASS_AUTH0 = TRUE)
 auth0_mgmt <- shinyutils::init_auth0()
 
-auth0_info <- auth0r::auth0_info()
+auth0_info <- if (isTRUE(getOption("auth0_disable"))) NULL else auth0r::auth0_info()
 
 # ------ DATABASE --------------------------------------------------------------
 
