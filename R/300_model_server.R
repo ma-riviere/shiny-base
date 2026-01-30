@@ -1,9 +1,14 @@
+# Model page server module
+# Handles async model fitting, saving, and deletion.
+#
+# @param selected_dataset_id reactiveVal for currently selected dataset ID (read-only here)
+# @param selected_model_id reactiveVal for currently selected model ID (read/write)
+# @param active_page Reactive for the currently active nav page
 model_server <- function(
     id,
-    selected_dataset_id = reactive(NULL),
-    selected_model_id = reactive(NULL),
-    active_page = reactive(NULL),
-    r = NULL
+    selected_dataset_id = reactiveVal(NULL),
+    selected_model_id = reactiveVal(NULL),
+    active_page = reactive(NULL)
 ) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
@@ -198,7 +203,7 @@ model_server <- function(
                     shinyjs::enable("delete_btn")
 
                     # Update shared state so sidebar dropdown syncs to saved model
-                    r$selected_model_id <- model_id
+                    selected_model_id(model_id)
 
                     # Trigger refresh for sidebar model dropdown
                     trigger("refresh_models")
