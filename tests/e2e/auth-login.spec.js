@@ -94,34 +94,32 @@ test.describe('Authentication & RBAC - Dev role', () => {
 
 // ----- RBAC - ADMIN ROLE -----------------------------------------------------
 // Tests for actual admin role (requires --project=admin)
+// Skipped when BYPASS_AUTH0=TRUE (no real user roles)
 
 test.describe('RBAC - Admin role', () => {
     let sharedPage;
     const config = getConfig();
 
-    // Only run for 'admin' project
+    // Only run for 'admin' project with real Auth0
     test.beforeEach(({ }, testInfo) => {
+        test.skip(config.bypassAuth0, 'Skipping: RBAC tests require Auth0');
         test.skip(testInfo.project.name !== 'admin', 'Skipping: not admin project');
     });
 
     test.beforeAll(async ({ browser }, testInfo) => {
-        // Skip setup for non-matching projects
-        if (testInfo.project.name !== 'admin') return;
+        // Skip setup for non-matching projects or bypass mode
+        if (testInfo.project.name !== 'admin' || config.bypassAuth0) return;
 
         const context = await browser.newContext();
         sharedPage = await context.newPage();
 
-        if (!config.bypassAuth0) {
-            await login(sharedPage, { role: 'admin' });
-        } else {
-            await sharedPage.goto(config.targetUrl);
-        }
+        await login(sharedPage, { role: 'admin' });
         await waitForShiny(sharedPage);
         await waitForWaiterHide(sharedPage);
     });
 
     test.afterAll(async ({ }, testInfo) => {
-        if (testInfo.project.name !== 'admin' || !sharedPage) return;
+        if (testInfo.project.name !== 'admin' || config.bypassAuth0 || !sharedPage) return;
         await sharedPage.context().close();
     });
 
@@ -141,34 +139,32 @@ test.describe('RBAC - Admin role', () => {
 
 // ----- RBAC - USER ROLE ------------------------------------------------------
 // Tests for regular user role (requires --project=user)
+// Skipped when BYPASS_AUTH0=TRUE (no real user roles)
 
 test.describe('RBAC - User role', () => {
     let sharedPage;
     const config = getConfig();
 
-    // Only run for 'user' project
+    // Only run for 'user' project with real Auth0
     test.beforeEach(({ }, testInfo) => {
+        test.skip(config.bypassAuth0, 'Skipping: RBAC tests require Auth0');
         test.skip(testInfo.project.name !== 'user', 'Skipping: not user project');
     });
 
     test.beforeAll(async ({ browser }, testInfo) => {
-        // Skip setup for non-matching projects
-        if (testInfo.project.name !== 'user') return;
+        // Skip setup for non-matching projects or bypass mode
+        if (testInfo.project.name !== 'user' || config.bypassAuth0) return;
 
         const context = await browser.newContext();
         sharedPage = await context.newPage();
 
-        if (!config.bypassAuth0) {
-            await login(sharedPage, { role: 'user' });
-        } else {
-            await sharedPage.goto(config.targetUrl);
-        }
+        await login(sharedPage, { role: 'user' });
         await waitForShiny(sharedPage);
         await waitForWaiterHide(sharedPage);
     });
 
     test.afterAll(async ({ }, testInfo) => {
-        if (testInfo.project.name !== 'user' || !sharedPage) return;
+        if (testInfo.project.name !== 'user' || config.bypassAuth0 || !sharedPage) return;
         await sharedPage.context().close();
     });
 
