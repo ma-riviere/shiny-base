@@ -118,6 +118,20 @@ jobs:
                   npm ci
                   npx playwright install chromium --with-deps
 
+            - name: Start Shiny app
+              if: steps.detect-tests.outputs.has_e2e == 'true'
+              run: |
+                  R -e "shiny::runApp(port = 9090, launch.browser = FALSE)" &
+                  # Wait for app to be ready (max 60s)
+                  for i in {1..60}; do
+                    if curl -s http://localhost:9090 > /dev/null 2>&1; then
+                      echo "App ready on port 9090"
+                      break
+                    fi
+                    echo "Waiting for app... ($i/60)"
+                    sleep 1
+                  done
+
             - name: Run Playwright e2e tests
               if: steps.detect-tests.outputs.has_e2e == 'true'
               working-directory: tests/e2e
