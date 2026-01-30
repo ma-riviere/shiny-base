@@ -2,10 +2,9 @@
 # Manages dataset/model selection dropdowns and filters.
 # Section visibility is handled by conditionalPanel in sidebar_ui.R (browser-side).
 #
-# @param r Shared reactiveValues for cross-module state. Expected fields:
-#   - selected_dataset_id: Dataset ID selected from home page row click (read/write)
-#   - selected_model_id: Model ID selected from model dropdown (read/write)
-sidebar_server <- function(id, r) {
+# @param selected_dataset_id reactiveVal for currently selected dataset ID (read/write)
+# @param selected_model_id reactiveVal for currently selected model ID (read/write)
+sidebar_server <- function(id, selected_dataset_id, selected_model_id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
@@ -24,15 +23,15 @@ sidebar_server <- function(id, r) {
 
         # ------ SHARED STATE SYNC ---------------------------------------------
 
-        # Sync dropdown FROM shared state (when home page sets r$selected_dataset_id)
+        # Sync dropdown FROM shared state (when home page sets selected_dataset_id)
         observeEvent(
-            r$selected_dataset_id,
+            selected_dataset_id(),
             {
-                req(r$selected_dataset_id)
+                req(selected_dataset_id())
                 updateSelectInput(
                     session,
                     "selected_dataset",
-                    selected = as.character(r$selected_dataset_id)
+                    selected = as.character(selected_dataset_id())
                 )
             },
             ignoreNULL = TRUE,
@@ -48,9 +47,9 @@ sidebar_server <- function(id, r) {
                     purrr::is_empty(input$selected_dataset) ||
                         !nzchar(input$selected_dataset)
                 ) {
-                    r$selected_dataset_id <- NULL
+                    selected_dataset_id(NULL)
                 } else {
-                    r$selected_dataset_id <- as.integer(input$selected_dataset)
+                    selected_dataset_id(as.integer(input$selected_dataset))
                 }
             },
             label = "sidebar_sync_dropdown_to_shared"
@@ -58,13 +57,13 @@ sidebar_server <- function(id, r) {
 
         # Sync model dropdown FROM shared state
         observeEvent(
-            r$selected_model_id,
+            selected_model_id(),
             {
-                req(r$selected_model_id)
+                req(selected_model_id())
                 updateSelectInput(
                     session,
                     "selected_model",
-                    selected = as.character(r$selected_model_id)
+                    selected = as.character(selected_model_id())
                 )
             },
             ignoreNULL = TRUE,
@@ -77,9 +76,9 @@ sidebar_server <- function(id, r) {
             input$selected_model,
             {
                 if (purrr::is_empty(input$selected_model) || !nzchar(input$selected_model)) {
-                    r$selected_model_id <- NULL
+                    selected_model_id(NULL)
                 } else {
-                    r$selected_model_id <- as.integer(input$selected_model)
+                    selected_model_id(as.integer(input$selected_model))
                 }
             },
             label = "sidebar_sync_model_dropdown_to_shared"
@@ -99,7 +98,7 @@ sidebar_server <- function(id, r) {
 
                 # Preserve selection: shared state > restored bookmark > first dataset
                 current_selection <- as.integer(
-                    r$selected_dataset_id %||% get_restored_input("selected_dataset")
+                    selected_dataset_id() %||% get_restored_input("selected_dataset")
                 )
 
                 if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
@@ -123,7 +122,7 @@ sidebar_server <- function(id, r) {
                         selected = new_selected
                     )
                     # Also update shared state
-                    r$selected_dataset_id <- as.integer(new_selected)
+                    selected_dataset_id(as.integer(new_selected))
                 }
             },
             ignoreInit = FALSE,
@@ -198,10 +197,10 @@ sidebar_server <- function(id, r) {
 
         # Load models for selected dataset
         observeEvent(
-            list(watch("refresh_models"), r$selected_dataset_id),
+            list(watch("refresh_models"), selected_dataset_id()),
             {
                 user_id <- purrr::pluck(session$userData$user, "id")
-                dataset_id <- r$selected_dataset_id
+                dataset_id <- selected_dataset_id()
 
                 if (purrr::is_empty(user_id) || purrr::is_empty(dataset_id)) {
                     values$user_models <- NULL
@@ -211,7 +210,7 @@ sidebar_server <- function(id, r) {
                         choices = c("No models" = ""),
                         selected = ""
                     )
-                    r$selected_model_id <- NULL
+                    selected_model_id(NULL)
                     return()
                 }
 
@@ -220,7 +219,7 @@ sidebar_server <- function(id, r) {
 
                 # Preserve selection: shared state > restored bookmark > none
                 current_model <- as.integer(
-                    r$selected_model_id %||% get_restored_input("selected_model")
+                    selected_model_id() %||% get_restored_input("selected_model")
                 )
 
                 if (purrr::is_empty(models) || nrow(models) == 0) {
@@ -230,7 +229,7 @@ sidebar_server <- function(id, r) {
                         choices = c("No models" = ""),
                         selected = ""
                     )
-                    r$selected_model_id <- NULL
+                    selected_model_id(NULL)
                 } else {
                     choices <- c(
                         "Select a model" = "",
@@ -247,7 +246,7 @@ sidebar_server <- function(id, r) {
                         choices = choices,
                         selected = new_selected
                     )
-                    if (!nzchar(new_selected)) r$selected_model_id <- NULL
+                    if (!nzchar(new_selected)) selected_model_id(NULL)
                 }
             },
             ignoreInit = FALSE,

@@ -124,15 +124,17 @@ server <- function(input, output, session) {
             "refresh_otel"
         )
 
-        # Shared state for cross-module communication ("Petit r" pattern)
-        # Prefer this over session$userData for reactive state that multiple modules need to read/write
-        r <- reactiveValues(
-            selected_dataset_id = NULL,
-            selected_model_id = NULL
-        )
+        # Shared state for cross-module communication (explicit reactiveVals)
+        # Each module receives only the reactiveVals it needs (read and/or write)
+        selected_dataset_id <- reactiveVal(NULL)
+        selected_model_id <- reactiveVal(NULL)
 
         navbar_server("navbar")
-        sidebar_module <- sidebar_server("sidebar", r = r)
+        sidebar_module <- sidebar_server(
+            "sidebar",
+            selected_dataset_id = selected_dataset_id,
+            selected_model_id = selected_model_id
+        )
 
         # Auto-close sidebar on pages without sidebar content, pulse toggle when content available
         # CSS handles showing animation only when sidebar is closed (via :has(#sidebar-sidebar[hidden]))
@@ -171,21 +173,20 @@ server <- function(input, output, session) {
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
             },
-            r = r
+            selected_dataset_id = selected_dataset_id
         )
         explore_server(
             "explore",
-            selected_dataset_id = reactive(r$selected_dataset_id),
+            selected_dataset_id = selected_dataset_id,
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
             }
         )
         model_server(
             "model",
-            selected_dataset_id = reactive(r$selected_dataset_id),
-            selected_model_id = reactive(r$selected_model_id),
-            active_page = reactive(input$nav),
-            r = r
+            selected_dataset_id = selected_dataset_id,
+            selected_model_id = selected_model_id,
+            active_page = reactive(input$nav)
         )
 
         # Admin module - always instantiate but gated by req(can("view:admin")) inside
