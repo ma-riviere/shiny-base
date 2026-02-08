@@ -102,9 +102,9 @@ When using the Hetzner volume for persistent storage (`deploy-shiny/config.yml` 
 
 1. **Bookmarks directory ownership**: The shiny container runs as UID 997. Volume subdirectories must be owned by `997:997`, not root. The `volume` Ansible role handles this.
 
-2. **Schema always applied**: Database schemas use `CREATE ... IF NOT EXISTS` and are applied on every provision (including reprovisioning). This ensures tables exist even after manual drops or when the PG data directory existed but app schemas were never applied.
+2. **Schema + grants applied in finalize phase**: Database schemas (`CREATE ... IF NOT EXISTS`) and grants run in `postgres/tasks/finalize.yml`, which executes AFTER `restore_from_offsite`. This prevents the emptiness check from being fooled by pre-existing empty tables created by schema application. The finalize step is a no-op when tables already exist from restore or volume.
 
-3. **Grants always run**: PostgreSQL grants for the app user run unconditionally to ensure permissions are correct after any reprovisioning or manual changes.
+3. **Dumps use `--no-owner --no-acl`**: `pg_backup.sh` strips ownership and ACL from dumps. Grants are enforced by Ansible in the finalize phase, ensuring consistent permissions regardless of dump source.
 
 ## Failed Approaches (DO NOT RETRY)
 
@@ -120,7 +120,11 @@ When using the Hetzner volume for persistent storage (`deploy-shiny/config.yml` 
 
 6. **Using `purrr::pluck(session, "userData", ...)` inside modules**: `pluck` bypasses `SessionProxy`'s `$` dispatch that delegates to the parent session. Use `session$userData$...` instead.
 
-7. **Playwright storage state for Auth0 session persistence**: Auth0r stores sessions server-side in R memory, not in browser cookies. The `auth0_state` cookie is a one-time CSRF token consumed during OAuth callback, not a session cookie. Use serial mode with shared page and login-per-describe instead.
+7. **Applying schemas before restore_from_offsite**: The postgres role applied `CREATE TABLE IF NOT EXISTS` schemas before the restore role ran. The restore's emptiness check (counting tables in `information_schema`) always found tables and skipped restore. Fix: three-phase approach — postgres bootstrap (DB/users) → restore → postgres finalize (schemas + grants).
+
+8. **Ansible `become_user` with stdin-piped shell commands**: `become_user: postgres` uses `sudo -S` which reads password from stdin. When combined with `shell: "gunzip ... | psql"`, sudo consumes the piped data instead of letting it flow to psql. DDL runs (no stdin needed) but `COPY ... FROM stdin` data is silently lost. Fix: use `su - postgres -c 'psql ...'` in the shell command instead of `become_user`.
+
+9. **Playwright storage state for Auth0 session persistence**: Auth0r stores sessions server-side in R memory, not in browser cookies. The `auth0_state` cookie is a one-time CSRF token consumed during OAuth callback, not a session cookie. Use serial mode with shared page and login-per-describe instead.
 
 ## Bookmark Restoration for Dynamic Inputs
 
