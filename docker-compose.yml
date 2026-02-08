@@ -100,7 +100,7 @@ services:
     volumes:
       - shiny_server_logs:/var/log/shiny-server
       - shinylogs:/srv/shiny-server/shinylogs
-      - /mnt/persist/bookmarks:/srv/shiny-server/shiny_bookmarks
+      - shiny_bookmarks:/srv/shiny-server/shiny_bookmarks
 
   netdata:
     image: netdata/netdata:stable
