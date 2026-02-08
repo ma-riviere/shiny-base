@@ -46,6 +46,8 @@ shiny-base/
 
 See `deploy-shiny/` submodule for IaC (Hetzner Cloud + Docker Swarm + Traefik). Provisioning (`./deploy-shiny/setup.sh`) auto-configures GitHub secrets (`SSH_PRIVATE_KEY`, `CICD_GITHUB_PAT`). Requires `GITHUB_PAT` env var with `repo` scope.
 
+Key infrastructure files: `deploy-shiny/R/lib/config.R` (config loading/validation/env export), `deploy-shiny/R/lib/backup.R` (pre-destroy backup hook), `deploy-shiny/R/lib/provision.R` (server provisioning + server-info.txt).
+
 ---
 
 # Architecture Decisions
@@ -77,6 +79,22 @@ See `deploy-shiny/` submodule for IaC (Hetzner Cloud + Docker Swarm + Traefik). 
 - Docker loads via `env_file` directive
 
 **Not for:** Production apps with compliance requirements (use Docker/Kubernetes secrets instead).
+
+## Local SSD + S3 Offsite Backups (preferred over Hetzner Volume)
+
+**Choice:** Run PostgreSQL on the server's local SSD, use S3-compatible object storage for offsite backups.
+
+**Why:** Hetzner Volumes are network-attached block storage and noticeably slower than local SSD for DB workloads.
+
+**Architecture:**
+- `backup_offsite` role is decoupled from the `volume` section — works with or without a volume
+- `rclone_client` shared role provides rclone install/config for both `backup_offsite` and `restore_from_offsite`
+- Computed paths (`cfg$computed$traefik_dir`, `cfg$computed$postgres_backup_dir`) resolve correctly regardless of volume presence
+- Pre-destroy hook in `destroy.R` runs `pg_backup.sh && backup_offsite.sh --with-logs` before teardown
+- `restore_from_offsite` role restores from most recent S3 dump on reprovision (only if DB is empty)
+- pg_backup uses atomic dump naming (`.tmp` → `.sql.gz`) to prevent offsite sync of partial files
+
+**Volume is still supported:** The `volume:` section in config.yml is presence-based. Commenting it out disables it. All volume code (OpenTofu persist/ state, Ansible volume role) remains intact.
 
 ## Persistent Volume Gotchas
 
