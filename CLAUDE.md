@@ -78,6 +78,16 @@ See `deploy-shiny/` submodule for IaC (Hetzner Cloud + Docker Swarm + Traefik). 
 
 **Not for:** Production apps with compliance requirements (use Docker/Kubernetes secrets instead).
 
+## Persistent Volume Gotchas
+
+When using the Hetzner volume for persistent storage (`deploy-shiny/config.yml` → `volume:` section):
+
+1. **Bookmarks directory ownership**: The shiny container runs as UID 997. Volume subdirectories must be owned by `997:997`, not root. The `volume` Ansible role handles this.
+
+2. **Schema always applied**: Database schemas use `CREATE ... IF NOT EXISTS` and are applied on every provision (including reprovisioning). This ensures tables exist even after manual drops or when the PG data directory existed but app schemas were never applied.
+
+3. **Grants always run**: PostgreSQL grants for the app user run unconditionally to ensure permissions are correct after any reprovisioning or manual changes.
+
 ## Failed Approaches (DO NOT RETRY)
 
 1. **Manual input restoration via `sendInputMessage()`**: Wrong protocol format. Use Shiny's native restoration with `_state_id_` in URL.
