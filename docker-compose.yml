@@ -23,7 +23,7 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik-certificates:/letsencrypt
+      - /var/lib/traefik:/letsencrypt
     deploy:
       placement:
         constraints:
@@ -156,8 +156,6 @@ volumes:
   shinylogs:
     driver: local
   shiny_bookmarks:
-    driver: local
-  traefik-certificates:
     driver: local
   netdata-config:
     driver: local
