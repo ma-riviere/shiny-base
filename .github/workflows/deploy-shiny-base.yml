@@ -226,7 +226,7 @@ jobs:
                     export IMAGE_TAG=${IMAGE_TAG}
                     docker pull \${REGISTRY_IMAGE}:\${IMAGE_TAG}
                     if docker service inspect shiny-base_shiny >/dev/null 2>&1; then
-                      docker service update --with-registry-auth --image \${REGISTRY_IMAGE}:\${IMAGE_TAG} shiny-base_shiny
+                      docker service update --force --with-registry-auth --image \${REGISTRY_IMAGE}:\${IMAGE_TAG} shiny-base_shiny
                     else
                       docker stack deploy --with-registry-auth -c docker-compose.yml shiny-base
                     fi"
