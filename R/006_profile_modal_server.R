@@ -51,7 +51,7 @@ profile_modal_server <- function(id) {
 
                     removeModal()
 
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = tr("Profile updated successfully"),
                         type = "success",
                         timer = 3000,
@@ -59,7 +59,7 @@ profile_modal_server <- function(id) {
                     )
                 },
                 error = \(e) {
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = paste(tr("Error updating profile:"), e$message),
                         type = "error",
                         timer = 5000,

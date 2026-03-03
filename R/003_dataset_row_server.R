@@ -76,7 +76,7 @@ dataset_row_server <- function(
                             nav_select_callback("home")
                         }
 
-                        shinyWidgets::show_toast(
+                        show_toast(
                             title = tr("Dataset deleted successfully"),
                             type = "success",
                             timer = 3000,
@@ -84,7 +84,7 @@ dataset_row_server <- function(
                         )
                     },
                     error = \(e) {
-                        shinyWidgets::show_toast(
+                        show_toast(
                             title = paste(tr("Error deleting dataset:"), e$message),
                             type = "error",
                             timer = 5000,

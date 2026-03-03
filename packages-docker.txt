@@ -18,7 +18,6 @@ ma-riviere/shinyutils
 shiny.i18n
 cookies
 blastula
-shinyWidgets
 DT
 yyjsonr
 otel

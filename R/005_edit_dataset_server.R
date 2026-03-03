@@ -25,7 +25,7 @@ edit_dataset_server <- function(id) {
 
             # Validate name
             if (purrr::is_empty(new_name) || !nzchar(new_name)) {
-                shinyWidgets::show_toast(
+                show_toast(
                     title = tr("Dataset name cannot be empty"),
                     type = "error",
                     timer = 3000,
@@ -41,7 +41,7 @@ edit_dataset_server <- function(id) {
                     removeModal()
                     trigger("refresh_datasets")
 
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = tr("Dataset renamed successfully"),
                         type = "success",
                         timer = 3000,
@@ -49,7 +49,7 @@ edit_dataset_server <- function(id) {
                     )
                 },
                 error = \(e) {
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = paste(tr("Error renaming dataset:"), e$message),
                         type = "error",
                         timer = 5000,
