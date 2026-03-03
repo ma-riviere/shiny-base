@@ -75,7 +75,7 @@ model_server <- function(
                         log_error("[MODEL] Error parsing dataset: {e$message}")
                         values$data <- NULL
                         values$dataset <- NULL
-                        shinyWidgets::show_toast(
+                        show_toast(
                             title = paste(tr("Error parsing dataset:"), e$message),
                             type = "error",
                             timer = 5000,
@@ -142,7 +142,7 @@ model_server <- function(
             result <- fit_task$result()
 
             if (!result$success) {
-                shinyWidgets::show_toast(
+                show_toast(
                     title = tr("Model fitting failed"),
                     text = result$message,
                     type = "error",
@@ -173,7 +173,7 @@ model_server <- function(
             shinyjs::disable("delete_btn") # Can't delete unsaved model
             shinyjs::show("results_section")
 
-            shinyWidgets::show_toast(
+            show_toast(
                 title = tr("Model fitted successfully"),
                 type = "success",
                 timer = 3000,
@@ -208,7 +208,7 @@ model_server <- function(
                     # Trigger refresh for sidebar model dropdown
                     trigger("refresh_models")
 
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = tr("Model saved"),
                         type = "success",
                         timer = 3000,
@@ -216,7 +216,7 @@ model_server <- function(
                     )
                 },
                 error = \(e) {
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = tr("Error saving model"),
                         text = e$message,
                         type = "error",
@@ -248,7 +248,7 @@ model_server <- function(
                     # Trigger refresh for sidebar model dropdown
                     trigger("refresh_models")
 
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = tr("Model deleted"),
                         type = "success",
                         timer = 3000,
@@ -256,7 +256,7 @@ model_server <- function(
                     )
                 },
                 error = \(e) {
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = tr("Error deleting model"),
                         text = e$message,
                         type = "error",

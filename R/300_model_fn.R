@@ -85,7 +85,7 @@ model_load_saved <- function(model_id, session, values, data = NULL, silent_fail
     model_row <- db_get_model(model_id)
     if (is.null(model_row) || nrow(model_row) == 0) {
         if (!silent_fail) {
-            shinyWidgets::show_toast(
+            show_toast(
                 title = tr("Model not found"),
                 type = "error",
                 timer = 3000,
@@ -98,7 +98,7 @@ model_load_saved <- function(model_id, session, values, data = NULL, silent_fail
     blob_data <- model_row$model_blob
     if (is.null(blob_data) || length(blob_data) == 0 || is.null(blob_data[[1]])) {
         if (!silent_fail) {
-            shinyWidgets::show_toast(
+            show_toast(
                 title = tr("Model data corrupted"),
                 type = "error",
                 timer = 3000,
@@ -129,7 +129,7 @@ model_load_saved <- function(model_id, session, values, data = NULL, silent_fail
         },
         error = \(e) {
             if (!silent_fail) {
-                shinyWidgets::show_toast(
+                show_toast(
                     title = tr("Error loading model"),
                     text = e$message,
                     type = "error",

@@ -44,8 +44,7 @@ ui <- function(request) {
             ),
             auth0r::use_auth0(),
             shinyjs::useShinyjs(),
-            shiny.i18n::usei18n(i18n),
-            shinyWidgets::useSweetAlert()
+            shiny.i18n::usei18n(i18n)
         ),
         sidebar = sidebar_ui("sidebar"),
         !!!navbar_ui("navbar")

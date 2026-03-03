@@ -157,7 +157,7 @@ upload_dataset_server <- function(id) {
                     msg <- tr("%s datasets uploaded successfully", success_count)
                 }
 
-                shinyWidgets::show_toast(
+                show_toast(
                     title = msg,
                     type = "success",
                     timer = 3000,
@@ -168,7 +168,7 @@ upload_dataset_server <- function(id) {
                 values$error <- paste(errors, collapse = "\n")
                 if (success_count > 0) {
                     trigger("refresh_datasets")
-                    shinyWidgets::show_toast(
+                    show_toast(
                         title = tr(
                             "%s of %s datasets uploaded",
                             success_count,

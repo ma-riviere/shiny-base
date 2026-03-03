@@ -50,7 +50,7 @@ explore_server <- function(
                         values$data <- NULL
                         dataset_row$row_count <- 0L
                         dataset_row$col_count <- 0L
-                        shinyWidgets::show_toast(
+                        show_toast(
                             title = paste(tr("Error parsing dataset:"), e$message),
                             type = "error",
                             timer = 5000,

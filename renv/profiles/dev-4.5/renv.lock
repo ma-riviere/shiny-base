@@ -34,10 +34,10 @@
     },
     "DBI": {
       "Package": "DBI",
-      "Version": "1.2.3",
+      "Version": "1.3.0",
       "Source": "Repository",
       "Title": "R Database Interface",
-      "Date": "2024-06-02",
+      "Date": "2026-02-11",
       "Authors@R": "c( person(\"R Special Interest Group on Databases (R-SIG-DB)\", role = \"aut\"), person(\"Hadley\", \"Wickham\", role = \"aut\"), person(\"Kirill\", \"Müller\", , \"kirill@cynkra.com\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0002-1416-3412\")), person(\"R Consortium\", role = \"fnd\") )",
       "Description": "A database interface definition for communication between R and relational database management systems.  All classes in this package are virtual and need to be extended by the various R/DBMS implementations.",
       "License": "LGPL (>= 2.1)",
@@ -50,8 +50,9 @@
       "Suggests": [
         "arrow",
         "blob",
+        "callr",
         "covr",
-        "DBItest",
+        "DBItest (>= 1.8.2)",
         "dbplyr",
         "downlit",
         "dplyr",
@@ -60,6 +61,8 @@
         "knitr",
         "magrittr",
         "nanoarrow (>= 0.3.0.1)",
+        "otel",
+        "otelsdk",
         "RMariaDB",
         "rmarkdown",
         "rprojroot",
@@ -72,14 +75,14 @@
       "Config/autostyle/scope": "line_breaks",
       "Config/autostyle/strict": "false",
       "Config/Needs/check": "r-dbi/DBItest",
-      "Encoding": "UTF-8",
-      "RoxygenNote": "7.3.1",
       "Config/Needs/website": "r-dbi/DBItest, r-dbi/dbitemplate, adbi, AzureKusto, bigrquery, DatabaseConnector, dittodb, duckdb, implyr, lazysf, odbc, pool, RAthena, IMSMWU/RClickhouse, RH2, RJDBC, RMariaDB, RMySQL, RPostgres, RPostgreSQL, RPresto, RSQLite, sergeant, sparklyr, withr",
       "Config/testthat/edition": "3",
+      "Encoding": "UTF-8",
+      "RoxygenNote": "7.3.3.9000",
       "NeedsCompilation": "no",
-      "Author": "R Special Interest Group on Databases (R-SIG-DB) [aut], Hadley Wickham [aut], Kirill Müller [aut, cre] (<https://orcid.org/0000-0002-1416-3412>), R Consortium [fnd]",
+      "Author": "R Special Interest Group on Databases (R-SIG-DB) [aut], Hadley Wickham [aut], Kirill Müller [aut, cre] (ORCID: <https://orcid.org/0000-0002-1416-3412>), R Consortium [fnd]",
       "Maintainer": "Kirill Müller <kirill@cynkra.com>",
-      "Repository": "PPM"
+      "Repository": "RSPM"
     },
     "DT": {
       "Package": "DT",
@@ -2815,7 +2818,7 @@
     },
     "later": {
       "Package": "later",
-      "Version": "1.4.6",
+      "Version": "1.4.7",
       "Source": "Repository",
       "Type": "Package",
       "Title": "Utilities for Scheduling Functions to Execute Later with Event Loops",
@@ -3127,7 +3130,7 @@
     },
     "mirai": {
       "Package": "mirai",
-      "Version": "2.6.0",
+      "Version": "2.6.1",
       "Source": "Repository",
       "Type": "Package",
       "Title": "Minimalist Async Evaluation Framework for R",
@@ -3144,6 +3147,7 @@
       ],
       "Suggests": [
         "cli",
+        "later",
         "litedown",
         "otel",
         "otelsdk",
@@ -3200,7 +3204,7 @@
     },
     "openssl": {
       "Package": "openssl",
-      "Version": "2.3.4",
+      "Version": "2.3.5",
       "Source": "Repository",
       "Type": "Package",
       "Title": "Toolkit for Encryption, Signatures and Certificates Based on OpenSSL",
@@ -3229,7 +3233,7 @@
       "NeedsCompilation": "yes",
       "Author": "Jeroen Ooms [aut, cre] (ORCID: <https://orcid.org/0000-0002-4035-0289>), Oliver Keyes [ctb]",
       "Maintainer": "Jeroen Ooms <jeroenooms@gmail.com>",
-      "Repository": "CRAN"
+      "Repository": "RSPM"
     },
     "otel": {
       "Package": "otel",
@@ -4447,45 +4451,6 @@
       "Maintainer": "Jakub Nowicki <opensource+kuba@appsilon.com>",
       "Repository": "RSPM"
     },
-    "shinyWidgets": {
-      "Package": "shinyWidgets",
-      "Version": "0.9.0",
-      "Source": "Repository",
-      "Title": "Custom Inputs Widgets for Shiny",
-      "Authors@R": "c( person(\"Victor\", \"Perrier\", email = \"victor.perrier@dreamrs.fr\", role = c(\"aut\", \"cre\", \"cph\")), person(\"Fanny\", \"Meyer\", role = \"aut\"), person(\"David\", \"Granjon\", role = \"aut\"), person(\"Ian\", \"Fellows\", role = \"ctb\", comment = \"Methods for mutating vertical tabs & updateMultiInput\"), person(\"Wil\", \"Davis\", role = \"ctb\", comment = \"numericRangeInput function\"), person(\"Spencer\", \"Matthews\", role = \"ctb\", comment = \"autoNumeric methods\"), person(family = \"JavaScript and CSS libraries authors\", role = c(\"ctb\", \"cph\"), comment = \"All authors are listed in LICENSE.md\") )",
-      "Description": "Collection of custom input controls and user interface components for 'Shiny' applications.  Give your applications a unique and colorful style !",
-      "URL": "https://github.com/dreamRs/shinyWidgets, https://dreamrs.github.io/shinyWidgets/",
-      "BugReports": "https://github.com/dreamRs/shinyWidgets/issues",
-      "License": "GPL-3",
-      "Encoding": "UTF-8",
-      "LazyData": "true",
-      "RoxygenNote": "7.3.2",
-      "Depends": [
-        "R (>= 3.1.0)"
-      ],
-      "Imports": [
-        "bslib",
-        "sass",
-        "shiny (>= 1.6.0)",
-        "htmltools (>= 0.5.1)",
-        "jsonlite",
-        "grDevices",
-        "rlang"
-      ],
-      "Suggests": [
-        "testthat",
-        "covr",
-        "ggplot2",
-        "DT",
-        "scales",
-        "shinydashboard",
-        "shinydashboardPlus"
-      ],
-      "NeedsCompilation": "no",
-      "Author": "Victor Perrier [aut, cre, cph], Fanny Meyer [aut], David Granjon [aut], Ian Fellows [ctb] (Methods for mutating vertical tabs & updateMultiInput), Wil Davis [ctb] (numericRangeInput function), Spencer Matthews [ctb] (autoNumeric methods), JavaScript and CSS libraries authors [ctb, cph] (All authors are listed in LICENSE.md)",
-      "Maintainer": "Victor Perrier <victor.perrier@dreamrs.fr>",
-      "Repository": "RSPM"
-    },
     "shinyjs": {
       "Package": "shinyjs",
       "Version": "2.1.1",
@@ -4522,10 +4487,10 @@
     },
     "shinytest2": {
       "Package": "shinytest2",
-      "Version": "0.5.0",
+      "Version": "0.5.1",
       "Source": "Repository",
       "Title": "Testing for Shiny Applications",
-      "Authors@R": "c( person(\"Barret\", \"Schloerke\", , \"barret@posit.co\", role = c(\"cre\", \"aut\"), comment = c(ORCID = \"0000-0001-9986-114X\")), person(, \"Posit Software, PBC\", role = c(\"cph\", \"fnd\")), person(\"Winston\", \"Chang\", , \"winston@posit.co\", role = \"ctb\", comment = \"Original author to rstudio/shinytest\"), person(\"Gábor\", \"Csárdi\", , \"gabor@posit.co\", role = \"ctb\", comment = \"Original author to rstudio/shinytest\"), person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = \"ctb\", comment = \"Original author to rstudio/shinytest\"), person(, \"Mango Solutions\", role = c(\"cph\", \"ccp\"), comment = \"Original author to rstudio/shinytest\") )",
+      "Authors@R": "c( person(\"Barret\", \"Schloerke\", , \"barret@posit.co\", role = c(\"cre\", \"aut\"), comment = c(ORCID = \"0000-0001-9986-114X\")), person(, \"Posit Software, PBC\", role = c(\"cph\", \"fnd\"), comment = c(ROR = \"03wc8by49\")), person(\"Winston\", \"Chang\", , \"winston@posit.co\", role = \"ctb\", comment = \"Original author to rstudio/shinytest\"), person(\"Gábor\", \"Csárdi\", , \"gabor@posit.co\", role = \"ctb\", comment = \"Original author to rstudio/shinytest\"), person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = \"ctb\", comment = \"Original author to rstudio/shinytest\"), person(, \"Mango Solutions\", role = c(\"cph\", \"ccp\"), comment = \"Original author to rstudio/shinytest\") )",
       "Description": "Automated unit testing of Shiny applications through a headless 'Chromium' browser.",
       "License": "MIT + file LICENSE",
       "URL": "https://rstudio.github.io/shinytest2/, https://github.com/rstudio/shinytest2",
@@ -4583,7 +4548,7 @@
       "RoxygenNote": "7.3.3",
       "Collate": "'R6-helper.R' 'app-driver-chromote.R' 'app-driver-dir.R' 'app-driver-expect-download.R' 'app-driver-expect-js.R' 'app-driver-expect-screenshot.R' 'app-driver-expect-unique-names.R' 'app-driver-expect-values.R' 'app-driver-get-log.R' 'app-driver-initialize.R' 'app-driver-log-message.R' 'app-driver-message.R' 'app-driver-node.R' 'app-driver-set-inputs.R' 'app-driver-start.R' 'app-driver-stop.R' 'app-driver-timeout.R' 'app-driver-upload-file.R' 'app-driver-variant.R' 'app-driver-wait.R' 'app-driver-window.R' 'app-driver.R' 'chromote-methods.R' 'compare-screenshot-threshold.R' 'cpp11.R' 'expect-snapshot.R' 'expr-recurse.R' 'httr2.R' 'migrate.R' 'missing-value.R' 'pkg.R' 'utils.R' 'platform.R' 'record-test-unique-name.R' 'record-test.R' 'rstudio.R' 'save-app.R' 'shiny-browser.R' 'shinytest2-logs.R' 'shinytest2-package.R' 'test-app.R' 'use.R'",
       "NeedsCompilation": "yes",
-      "Author": "Barret Schloerke [cre, aut] (ORCID: <https://orcid.org/0000-0001-9986-114X>), Posit Software, PBC [cph, fnd], Winston Chang [ctb] (Original author to rstudio/shinytest), Gábor Csárdi [ctb] (Original author to rstudio/shinytest), Hadley Wickham [ctb] (Original author to rstudio/shinytest), Mango Solutions [cph, ccp] (Original author to rstudio/shinytest)",
+      "Author": "Barret Schloerke [cre, aut] (ORCID: <https://orcid.org/0000-0001-9986-114X>), Posit Software, PBC [cph, fnd] (ROR: <https://ror.org/03wc8by49>), Winston Chang [ctb] (Original author to rstudio/shinytest), Gábor Csárdi [ctb] (Original author to rstudio/shinytest), Hadley Wickham [ctb] (Original author to rstudio/shinytest), Mango Solutions [cph, ccp] (Original author to rstudio/shinytest)",
       "Maintainer": "Barret Schloerke <barret@posit.co>",
       "Repository": "RSPM"
     },
@@ -4600,7 +4565,7 @@
       "RoxygenNote": "7.3.3",
       "Imports": [
         "bsicons",
-        "bslib (>= 0.8.0)",
+        "bslib (>= 0.10.0)",
         "cli",
         "cookies",
         "data.table",
@@ -4620,7 +4585,6 @@
         "shiny.i18n",
         "shinyjs",
         "shinyvalidate",
-        "shinyWidgets",
         "yaml",
         "yyjsonr"
       ],
@@ -4642,7 +4606,7 @@
       "RemoteUsername": "ma-riviere",
       "RemotePkgRef": "ma-riviere/shinyutils",
       "RemoteRef": "HEAD",
-      "RemoteSha": "85477ca07eea53edf8ab2d7d983239f4862b7cd2",
+      "RemoteSha": "56fae46eb6eb56bb41c3142c8f39feb4dad4c0b9",
       "NeedsCompilation": "no",
       "Author": "Marc-Aurele Riviere [aut, cre]",
       "Maintainer": "Marc-Aurele Riviere <ma@riviere.io>",
@@ -5725,21 +5689,23 @@
     },
     "xtable": {
       "Package": "xtable",
-      "Version": "1.8-4",
+      "Version": "1.8-8",
       "Source": "Repository",
-      "Date": "2019-04-08",
+      "Date": "2026-02-20",
       "Title": "Export Tables to LaTeX or HTML",
       "Authors@R": "c(person(\"David B.\", \"Dahl\", role=\"aut\"), person(\"David\", \"Scott\", role=c(\"aut\",\"cre\"), email=\"d.scott@auckland.ac.nz\"), person(\"Charles\", \"Roosen\", role=\"aut\"), person(\"Arni\", \"Magnusson\", role=\"aut\"), person(\"Jonathan\", \"Swinton\", role=\"aut\"), person(\"Ajay\", \"Shah\", role=\"ctb\"), person(\"Arne\", \"Henningsen\", role=\"ctb\"), person(\"Benno\", \"Puetz\", role=\"ctb\"), person(\"Bernhard\", \"Pfaff\", role=\"ctb\"), person(\"Claudio\", \"Agostinelli\", role=\"ctb\"), person(\"Claudius\", \"Loehnert\", role=\"ctb\"), person(\"David\", \"Mitchell\", role=\"ctb\"), person(\"David\", \"Whiting\", role=\"ctb\"), person(\"Fernando da\", \"Rosa\", role=\"ctb\"), person(\"Guido\", \"Gay\", role=\"ctb\"), person(\"Guido\", \"Schulz\", role=\"ctb\"), person(\"Ian\", \"Fellows\", role=\"ctb\"), person(\"Jeff\", \"Laake\", role=\"ctb\"), person(\"John\", \"Walker\", role=\"ctb\"), person(\"Jun\", \"Yan\", role=\"ctb\"), person(\"Liviu\", \"Andronic\", role=\"ctb\"), person(\"Markus\", \"Loecher\", role=\"ctb\"), person(\"Martin\", \"Gubri\", role=\"ctb\"), person(\"Matthieu\", \"Stigler\", role=\"ctb\"), person(\"Robert\", \"Castelo\", role=\"ctb\"), person(\"Seth\", \"Falcon\", role=\"ctb\"), person(\"Stefan\", \"Edwards\", role=\"ctb\"), person(\"Sven\", \"Garbade\", role=\"ctb\"), person(\"Uwe\", \"Ligges\", role=\"ctb\"))",
       "Maintainer": "David Scott <d.scott@auckland.ac.nz>",
       "Imports": [
         "stats",
-        "utils"
+        "utils",
+        "methods"
       ],
       "Suggests": [
         "knitr",
-        "plm",
         "zoo",
-        "survival"
+        "survival",
+        "glue",
+        "tinytex"
       ],
       "VignetteBuilder": "knitr",
       "Description": "Coerce data to LaTeX and HTML tables.",
@@ -5748,7 +5714,7 @@
         "R (>= 2.10.0)"
       ],
       "License": "GPL (>= 2)",
-      "Repository": "PPM",
+      "Repository": "RSPM",
       "NeedsCompilation": "no",
       "Author": "David B. Dahl [aut], David Scott [aut, cre], Charles Roosen [aut], Arni Magnusson [aut], Jonathan Swinton [aut], Ajay Shah [ctb], Arne Henningsen [ctb], Benno Puetz [ctb], Bernhard Pfaff [ctb], Claudio Agostinelli [ctb], Claudius Loehnert [ctb], David Mitchell [ctb], David Whiting [ctb], Fernando da Rosa [ctb], Guido Gay [ctb], Guido Schulz [ctb], Ian Fellows [ctb], Jeff Laake [ctb], John Walker [ctb], Jun Yan [ctb], Liviu Andronic [ctb], Markus Loecher [ctb], Martin Gubri [ctb], Matthieu Stigler [ctb], Robert Castelo [ctb], Seth Falcon [ctb], Stefan Edwards [ctb], Sven Garbade [ctb], Uwe Ligges [ctb]",
       "Encoding": "UTF-8"

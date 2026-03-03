@@ -167,9 +167,20 @@
     }
 }
 
-// SweetAlert2 toast - optional class to hide X close button
-.swal2-toast.toast-no-close {
-    .swal2-close {
-        display: none;
-    }
+// Toast timer bar (animated countdown)
+.toast {
+    overflow: hidden;
+}
+.toast-timer-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.4);
+    animation: toast-timer-shrink linear forwards;
+}
+@keyframes toast-timer-shrink {
+    from { width: 100%; }
+    to { width: 0%; }
 }

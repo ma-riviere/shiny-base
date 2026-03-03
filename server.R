@@ -377,37 +377,32 @@ server <- function(input, output, session) {
 
             restore_url <- paste0("/?_state_id_=", last_bookmark$state_id)
 
-            toast_html <- paste0(
-                tr("You have a recent session (%s).", age_text),
-                "<br><br>",
-                as.character(htmltools::tags$a(
-                    href = restore_url,
-                    class = "btn btn-primary btn-sm",
-                    tr("Restore")
-                )),
-                " ",
-                as.character(htmltools::tags$button(
-                    tr("Dismiss"),
-                    onclick = "Swal.close();",
-                    class = "btn btn-default btn-sm"
-                ))
-            )
-
-            shinyjs::runjs(sprintf(
-                "Swal.fire({
-                    title: %s,
-                    html: %s,
-                    icon: 'info',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    showCloseButton: false,
-                    timer: 30000,
-                    timerProgressBar: true,
-                    customClass: { popup: 'toast-no-close' }
-                });",
-                yyjsonr::write_json_str(tr("Welcome Back"), auto_unbox = TRUE),
-                yyjsonr::write_json_str(toast_html, auto_unbox = TRUE)
+            bslib::show_toast(bslib::toast(
+                htmltools::tags$div(
+                    class = "d-flex align-items-center gap-3",
+                    bsicons::bs_icon("clock-history", size = "1.5rem"),
+                    htmltools::tags$div(
+                        htmltools::tags$strong(tr("Welcome Back")),
+                        htmltools::tags$div(
+                            class = "small opacity-75 mb-2",
+                            tr("You have a recent session (%s).", age_text)
+                        ),
+                        htmltools::tags$a(
+                            href = restore_url,
+                            class = "btn btn-primary btn-sm",
+                            tr("Restore")
+                        )
+                    )
+                ),
+                htmltools::tags$div(
+                    class = "toast-timer-bar",
+                    style = "animation-duration: 30s;"
+                ),
+                id = "bookmark-restore",
+                type = "info",
+                duration_s = 30,
+                position = "top-right",
+                closable = TRUE
             ))
         },
         ignoreInit = TRUE

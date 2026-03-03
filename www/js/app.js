@@ -6,7 +6,7 @@
 //
 // Usage (Server):
 //   observeEvent(input$clipboard_copied, {
-//       shinyWidgets::show_toast(input$clipboard_copied$msg, type = "success")
+//       show_toast(input$clipboard_copied$msg, type = "success")
 //   })
 async function copyToClipboard(text, successMsg) {
     await navigator.clipboard.writeText(text);
