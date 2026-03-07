@@ -78,7 +78,7 @@ home_server <- function(
             # they see the LAST value of the loop variable. lapply creates a new
             # environment per iteration, freezing each value.
             lapply(new_ids, \(rid) {
-                numeric_id <- as.integer(sub("row_", "", rid))
+                numeric_id <- as.integer(sub("row_", "", rid, fixed = TRUE))
                 dataset_row_server(
                     rid,
                     all_datasets = reactive(values$datasets),
