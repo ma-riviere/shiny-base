@@ -325,8 +325,12 @@
             "fr": "Modèles enregistrés"
         },
         {
-            "en": "Load Model",
-            "fr": "Charger un modèle"
+            "en": "Delete model",
+            "fr": "Supprimer le modèle"
+        },
+        {
+            "en": "No saved models for this dataset",
+            "fr": "Aucun modèle enregistré pour ce jeu de données"
         },
         {
             "en": "Model fitted successfully",

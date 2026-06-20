@@ -1,0 +1,78 @@
+// Saved-models picker (sidebar): compact, click-to-select list of saved models.
+.model-picker {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-xs;
+    padding: $spacing-xs;
+    background: $gray-50;
+    border: 1px solid $border-color;
+    border-radius: $border-radius-lg;
+
+    .model-picker-row {
+        display: flex;
+        align-items: center;
+        color: $gray-700;
+        border-radius: $border-radius-sm;
+        transition: all $transition-fast;
+
+        &:hover {
+            background: $white;
+            box-shadow: $shadow-sm;
+        }
+
+        &.selected {
+            background: $primary;
+            color: $white;
+            font-weight: 600;
+        }
+
+        &.selected .model-picker-delete {
+            color: rgba($white, 0.8);
+
+            &:hover {
+                color: $white;
+            }
+        }
+    }
+
+    // Clickable area: fills the row (minus the delete button) and selects on click.
+    .model-picker-select {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        padding: $spacing-xs $spacing-sm;
+        cursor: pointer;
+
+        &:focus-visible {
+            outline: 2px solid $primary-light;
+            outline-offset: -2px;
+            border-radius: $border-radius-sm;
+        }
+    }
+
+    .model-picker-formula {
+        min-width: 0;
+        overflow: hidden;
+        font-family: $font-family-mono;
+        font-size: 0.8125rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .model-picker-delete {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        padding: $spacing-xs $spacing-sm;
+        background: transparent;
+        border: 0;
+        color: $gray-400;
+        line-height: 1;
+        transition: color $transition-fast;
+
+        &:hover {
+            color: $danger;
+        }
+    }
+}

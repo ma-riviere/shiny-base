@@ -68,8 +68,9 @@ sidebar_ui <- function(id) {
                 )
             )
         ),
-        # ------ MODEL PARAMETERS SECTION -----------------------------------------
-        # Visible only on model page
+        # ------ MODEL PARAMETERS SECTION --------------------------------------
+        # Visible only on model page. The saved-models picker is rendered by the
+        # model module, so we host its output here via the model namespace.
         conditionalPanel(
             condition = "input.nav === 'model'",
             div(
@@ -79,16 +80,7 @@ sidebar_ui <- function(id) {
                     `data-key` = "Saved Models",
                     tr("Saved Models")
                 ),
-                selectInput(
-                    ns("selected_model"),
-                    label = tags$span(
-                        class = "i18n",
-                        `data-key` = "Load Model",
-                        tr("Load Model")
-                    ),
-                    choices = c("No models" = ""),
-                    selected = ""
-                )
+                uiOutput(NS("model")("saved_models"))
             )
         ),
         # ------ FOOTER --------------------------------------------------------

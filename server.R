@@ -53,7 +53,11 @@ server <- function(input, output, session) {
         "admin-auth0-roles-new_role_description",
         "admin-auth0-roles-confirm_add_role",
         "admin-auth0-roles-delete_role",
-        "admin-auth0-roles-confirm_delete_role"
+        "admin-auth0-roles-confirm_delete_role",
+        # Model table delete button (side-effecting event-priority input).
+        # Note: "model-selected_model" is intentionally NOT excluded - it carries
+        # the model selection and must bookmark/restore like a normal input.
+        "model-model_action_delete"
     )
     shiny::setBookmarkExclude(bookmark_exclude)
 
@@ -127,13 +131,11 @@ server <- function(input, output, session) {
         # Shared state for cross-module communication (explicit reactiveVals)
         # Each module receives only the reactiveVals it needs (read and/or write)
         selected_dataset_id <- reactiveVal(NULL)
-        selected_model_id <- reactiveVal(NULL)
 
         navbar_server("navbar")
         sidebar_module <- sidebar_server(
             "sidebar",
-            selected_dataset_id = selected_dataset_id,
-            selected_model_id = selected_model_id
+            selected_dataset_id = selected_dataset_id
         )
 
         # Auto-close sidebar on pages without sidebar content, pulse toggle when content available
@@ -185,7 +187,6 @@ server <- function(input, output, session) {
         model_server(
             "model",
             selected_dataset_id = selected_dataset_id,
-            selected_model_id = selected_model_id,
             active_page = reactive(input$nav)
         )
 

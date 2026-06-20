@@ -2,16 +2,18 @@
 # Handles async model fitting, saving, and deletion.
 #
 # @param selected_dataset_id reactiveVal for currently selected dataset ID (read-only here)
-# @param selected_model_id reactiveVal for currently selected model ID (read/write)
 # @param active_page Reactive for the currently active nav page
 model_server <- function(
     id,
     selected_dataset_id = reactiveVal(NULL),
-    selected_model_id = reactiveVal(NULL),
     active_page = reactive(NULL)
 ) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
+
+        # Currently selected saved-model id. Module-local state, mirrored to the
+        # bookmarkable `selected_model` input by the sync observer below.
+        selected_model_id <- reactiveVal(NULL)
 
         values <- reactiveValues(
             dataset = NULL,
@@ -30,6 +32,15 @@ model_server <- function(
             label = "model_has_fitted"
         )
 
+        # Saved models for the current dataset: one source shared by the picker
+        # render and the id-validation guard. Refreshes on save/delete.
+        user_models <- reactive(label = "model_user_models", {
+            watch("refresh_models")
+            user_id <- purrr::pluck(session$userData$user, "id")
+            req(user_id, selected_dataset_id())
+            db_get_models_for_dataset(user_id, selected_dataset_id())
+        })
+
         # ------ REACTIVE ------------------------------------------------------
 
         # Load dataset when selection changes (ignoreInit = FALSE for bookmark restoration)
@@ -40,10 +51,12 @@ model_server <- function(
             {
                 dataset_id <- selected_dataset_id()
 
-                # Clear previous model when dataset changes
+                # Clear previous model and selection when dataset changes
+                # (the saved-models table is scoped to the current dataset)
                 values$fitted_model <- NULL
                 values$metrics <- NULL
                 values$loaded_model_id <- NULL
+                selected_model_id(NULL)
                 updateTextInput(session, "equation", value = "")
                 shinyjs::disable("save_btn")
                 shinyjs::disable("delete_btn")
@@ -86,7 +99,7 @@ model_server <- function(
             }
         )
 
-        # Load model when selected from dropdown (only when on model page and data loaded)
+        # Load model when selection changes (only when on model page and data loaded)
         observeEvent(
             list(selected_model_id(), values$data),
             label = "model_load_saved",
@@ -167,6 +180,7 @@ model_server <- function(
                 summary_text = result$summary_text
             )
             values$loaded_model_id <- NULL # New fit, not saved yet
+            selected_model_id(NULL) # Unsaved fit: no saved model is selected
 
             # Enable save button and show results
             shinyjs::enable("save_btn")
@@ -202,10 +216,11 @@ model_server <- function(
                     values$loaded_model_id <- model_id
                     shinyjs::enable("delete_btn")
 
-                    # Update shared state so sidebar dropdown syncs to saved model
+                    # Select the saved model (highlights its row; the sync
+                    # observer mirrors it to the bookmarkable input)
                     selected_model_id(model_id)
 
-                    # Trigger refresh for sidebar model dropdown
+                    # Refresh the saved-models picker
                     trigger("refresh_models")
 
                     show_toast(
@@ -236,16 +251,167 @@ model_server <- function(
                 {
                     db_delete_model(values$loaded_model_id)
 
-                    # Clear state
+                    # Clear state (clearing the selection also clears the
+                    # bookmarkable input via the sync observer)
                     values$fitted_model <- NULL
                     values$metrics <- NULL
                     values$loaded_model_id <- NULL
+                    selected_model_id(NULL)
                     updateTextInput(session, "equation", value = "")
                     shinyjs::disable("save_btn")
                     shinyjs::disable("delete_btn")
                     shinyjs::hide("results_section")
 
-                    # Trigger refresh for sidebar model dropdown
+                    # Refresh the saved-models picker
+                    trigger("refresh_models")
+
+                    show_toast(
+                        title = tr("Model deleted"),
+                        type = "success",
+                        timer = 3000,
+                        position = "bottom-end"
+                    )
+                },
+                error = \(e) {
+                    show_toast(
+                        title = tr("Error deleting model"),
+                        text = e$message,
+                        type = "error",
+                        timer = 5000,
+                        position = "bottom-end"
+                    )
+                }
+            )
+        })
+
+        # ------ SAVED MODELS PICKER -------------------------------------------
+        # Compact click-to-select list (rendered into the sidebar) of this
+        # dataset's saved models. Demonstrates the "one observer for all rows"
+        # pattern (see set_input_js() in helpers_tables.R) with two flavours:
+        #   - Select: clicking a row sets a STABLE value input (`selected_model`),
+        #             deduplicated, so the selection bookmarks/restores like any input.
+        #   - Delete: a per-row ACTION button (`model_action_delete` = {id} with
+        #             priority 'event', so repeat clicks re-fire). It sits OUTSIDE
+        #             the clickable area (sibling, not child), so clicking it does
+        #             not select; bookmark-excluded.
+
+        output$saved_models <- renderUI({
+            req(has_data())
+            models <- user_models()
+
+            if (purrr::is_empty(models) || nrow(models) == 0) {
+                return(p(
+                    class = "text-muted small fst-italic mb-0 i18n",
+                    `data-key` = "No saved models for this dataset",
+                    tr("No saved models for this dataset")
+                ))
+            }
+
+            # One delete button per row
+            delete_btns <- create_table_action_button(
+                ns("model_action_delete"),
+                models$id,
+                icon = "trash",
+                title = tr("Delete model"),
+                class = "model-picker-delete"
+            )
+
+            sel_id <- selected_model_id() %||% -1L
+            rows <- lapply(seq_len(nrow(models)), function(i) {
+                select_js <- set_input_js(ns("selected_model"), models$id[i])
+                div(
+                    class = paste("model-picker-row", if (isTRUE(models$id[i] == sel_id)) "selected"),
+                    div(
+                        class = "model-picker-select",
+                        role = "button",
+                        tabindex = "0",
+                        onclick = select_js,
+                        onkeydown = sprintf(
+                            "if(event.key==='Enter'||event.key===' '){event.preventDefault();%s}",
+                            select_js
+                        ),
+                        span(class = "model-picker-formula", models$formula[i])
+                    ),
+                    HTML(delete_btns[i])
+                )
+            })
+
+            div(class = "model-picker", rows)
+        })
+
+        # Guard: a model id from the client (row click) or a restored bookmark must
+        # be one of the current dataset's models before we act on it (server-side
+        # validation; never trust client-supplied ids).
+        model_belongs <- function(model_id) {
+            !is.na(model_id) && isTRUE(model_id %in% user_models()$id)
+        }
+
+        # Select a model when its row is clicked. `selected_model` is a stable
+        # value input; setting the shared state lets model_load_saved load it.
+        observeEvent(input$selected_model, label = "model_table_select", {
+            req(nzchar(input$selected_model))
+            model_id <- as.integer(input$selected_model)
+            req(model_belongs(model_id))
+            selected_model_id(model_id)
+        })
+
+        # Keep the bookmarkable `selected_model` input in sync with the shared
+        # state, so the selection survives bookmarking no matter how it changed
+        # (row click, save, fit, delete, restore).
+        observeEvent(
+            selected_model_id(),
+            ignoreNULL = FALSE,
+            ignoreInit = TRUE,
+            label = "model_sync_selection_input",
+            {
+                shinyjs::runjs(sprintf(
+                    "Shiny.setInputValue('%s', '%s')",
+                    ns("selected_model"),
+                    selected_model_id() %||% ""
+                ))
+            }
+        )
+
+        # Restore the bookmarked selection once the dataset's data is available.
+        # The selection lives in a shared reactiveVal (not a native input), so on
+        # restore we seed it from the captured bookmark (mirrors the dataset path).
+        observeEvent(values$data, label = "model_restore_selection", once = TRUE, {
+            restored <- get_restored_input("selected_model")
+            req(!is.null(restored), is.null(selected_model_id()))
+            model_id <- as.integer(restored)
+            if (model_belongs(model_id)) {
+                selected_model_id(model_id)
+            } else {
+                # Drop a stale/deleted bookmarked id so it isn't re-persisted.
+                shinyjs::runjs(sprintf("Shiny.setInputValue('%s', '')", ns("selected_model")))
+            }
+        })
+
+        # Delete a model when any row's "Delete" button is clicked (single observer).
+        observeEvent(input$model_action_delete, label = "model_table_delete", {
+            model_id <- as.integer(input$model_action_delete$id)
+            req(model_belongs(model_id))
+
+            tryCatch(
+                {
+                    db_delete_model(model_id)
+
+                    # If the deleted model is the one loaded in the editor, clear it
+                    if (isTRUE(model_id == values$loaded_model_id)) {
+                        values$fitted_model <- NULL
+                        values$metrics <- NULL
+                        values$loaded_model_id <- NULL
+                        updateTextInput(session, "equation", value = "")
+                        shinyjs::disable("save_btn")
+                        shinyjs::disable("delete_btn")
+                        shinyjs::hide("results_section")
+                    }
+                    # Clearing the selection also clears the bookmarkable input
+                    # (via the sync observer), so a deleted id is not restored.
+                    if (isTRUE(model_id == selected_model_id())) {
+                        selected_model_id(NULL)
+                    }
+
                     trigger("refresh_models")
 
                     show_toast(
