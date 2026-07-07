@@ -293,11 +293,11 @@
     },
     "auth0r": {
       "Package": "auth0r",
-      "Version": "0.1.0",
+      "Version": "0.2.0",
       "Source": "GitHub",
       "Title": "R Interface to Auth0 APIs",
       "Authors@R": "person(\"Marc-Aurèle\", \"Rivière\", role = c(\"aut\", \"cre\"), email = \"marc.aurele.riviere@gmail.com\")",
-      "Description": "R6 classes for interacting with Auth0 Management API and Authentication API. Provides tools for user management, token handling, and OAuth2 flows.",
+      "Description": "One-stop Auth0 integration for R: OIDC authorization-code flow with PKCE, strict ID-token and RFC 9068 access-token verification against the tenant JWKS, rotating refresh token helpers, encryption-at-rest utilities, Management API client with idempotent provisioning, and framework adapters for Shiny and plumber2/fireproof.",
       "License": "MIT + file LICENSE",
       "Encoding": "UTF-8",
       "Roxygen": "list(markdown = TRUE)",
@@ -311,15 +311,21 @@
         "rlang",
         "yaml",
         "jose",
+        "openssl",
+        "sodium",
         "yyjsonr"
       ],
       "Suggests": [
         "testthat (>= 3.0.0)",
         "withr",
+        "webfakes",
         "shiny",
         "shinyjs",
-        "sodium",
-        "plumber2"
+        "later",
+        "cookies",
+        "plumber2",
+        "fireproof",
+        "reqres"
       ],
       "Config/testthat/edition": "3",
       "RemoteType": "github",
@@ -328,13 +334,10 @@
       "RemoteUsername": "ma-riviere",
       "RemotePkgRef": "ma-riviere/auth0r",
       "RemoteRef": "HEAD",
-      "RemoteSha": "f9859ddeec332c82873c9455d6b0f79540b50e7b",
+      "RemoteSha": "9e7d29d31ad58ec52269bd7dcbe1c9cf9b80d4a8",
       "NeedsCompilation": "no",
       "Author": "Marc-Aurèle Rivière [aut, cre]",
-      "Maintainer": "Marc-Aurèle Rivière <marc.aurele.riviere@gmail.com>",
-      "Depends": [
-        "R (>= 4.1.0)"
-      ]
+      "Maintainer": "Marc-Aurèle Rivière <marc.aurele.riviere@gmail.com>"
     },
     "base64enc": {
       "Package": "base64enc",
