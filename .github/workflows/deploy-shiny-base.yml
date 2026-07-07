@@ -41,15 +41,22 @@ jobs:
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-            - name: Check for R file changes
+            - name: Check for app changes
               id: check
               run: |
                   if [ "${{ github.event_name }}" == "pull_request" ]; then
-                    CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.R$' || echo "")
+                    CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
                   else
-                    CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '\.R$' || echo "")
+                    # Diff the full push range, not just the last commit
+                    BEFORE="${{ github.event.before }}"
+                    if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+                      BEFORE="HEAD~1"
+                    fi
+                    CHANGED=$(git diff --name-only "$BEFORE" HEAD)
                   fi
-                  if [ -n "$CHANGED" ]; then
+                  echo "Changed files:"
+                  echo "$CHANGED"
+                  if echo "$CHANGED" | grep -qE '\.R$|renv\.lock$|^Dockerfile|^docker-compose\.yml$|^(www|data|database|tests)/|^\.github/workflows/'; then
                     echo "r_changed=true" >> $GITHUB_OUTPUT
                   else
                     echo "r_changed=false" >> $GITHUB_OUTPUT
