@@ -341,6 +341,10 @@
             "fr": "Échec du fit du modèle"
         },
         {
+            "en": "Invalid formula",
+            "fr": "Formule invalide"
+        },
+        {
             "en": "Model saved",
             "fr": "Modèle enregistré"
         },

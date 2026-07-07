@@ -13,30 +13,21 @@ model_compute_metrics <- function(model) {
 }
 
 # Async model fitting task body (runs in mirai subprocess)
+# `formula` MUST be the object returned by validate_formula() (helpers_formula.R),
+# never a raw string: lm() executes code from the formula during model.frame().
+# The validated object is bound to a minimal environment that travels with it
+# into the subprocess, so nothing dangerous can resolve at fit time.
 # Returns list with success/failure and model/metrics or error info
-model_fit_task <- function(data, formula_str, log_fn, metrics_fn) {
+model_fit_task <- function(data, formula, log_fn, metrics_fn) {
     tryCatch(
         {
-            log_fn("DEBUG", "Fitting model with formula: ", formula_str)
-
-            # Validate and parse formula
-            formula_obj <- as.formula(formula_str)
-
-            # Get variables from formula
-            vars <- all.vars(formula_obj)
-
-            # Check if all variables exist
-            missing_vars <- setdiff(vars, colnames(data))
-            if (length(missing_vars) > 0) {
-                log_fn("ERROR", "Variables not found: ", paste(missing_vars, collapse = ", "))
-                stop(paste("Variables not found in data:", paste(missing_vars, collapse = ", ")))
-            }
+            log_fn("DEBUG", "Fitting model with formula: ", deparse1(formula))
 
             # Fit model with na.action to handle missing values
-            fit <- lm(formula_obj, data = data, na.action = na.exclude)
+            fit <- lm(formula, data = data, na.action = na.exclude)
 
-            # Replace formula_obj in call with actual formula for readable summary output
-            fit$call$formula <- formula_obj
+            # Replace formula in call with actual formula for readable summary output
+            fit$call$formula <- formula
 
             # Extract metrics BEFORE butchering (butcher removes components summary() needs)
             metrics <- metrics_fn(fit)
@@ -111,6 +102,12 @@ model_load_saved <- function(model_id, session, values, data = NULL, silent_fail
     tryCatch(
         {
             loaded_model <- db_unserialize_model(blob_data[[1]])
+
+            # axe_env() stripped the terms environment to baseenv(), where stats
+            # functions (e.g. poly) don't resolve and predict() fails; rebind the
+            # minimal formula env (helpers_formula.R), which holds exactly the
+            # functions a validated formula can reference.
+            environment(loaded_model$terms) <- formula_environment()
 
             # Restore fitted.values for summary() - axe_fitted removes these
             if (!is.null(data)) {

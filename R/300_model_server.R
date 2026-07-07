@@ -131,11 +131,11 @@ model_server <- function(
 
         # ------ MODEL FITTING (ASYNC) -----------------------------------------
 
-        fit_task <- ExtendedTask$new(function(data, formula_str) {
+        fit_task <- ExtendedTask$new(function(data, formula) {
             mirai::mirai(
-                task_fn(data, formula_str, log_fn, metrics_fn),
+                task_fn(data, formula, log_fn, metrics_fn),
                 data = data,
-                formula_str = formula_str,
+                formula = formula,
                 log_fn = make_mirai_logger("MODEL"),
                 metrics_fn = model_compute_metrics,
                 task_fn = model_fit_task
@@ -147,7 +147,26 @@ model_server <- function(
         observeEvent(input$fit_btn, label = "model_fit_click", {
             req(has_data())
             req(nzchar(trimws(input$equation)))
-            fit_task$invoke(values$data, input$equation)
+
+            # SECURITY: formulas execute code during model.frame(), so the raw
+            # equation string never reaches as.formula()/lm() (see helpers_formula.R)
+            formula_obj <- tryCatch(
+                validate_formula(input$equation, colnames(values$data)),
+                error = \(e) {
+                    show_toast(
+                        title = tr("Invalid formula"),
+                        text = e$message,
+                        type = "error",
+                        timer = 5000,
+                        position = "bottom-end"
+                    )
+                    # No task invoked: release the task button manually
+                    bslib::update_task_button("fit_btn", state = "ready")
+                    NULL
+                }
+            )
+            req(!is.null(formula_obj))
+            fit_task$invoke(values$data, formula_obj)
         })
 
         # Handle fit result
