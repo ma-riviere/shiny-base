@@ -232,9 +232,12 @@ jobs:
                     docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.CICD_GITHUB_PAT }}
                     export REGISTRY_IMAGE=${REGISTRY_IMAGE}
                     export IMAGE_TAG=${IMAGE_TAG}
+                    # each image is ~8GB on a 38GB disk: clear superseded images
+                    # BEFORE pulling (running images stay referenced; a rollback
+                    # would re-pull from GHCR)
+                    docker container prune -f
+                    docker image prune -af
                     docker pull \${REGISTRY_IMAGE}:\${IMAGE_TAG}
-                    if docker service inspect shiny-base_shiny >/dev/null 2>&1; then
-                      docker service update --force --with-registry-auth --image \${REGISTRY_IMAGE}:\${IMAGE_TAG} shiny-base_shiny
-                    else
-                      docker stack deploy --with-registry-auth -c docker-compose.yml shiny-base
-                    fi"
+                    # stack deploy (not service update) so compose spec changes
+                    # (replicas, env, labels) are applied, not just the image
+                    docker stack deploy --with-registry-auth -c docker-compose.yml shiny-base"
