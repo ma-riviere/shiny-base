@@ -32,7 +32,10 @@ services:
     env_file:
       - /opt/shiny/.Renviron.prod
     deploy:
-      replicas: 2
+      # Single replica: Shiny Server's SockJS multiplexing and auth0r's login
+      # handoff both require the page and its websocket to reach the same
+      # process; >1 replica needs Traefik sticky sessions.
+      replicas: 1
       update_config:
         parallelism: 1
         delay: 5s
