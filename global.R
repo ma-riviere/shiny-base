@@ -56,6 +56,14 @@ options(
     auth0_roles_claim = "https://shiny-base.ma-riviere.com/roles",
     permissions_file = "data/permissions.yaml",
 
+    # Security
+    # Sanitize error messages shown to the client in prod (avoid leaking internals);
+    # keep full errors in dev. The full error still reaches logs/error emails.
+    shiny.sanitize.errors = Sys.getenv("ENV") == "prod",
+    # Upload cap. Must exceed the 10 MB ceiling enforced by the upload module's
+    # validator, else Shiny rejects the request before shinyvalidate runs (default 5 MB).
+    shiny.maxRequestSize = 12 * 1024^2,
+
     # Debug
     # DISABLED: autoreload was causing app restarts during E2E tests (file writes to bookmarks/logs)
     shiny.autoreload = FALSE,

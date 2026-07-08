@@ -36,7 +36,11 @@ edit_dataset_server <- function(id) {
 
             tryCatch(
                 {
-                    db_update_dataset_name(values$pending_rename_id, new_name)
+                    db_update_dataset_name(
+                        values$pending_rename_id,
+                        new_name,
+                        purrr::pluck(session$userData$user, "id")
+                    )
                     values$pending_rename_id <- NULL
                     removeModal()
                     trigger("refresh_datasets")

@@ -316,7 +316,7 @@
     },
     "auth0r": {
       "Package": "auth0r",
-      "Version": "0.2.1",
+      "Version": "0.2.2",
       "Source": "GitHub",
       "Title": "R Interface to Auth0 APIs",
       "Authors@R": "person(\"Marc-Aurèle\", \"Rivière\", role = c(\"aut\", \"cre\"), email = \"marc.aurele.riviere@gmail.com\")",
@@ -357,7 +357,7 @@
       "RemoteUsername": "ma-riviere",
       "RemotePkgRef": "ma-riviere/auth0r",
       "RemoteRef": "HEAD",
-      "RemoteSha": "8c860b2f886eed0b19a07b10390dc10e3c8b1652",
+      "RemoteSha": "87686c581584b67a05327015c20178d4dca9e7dc",
       "NeedsCompilation": "no",
       "Author": "Marc-Aurèle Rivière [aut, cre]",
       "Maintainer": "Marc-Aurèle Rivière <marc.aurele.riviere@gmail.com>"

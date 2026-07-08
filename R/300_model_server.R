@@ -69,8 +69,8 @@ model_server <- function(
                     return()
                 }
 
-                # Fetch dataset from DB
-                dataset_row <- db_get_dataset(dataset_id)
+                # Fetch dataset from DB (user-scoped: never trust a client-supplied id)
+                dataset_row <- db_get_dataset(dataset_id, purrr::pluck(session$userData$user, "id"))
                 if (purrr::is_empty(dataset_row)) {
                     log_warn("[MODEL] Dataset {dataset_id} not found in DB")
                     values$dataset <- NULL
@@ -109,7 +109,13 @@ model_server <- function(
                 model_id <- selected_model_id()
                 req(!is.null(model_id), !is.na(model_id))
                 req(!identical(model_id, values$loaded_model_id))
-                model_load_saved(model_id, session, values, data = values$data)
+                model_load_saved(
+                    model_id,
+                    purrr::pluck(session$userData$user, "id"),
+                    session,
+                    values,
+                    data = values$data
+                )
             }
         )
 
@@ -122,6 +128,7 @@ model_server <- function(
             req(!is.null(model_id), !is.na(model_id))
             model_load_saved(
                 model_id,
+                purrr::pluck(session$userData$user, "id"),
                 session,
                 values,
                 data = values$data,
@@ -268,7 +275,7 @@ model_server <- function(
 
             tryCatch(
                 {
-                    db_delete_model(values$loaded_model_id)
+                    db_delete_model(values$loaded_model_id, purrr::pluck(session$userData$user, "id"))
 
                     # Clear state (clearing the selection also clears the
                     # bookmarkable input via the sync observer)
@@ -413,7 +420,7 @@ model_server <- function(
 
             tryCatch(
                 {
-                    db_delete_model(model_id)
+                    db_delete_model(model_id, purrr::pluck(session$userData$user, "id"))
 
                     # If the deleted model is the one loaded in the editor, clear it
                     if (isTRUE(model_id == values$loaded_model_id)) {

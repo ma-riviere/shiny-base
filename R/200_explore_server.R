@@ -31,8 +31,8 @@ explore_server <- function(
                     return()
                 }
 
-                # Fetch dataset from DB
-                dataset_row <- db_get_dataset(dataset_id)
+                # Fetch dataset from DB (user-scoped: never trust a client-supplied id)
+                dataset_row <- db_get_dataset(dataset_id, purrr::pluck(session$userData$user, "id"))
                 if (purrr::is_empty(dataset_row)) {
                     values$dataset <- NULL
                     values$data <- NULL

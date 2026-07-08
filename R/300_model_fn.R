@@ -72,8 +72,8 @@ model_fit_task <- function(data, formula, log_fn, metrics_fn) {
 # @param data Data frame to restore fitted values (butchered models lose this)
 # @param silent_fail If TRUE, suppress error toasts (used for background loading)
 # @return TRUE if successful, FALSE otherwise
-model_load_saved <- function(model_id, session, values, data = NULL, silent_fail = FALSE) {
-    model_row <- db_get_model(model_id)
+model_load_saved <- function(model_id, user_id, session, values, data = NULL, silent_fail = FALSE) {
+    model_row <- db_get_model(model_id, user_id)
     if (is.null(model_row) || nrow(model_row) == 0) {
         if (!silent_fail) {
             show_toast(

@@ -66,7 +66,7 @@ dataset_row_server <- function(
             {
                 tryCatch(
                     {
-                        db_delete_dataset(row_id())
+                        db_delete_dataset(row_id(), purrr::pluck(session$userData$user, "id"))
                         removeModal()
                         trigger("refresh_datasets")
                         trigger("refresh_models")
@@ -105,7 +105,7 @@ dataset_row_server <- function(
             },
             content = function(file) {
                 req(my_data())
-                dataset_row <- db_get_dataset(row_id())
+                dataset_row <- db_get_dataset(row_id(), purrr::pluck(session$userData$user, "id"))
                 req(dataset_row)
                 data <- db_parse_dataset_data(dataset_row$data)
                 write.csv(data, file, row.names = FALSE)

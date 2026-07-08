@@ -69,10 +69,10 @@ db_get_user_datasets_count <- function(user_id) {
     as.integer(result$count)
 }
 
-# Get a single dataset with full data
-db_get_dataset <- function(dataset_id) {
+# Get a single dataset with full data (scoped to the owning user - prevents IDOR)
+db_get_dataset <- function(dataset_id, user_id) {
     result <- dplyr::tbl(db_pool, "datasets") |>
-        dplyr::filter(id == !!dataset_id) |>
+        dplyr::filter(id == !!dataset_id, user_id == !!user_id) |>
         dplyr::collect()
     if (nrow(result) == 0) {
         return(NULL)
@@ -93,20 +93,29 @@ db_create_dataset <- function(user_id, name, data_df) {
     )
 }
 
-# Update a dataset name by ID
-db_update_dataset_name <- function(dataset_id, new_name) {
+# Update a dataset name by ID (scoped to the owning user - prevents IDOR)
+db_update_dataset_name <- function(dataset_id, new_name, user_id) {
     db_execute(
-        "UPDATE datasets SET name = {new_name} WHERE id = {dataset_id}",
+        "UPDATE datasets SET name = {new_name} WHERE id = {dataset_id} AND user_id = {user_id}",
         dataset_id = dataset_id,
-        new_name = new_name
+        new_name = new_name,
+        user_id = user_id
     )
 }
 
-# Delete a dataset by ID (also deletes linked models)
-db_delete_dataset <- function(dataset_id) {
+# Delete a dataset by ID (also deletes linked models; scoped to the owning user - prevents IDOR)
+db_delete_dataset <- function(dataset_id, user_id) {
     # Delete linked models first (manual cascade - SQLite PRAGMA foreign_keys doesn't persist across pool connections)
-    db_execute("DELETE FROM models WHERE dataset_id = {dataset_id}", dataset_id = dataset_id)
-    db_execute("DELETE FROM datasets WHERE id = {dataset_id}", dataset_id = dataset_id)
+    db_execute(
+        "DELETE FROM models WHERE dataset_id = {dataset_id} AND user_id = {user_id}",
+        dataset_id = dataset_id,
+        user_id = user_id
+    )
+    db_execute(
+        "DELETE FROM datasets WHERE id = {dataset_id} AND user_id = {user_id}",
+        dataset_id = dataset_id,
+        user_id = user_id
+    )
 }
 
 # Parse dataset JSON data back to data frame
@@ -129,13 +138,14 @@ db_get_models_for_dataset <- function(user_id, dataset_id) {
         dplyr::collect()
 }
 
-# Get a single model with full blob
+# Get a single model with full blob (scoped to the owning user - prevents IDOR)
 #
 # @param model_id Model ID
+# @param user_id User ID (authoritative owner filter)
 # @return Single row data frame or NULL if not found
-db_get_model <- function(model_id) {
+db_get_model <- function(model_id, user_id) {
     result <- dplyr::tbl(db_pool, "models") |>
-        dplyr::filter(id == !!model_id) |>
+        dplyr::filter(id == !!model_id, user_id == !!user_id) |>
         dplyr::collect()
     if (nrow(result) == 0) {
         return(NULL)
@@ -151,6 +161,18 @@ db_get_model <- function(model_id) {
 # @param model_obj Fitted model object (will be serialized)
 # @return Model ID (new or existing)
 db_upsert_model <- function(user_id, dataset_id, formula, model_obj) {
+    # Verify the dataset belongs to this user before attaching a model to it.
+    # dataset_id comes from client-settable shared UI state, so this closes the
+    # write-side IDOR (a user saving a model against another user's dataset).
+    owns <- db_query(
+        "SELECT 1 AS ok FROM datasets WHERE id = {dataset_id} AND user_id = {user_id}",
+        dataset_id = dataset_id,
+        user_id = user_id
+    )
+    if (nrow(owns) == 0) {
+        cli::cli_abort("Dataset does not belong to the current user.")
+    }
+
     # Normalize formula (trim + collapse whitespace)
     formula_clean <- gsub("\\s+", " ", trimws(formula))
 
@@ -193,12 +215,21 @@ db_upsert_model <- function(user_id, dataset_id, formula, model_obj) {
     }
 }
 
-# Delete a model by ID
-db_delete_model <- function(model_id) {
-    db_execute("DELETE FROM models WHERE id = {model_id}", model_id = model_id)
+# Delete a model by ID (scoped to the owning user - prevents IDOR)
+db_delete_model <- function(model_id, user_id) {
+    db_execute(
+        "DELETE FROM models WHERE id = {model_id} AND user_id = {user_id}",
+        model_id = model_id,
+        user_id = user_id
+    )
 }
 
-# Deserialize model blob back to R object
+# Deserialize model blob back to R object.
+# Trust boundary: unserialize() of attacker-controlled bytes can execute code via
+# S4/refclass dispatch. Safe today only because the app is the sole writer of
+# models.model_blob and db_get_model() is user-scoped (a user loads only their own
+# rows). If DB write access is ever exposed (import feature, shared DB role), add an
+# HMAC over the blob and verify it here before unserialize(). See SECURITY.md P3-4.
 db_unserialize_model <- function(model_blob) {
     unserialize(model_blob)
 }
