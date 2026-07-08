@@ -60,7 +60,16 @@ services:
         - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https?://www\\.(.+)"
         - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://$${1}"
         - "traefik.http.middlewares.www-redirect.redirectregex.permanent=true"
-        - "traefik.http.routers.shiny-https.middlewares=www-redirect"
+        # Security headers (Traefik is the edge here; revisit when moving behind Cloudflare - see SECURITY.md)
+        - "traefik.http.middlewares.sec-headers.headers.stsSeconds=31536000"
+        - "traefik.http.middlewares.sec-headers.headers.stsIncludeSubdomains=false"
+        - "traefik.http.middlewares.sec-headers.headers.stsPreload=false"
+        - "traefik.http.middlewares.sec-headers.headers.contentTypeNosniff=true"
+        - "traefik.http.middlewares.sec-headers.headers.frameDeny=true"
+        - "traefik.http.middlewares.sec-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
+        # Login-gated app: ask crawlers not to index (no Cloudflare in front for now)
+        - "traefik.http.middlewares.sec-headers.headers.customresponseheaders.X-Robots-Tag=noindex, nofollow"
+        - "traefik.http.routers.shiny-https.middlewares=sec-headers,www-redirect"
         # Load balancer on port 3838
         - "traefik.http.services.shiny.loadbalancer.server.port=3838"
         # Sticky sessions
