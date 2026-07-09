@@ -13,9 +13,9 @@ LOGS_DIR=logs
 BOOKMARK_DIR=bookmarks
 
 # Auth0
-AUTH0_USER=ma-riviere
-AUTH0_TENANT=ma-riviere
-AUTH0_REGION=eu.auth0.com
+AUTH0_DOMAIN=ma-riviere.eu.auth0.com
+# Optional: audience requested for the access token (here: Management API)
+AUTH0_AUDIENCE=https://ma-riviere.eu.auth0.com/api/v2/
 AUTH0_CLIENT_ID=
 AUTH0_CLIENT_SECRET=
 AUTH0_COOKIE_KEY=

@@ -24,17 +24,13 @@ shiny::runApp()
    - Choose "Regular Web Application"
    - Note the Domain, Client ID, and Client Secret
 
-2. **Configure `_auth0.yml`**
-```yaml
-name: shiny-base
-remote_url: !expr Sys.getenv("APP_URL")
-auth0_config:
-    api_url: !expr paste0("https://", Sys.getenv("AUTH0_USER"), ".eu.auth0.com")
-    audience: !expr paste0('https://', Sys.getenv("AUTH0_USER"), '.eu.auth0.com/api/v2/')
-    scope: openid profile email
-    credentials:
-        key: !expr Sys.getenv("AUTH0_CLIENT_ID")
-        secret: !expr Sys.getenv("AUTH0_CLIENT_SECRET")
+2. **Configure the Auth0 environment variables** (in `.Renviron`, see `.Renviron.example`)
+```sh
+AUTH0_DOMAIN=ma-riviere.eu.auth0.com
+AUTH0_CLIENT_ID=...
+AUTH0_CLIENT_SECRET=...
+# Optional: audience requested for the access token (here: Management API)
+AUTH0_AUDIENCE=https://ma-riviere.eu.auth0.com/api/v2/
 ```
 
 3. **Enable RBAC (Role-Based Access Control)**

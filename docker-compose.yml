@@ -81,6 +81,9 @@ services:
       - traefik-net
     environment:
       - RENV_PROFILE=docker-4.5
+      # Non-secret AUTH0_DOMAIN / AUTH0_AUDIENCE (auth0r >= 0.3.0 env config); secrets stay in .Renviron.prod
+      - AUTH0_DOMAIN=ma-riviere.eu.auth0.com
+      - AUTH0_AUDIENCE=https://ma-riviere.eu.auth0.com/api/v2/
     healthcheck:
       # Use HEAD request to avoid spawning R processes for auth-protected apps
       test:
