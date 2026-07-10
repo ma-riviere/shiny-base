@@ -27,9 +27,9 @@ jobs:
     format-check:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
             - name: Install Air
-              uses: posit-dev/setup-air@v1
+              uses: posit-dev/setup-air@cf390573ff4fe0f198f35df3a642b1409328d859 # v1.0.1
             - name: Check R code formatting and syntax
               run: air format . --check
 
@@ -38,7 +38,7 @@ jobs:
         outputs:
             r_changed: ${{ steps.check.outputs.r_changed }}
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
               with:
                   fetch-depth: 0
             - name: Check for app changes
@@ -56,7 +56,7 @@ jobs:
                   fi
                   echo "Changed files:"
                   echo "$CHANGED"
-                  if echo "$CHANGED" | grep -qE '\.R$|renv\.lock$|^Dockerfile|^docker-compose\.yml$|^(www|data|database|tests)/|^\.github/workflows/'; then
+                  if echo "$CHANGED" | grep -qE '\.R$|renv\.lock$|^Dockerfile|^docker-compose\.yml$|^\.Rprofile$|^\.dockerignore$|^packages-.*\.txt$|^(www|data|database|tests|r-utils|deploy-shiny)/|^r-utils$|^deploy-shiny$|^\.github/workflows/'; then
                     echo "r_changed=true" >> $GITHUB_OUTPUT
                   else
                     echo "r_changed=false" >> $GITHUB_OUTPUT
@@ -73,15 +73,12 @@ jobs:
             checks: write
             pull-requests: write
         container:
-            image: ghcr.io/ma-riviere/docker-shiny:4.5
+            image: ghcr.io/ma-riviere/docker-shiny:4.6-test
             options: --user root
         env:
-            RENV_PROFILE: "dev-4.5"
-            RENV_PATHS_CACHE: /opt/renv/cache
-            GITHUB_PAT: ${{ secrets.CICD_GITHUB_PAT }}
             BYPASS_AUTH0: "TRUE"
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
               with:
                   submodules: recursive
                   token: ${{ secrets.CICD_GITHUB_PAT }}
@@ -101,9 +98,14 @@ jobs:
                   fi
 
             # ---- shinytest2 ----
+            # Exact dev library: clean = TRUE removes pre-warmed packages not in the
+            # lockfile so tests cannot rely on undeclared dependencies
+            # (no renv activation in containers: IN_CONTAINER is set by the test image)
             - name: Install R test packages
               if: steps.detect-tests.outputs.has_shinytest2 == 'true'
-              run: R -e 'renv::restore(prompt = FALSE)'
+              env:
+                  GITHUB_PAT: ${{ secrets.CICD_GITHUB_PAT }}
+              run: Rscript -e '.libPaths(c("/opt/renv-bootstrap", .libPaths())); renv::restore(lockfile = "renv/profiles/dev-4.6/renv.lock", library = Sys.getenv("R_LIBS_SITE"), clean = TRUE, prompt = FALSE)'
 
             - name: Run shinytest2 tests
               if: steps.detect-tests.outputs.has_shinytest2 == 'true'
@@ -114,7 +116,7 @@ jobs:
             # ---- Playwright e2e ----
             - name: Install Node.js
               if: steps.detect-tests.outputs.has_e2e == 'true'
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
               with:
                   node-version: "20"
 
@@ -149,7 +151,7 @@ jobs:
             # ---- Results ----
             - name: Publish test results
               if: always()
-              uses: mikepenz/action-junit-report@v4
+              uses: mikepenz/action-junit-report@db71d41eb79864e25ab0337e395c352e84523afe # v4.3.1
               with:
                   report_paths: |
                       junit_shinytest2.xml
@@ -163,7 +165,7 @@ jobs:
             github.ref == 'refs/heads/main' &&
             (
               (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true') ||
-              (github.event_name != 'workflow_dispatch' && needs.format-check.result == 'success' && needs.tests.result == 'success')
+              (github.event_name != 'workflow_dispatch' && needs.format-check.result == 'success' && (needs.tests.result == 'success' || needs.tests.result == 'skipped'))
             )
         needs: [format-check, tests]
         runs-on: ubuntu-latest
@@ -171,28 +173,23 @@ jobs:
             contents: read
             packages: write
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
               with:
                   submodules: recursive
                   token: ${{ secrets.CICD_GITHUB_PAT }}
             - name: Log in to GHCR
-              uses: docker/login-action@v3
+              uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
               with:
                   registry: ghcr.io
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
-            - name: Extract metadata
-              id: meta
-              uses: docker/metadata-action@v5
-              with:
-                  images: ghcr.io/${{ github.repository }}
             - name: Build and push
               env:
                   GITHUB_PAT: ${{ secrets.CICD_GITHUB_PAT }}
               run: |
                   docker build \
                     --pull \
-                    --secret id=GITHUB_PAT,env=GITHUB_PAT \
+                    --secret id=github_pat,env=GITHUB_PAT \
                     -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
                   docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
 
@@ -207,7 +204,7 @@ jobs:
         needs: [build]
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
+            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
               with:
                   submodules: true
                   token: ${{ secrets.CICD_GITHUB_PAT }}

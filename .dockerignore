@@ -11,7 +11,14 @@ docs/
 README*
 LICENSE
 .env
-.Renviron.local
+# secrets and local state: gitignored but present in the local worktree
+.Renviron
+.Renviron.*
+database/*.db
+cache/
+logs/
+shiny_bookmarks/
+data/shinylogs/
 node_modules/
 __pycache__/
 *.pyc
@@ -33,3 +40,4 @@ renv/profiles/*/lock/
 renv/profiles/*/python/
 renv/profiles/*/sandbox/
 renv/profiles/*/staging/
+renv/profiles/*/renv/

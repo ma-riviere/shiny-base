@@ -39,7 +39,6 @@ services:
       update_config:
         parallelism: 1
         delay: 5s
-        failure_action: rollback
       restart_policy:
         condition: on-failure
       labels:
@@ -80,7 +79,6 @@ services:
     networks:
       - traefik-net
     environment:
-      - RENV_PROFILE=docker-4.5
       # Non-secret AUTH0_DOMAIN / AUTH0_AUDIENCE (auth0r >= 0.3.0 env config); secrets stay in .Renviron.prod
       - AUTH0_DOMAIN=ma-riviere.eu.auth0.com
       - AUTH0_AUDIENCE=https://ma-riviere.eu.auth0.com/api/v2/
