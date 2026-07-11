@@ -49,7 +49,7 @@ ui <- function(request) {
                 tags$link(
                     rel = "stylesheet",
                     type = "text/css",
-                    href = "css/main.min.css"
+                    href = sprintf("css/main.min.css?v=%s", as.integer(Sys.time()))
                 ),
                 shinyutils::use_js_helpers(),
                 tags$script(src = sprintf("js/app.js?v=%s", as.integer(Sys.time())))
