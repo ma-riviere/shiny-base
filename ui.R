@@ -16,6 +16,18 @@ ui <- function(request) {
             underline = FALSE
         ),
         header = tagList(
+            # Serve js-cookie same-origin: cookies::cookie_dependency() declares it
+            # with a CDN href that the CSP blocks (no Cookies global -> no cookie
+            # input -> app init hangs). htmltools dedupes by name, highest version
+            # wins, so this file-based copy (shipped in the cookies package)
+            # replaces the CDN one.
+            htmltools::htmlDependency(
+                name = "js-cookie",
+                version = "3.0.1.9000",
+                src = "js",
+                package = "cookies",
+                script = "js.cookie.min.js"
+            ),
             shinyutils::use_hex_loader(tr("Loading"), theme = theme),
             # Will be relocated/injected in <head> by Shiny
             tags$head(
