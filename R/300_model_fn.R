@@ -1,5 +1,21 @@
 # Model module helper functions
 
+# bslib 0.11.0's update_toolbar_input_button() warns "Consider providing a
+# non-empty string label" on EVERY call where label is NULL, i.e. the normal
+# "keep the current label" case. Under options(warn = 2) (shinytest2 setup)
+# that warning becomes a session-killing error. Muffle that specific spurious
+# warning until it is fixed upstream; everything else passes through.
+update_toolbar_button <- function(...) {
+    withCallingHandlers(
+        bslib::update_toolbar_input_button(...),
+        warning = \(w) {
+            if (grepl("non-empty string label", conditionMessage(w), fixed = TRUE)) {
+                invokeRestart("muffleWarning")
+            }
+        }
+    )
+}
+
 # Compute fit metrics from a model object
 # Returns list with r_squared, rmse, aic, summary_text
 model_compute_metrics <- function(model) {
@@ -120,7 +136,7 @@ model_load_saved <- function(model_id, user_id, session, values, data = NULL, si
 
             updateTextInput(session, "equation", value = model_row$formula)
             shinyjs::show("results_section")
-            bslib::update_toolbar_input_button("delete_btn", disabled = FALSE, session = session)
+            update_toolbar_button("delete_btn", disabled = FALSE, session = session)
             return(TRUE)
         },
         error = \(e) {
