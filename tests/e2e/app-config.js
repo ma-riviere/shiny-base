@@ -34,7 +34,7 @@ const SELECTORS = {
     model: {
         modelSelect: '#model-model_select',
         fitButton: '#model-fit_btn',
-        saveButton: '#model-save_btn',
+        deleteButton: '#model-delete_btn',
         modelSummary: '#model-summary'
     },
     // Home module (100_home)
@@ -65,12 +65,14 @@ async function selectDataset(page, datasetId) {
 }
 
 /**
- * Fit a model with current settings.
+ * Fit a model with current settings (fit auto-saves; the fit button is a
+ * toolbar button disabled server-side while the async fit runs).
  * @param {Page} page - Playwright page
  */
 async function fitModel(page) {
-    const { clickTaskButton } = require('./helpers');
-    await clickTaskButton(page, 'model-fit_btn', { timeout: 120000 });
+    const { clickButton } = require('./helpers');
+    await clickButton(page, 'model-fit_btn');
+    await page.locator('#model-results_section').waitFor({ state: 'visible', timeout: 120000 });
 }
 
 module.exports = {

@@ -309,6 +309,10 @@
             "fr": "Fit"
         },
         {
+            "en": "Delete",
+            "fr": "Supprimer"
+        },
+        {
             "en": "Enter an R formula (e.g., y ~ x1 + x2, y ~ poly(x, 2))",
             "fr": "Entrez une formule R (ex: y ~ x1 + x2, y ~ poly(x, 2))"
         },
@@ -333,8 +337,8 @@
             "fr": "Aucun modèle enregistré pour ce jeu de données"
         },
         {
-            "en": "Model fitted successfully",
-            "fr": "Modèle fité avec succès"
+            "en": "Model fitted and saved",
+            "fr": "Modèle fité et enregistré"
         },
         {
             "en": "Model fitting failed",
@@ -343,10 +347,6 @@
         {
             "en": "Invalid formula",
             "fr": "Formule invalide"
-        },
-        {
-            "en": "Model saved",
-            "fr": "Modèle enregistré"
         },
         {
             "en": "Model deleted",

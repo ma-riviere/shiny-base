@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('./helpers/fixtures');
 const { waitForShiny, waitForWaiterHide, login, getConfig, navigateTo, getCurrentPage } = require('./helpers');
-const { uploadFile, fillInput, clickButton, clickTaskButton, createToyDataset, deleteFile } = require('./helpers');
+const { uploadFile, fillInput, clickButton, createToyDataset, deleteFile } = require('./helpers');
 const { PAGES } = require('./app-config');
 
 test.describe.serial('Workflow: Dataset and Model', () => {
@@ -69,7 +69,7 @@ test.describe.serial('Workflow: Dataset and Model', () => {
         await expect(sharedPage.locator('#explore-summary_row-name')).toContainText(datasetName);
     });
 
-    test('should fit a model', async () => {
+    test('should fit a model (auto-saved)', async () => {
         await navigateTo(sharedPage, PAGES.MODEL);
 
         // Ensure inputs are visible
@@ -78,22 +78,18 @@ test.describe.serial('Workflow: Dataset and Model', () => {
         // Fill equation
         await fillInput(sharedPage, 'model-equation', 'mpg ~ wt');
 
-        // Fit
-        await clickTaskButton(sharedPage, 'model-fit_btn', { waitForComplete: true });
+        // Fit (toolbar button, disabled server-side while the async fit runs)
+        await clickButton(sharedPage, 'model-fit_btn');
 
         // Check results section visible
-        await expect(sharedPage.locator('#model-results_section')).toBeVisible();
-        await expect(sharedPage.locator('#model-save_btn')).toBeEnabled();
+        await expect(sharedPage.locator('#model-results_section')).toBeVisible({ timeout: 60000 });
+
+        // Fit = saved: the delete button enables without a separate save step
+        await expect(sharedPage.locator('#model-delete_btn')).toBeEnabled();
     });
 
-    test('should save and delete model', async () => {
-        // Save
-        await clickButton(sharedPage, 'model-save_btn');
-
-        // Check delete button enabled
-        await expect(sharedPage.locator('#model-delete_btn')).toBeEnabled();
-
-        // Delete
+    test('should delete model', async () => {
+        // Delete (model was auto-saved by the fit)
         await clickButton(sharedPage, 'model-delete_btn');
 
         // Check cleaned up

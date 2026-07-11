@@ -29,6 +29,34 @@
     }
 }
 
+// Model equation card (bslib toolbar in the header)
+.model-equation-card {
+    padding: 0;
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: $spacing-sm;
+        padding: $spacing-md $spacing-lg;
+        background: linear-gradient(to right, rgba($primary, 0.05), $white);
+        border-bottom: 1px solid $border-color;
+        border-left: 4px solid $primary;
+
+        h3 {
+            margin: 0;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: $gray-900;
+        }
+    }
+
+    .card-body {
+        padding: $spacing-lg;
+    }
+}
+
 .stat-card {
     display: flex;
     align-items: center;

@@ -1,5 +1,6 @@
 # Model page server module
-# Handles async model fitting, saving, and deletion.
+# Handles async model fitting (a successful fit is saved immediately,
+# feature parity with plumber2-base) and deletion.
 #
 # @param selected_dataset_id reactiveVal for currently selected dataset ID (read-only here)
 # @param active_page Reactive for the currently active nav page
@@ -20,18 +21,17 @@ model_server <- function(
             data = NULL,
             fitted_model = NULL,
             metrics = NULL,
-            loaded_model_id = NULL # Track if current model is saved (for delete)
+            loaded_model_id = NULL, # Track if current model is saved (for delete)
+            # Formula string + dataset id captured at fit-click time: the async
+            # result must not be saved against a dataset selected mid-fit, and
+            # the equation input may have been edited while the task ran.
+            fit_request = NULL
         )
 
         has_data <- reactive(
             !purrr::is_empty(values$data),
             label = "model_has_data"
         )
-        has_model <- reactive(
-            !purrr::is_empty(values$fitted_model),
-            label = "model_has_fitted"
-        )
-
         # Saved models for the current dataset: one source shared by the picker
         # render and the id-validation guard. Refreshes on save/delete.
         user_models <- reactive(label = "model_user_models", {
@@ -58,8 +58,7 @@ model_server <- function(
                 values$loaded_model_id <- NULL
                 selected_model_id(NULL)
                 updateTextInput(session, "equation", value = "")
-                shinyjs::disable("save_btn")
-                shinyjs::disable("delete_btn")
+                bslib::update_toolbar_input_button("delete_btn", disabled = TRUE)
                 shinyjs::hide("results_section")
 
                 if (purrr::is_empty(dataset_id)) {
@@ -147,13 +146,13 @@ model_server <- function(
                 metrics_fn = model_compute_metrics,
                 task_fn = model_fit_task
             )
-        }) |>
-            bslib::bind_task_button("fit_btn")
+        })
 
         # Trigger fit when button is clicked
         observeEvent(input$fit_btn, label = "model_fit_click", {
             req(has_data())
             req(nzchar(trimws(input$equation)))
+            req(!identical(fit_task$status(), "running"))
 
             # SECURITY: formulas execute code during model.frame(), so the raw
             # equation string never reaches as.formula()/lm() (see helpers_formula.R)
@@ -167,18 +166,32 @@ model_server <- function(
                         timer = 5000,
                         position = "bottom-end"
                     )
-                    # No task invoked: release the task button manually
-                    bslib::update_task_button("fit_btn", state = "ready")
                     NULL
                 }
             )
             req(!is.null(formula_obj))
+
+            # Toolbar buttons have no bind_task_button() equivalent: manage the
+            # busy state manually (re-enabled in the result observer)
+            bslib::update_toolbar_input_button("fit_btn", disabled = TRUE)
+            values$fit_request <- list(
+                formula_str = input$equation,
+                dataset_id = selected_dataset_id()
+            )
             fit_task$invoke(values$data, formula_obj)
         })
 
-        # Handle fit result
+        # Handle fit result: a successful fit is saved immediately (fit = saved,
+        # feature parity with plumber2-base's fit job)
         observeEvent(fit_task$result(), label = "model_fit_result", {
             result <- fit_task$result()
+            bslib::update_toolbar_input_button("fit_btn", disabled = FALSE)
+
+            fit_request <- values$fit_request
+            values$fit_request <- NULL
+            # Dataset switched mid-fit: the load-dataset observer already cleared
+            # the page, discard the stale result
+            req(identical(fit_request$dataset_id, selected_dataset_id()))
 
             if (!result$success) {
                 show_toast(
@@ -191,8 +204,7 @@ model_server <- function(
                 values$fitted_model <- NULL
                 values$metrics <- NULL
                 values$loaded_model_id <- NULL
-                shinyjs::disable("save_btn")
-                shinyjs::disable("delete_btn")
+                bslib::update_toolbar_input_button("delete_btn", disabled = TRUE)
                 shinyjs::hide("results_section")
                 return()
             }
@@ -205,43 +217,20 @@ model_server <- function(
                 aic = result$aic,
                 summary_text = result$summary_text
             )
-            values$loaded_model_id <- NULL # New fit, not saved yet
-            selected_model_id(NULL) # Unsaved fit: no saved model is selected
-
-            # Enable save button and show results
-            shinyjs::enable("save_btn")
-            shinyjs::disable("delete_btn") # Can't delete unsaved model
             shinyjs::show("results_section")
-
-            show_toast(
-                title = tr("Model fitted successfully"),
-                type = "success",
-                timer = 3000,
-                position = "bottom-end"
-            )
-        })
-
-        # ------ SAVE MODEL ----------------------------------------------------
-
-        observeEvent(input$save_btn, label = "model_save_click", {
-            req(has_model())
-
-            user_id <- purrr::pluck(session$userData$user, "id")
-            req(user_id)
-            req(selected_dataset_id())
 
             tryCatch(
                 {
                     model_id <- db_upsert_model(
-                        user_id = user_id,
-                        dataset_id = selected_dataset_id(),
-                        formula = input$equation,
+                        user_id = purrr::pluck(session$userData$user, "id"),
+                        dataset_id = fit_request$dataset_id,
+                        formula = fit_request$formula_str,
                         model_obj = values$fitted_model,
                         metrics = values$metrics
                     )
 
                     values$loaded_model_id <- model_id
-                    shinyjs::enable("delete_btn")
+                    bslib::update_toolbar_input_button("delete_btn", disabled = FALSE)
 
                     # Select the saved model (highlights its row; the sync
                     # observer mirrors it to the bookmarkable input)
@@ -251,13 +240,16 @@ model_server <- function(
                     trigger("refresh_models")
 
                     show_toast(
-                        title = tr("Model saved"),
+                        title = tr("Model fitted and saved"),
                         type = "success",
                         timer = 3000,
                         position = "bottom-end"
                     )
                 },
                 error = \(e) {
+                    values$loaded_model_id <- NULL
+                    selected_model_id(NULL)
+                    bslib::update_toolbar_input_button("delete_btn", disabled = TRUE)
                     show_toast(
                         title = tr("Error saving model"),
                         text = e$message,
@@ -285,8 +277,7 @@ model_server <- function(
                     values$loaded_model_id <- NULL
                     selected_model_id(NULL)
                     updateTextInput(session, "equation", value = "")
-                    shinyjs::disable("save_btn")
-                    shinyjs::disable("delete_btn")
+                    bslib::update_toolbar_input_button("delete_btn", disabled = TRUE)
                     shinyjs::hide("results_section")
 
                     # Refresh the saved-models picker
@@ -429,8 +420,7 @@ model_server <- function(
                         values$metrics <- NULL
                         values$loaded_model_id <- NULL
                         updateTextInput(session, "equation", value = "")
-                        shinyjs::disable("save_btn")
-                        shinyjs::disable("delete_btn")
+                        bslib::update_toolbar_input_button("delete_btn", disabled = TRUE)
                         shinyjs::hide("results_section")
                     }
                     # Clearing the selection also clears the bookmarkable input

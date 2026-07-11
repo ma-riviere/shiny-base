@@ -120,8 +120,7 @@ model_load_saved <- function(model_id, user_id, session, values, data = NULL, si
 
             updateTextInput(session, "equation", value = model_row$formula)
             shinyjs::show("results_section")
-            shinyjs::enable("save_btn")
-            shinyjs::enable("delete_btn")
+            bslib::update_toolbar_input_button("delete_btn", disabled = FALSE, session = session)
             return(TRUE)
         },
         error = \(e) {

@@ -16,51 +16,42 @@ model_ui <- function(id) {
         div(
             class = "content-section mb-4",
             div(
-                class = "card",
+                class = "card model-equation-card",
                 div(
-                    class = "card-body",
-                    h5(
-                        class = "card-title i18n",
+                    class = "card-header",
+                    h3(
+                        class = "i18n",
                         `data-key` = "Model Equation",
                         tr("Model Equation")
                     ),
-                    div(
-                        class = "d-flex gap-2 align-items-start",
-                        div(
-                            class = "flex-grow-1",
-                            textInput(
-                                ns("equation"),
-                                label = NULL,
-                                placeholder = "y ~ x1 + x2",
-                                width = "100%"
-                            )
-                        ),
-                        bslib::input_task_button(
+                    # Fit/Delete as compact toolbar controls. A successful fit is
+                    # saved immediately (parity with plumber2-base), so there is
+                    # no separate Save button.
+                    bslib::toolbar(
+                        align = "right",
+                        bslib::toolbar_input_button(
                             ns("fit_btn"),
-                            label = tagList(
-                                bsicons::bs_icon("play-fill"),
-                                tags$span(class = "i18n", `data-key` = "Fit", tr("Fit"))
-                            ),
-                            class = "btn-primary"
+                            label = tags$span(class = "i18n", `data-key` = "Fit", tr("Fit")),
+                            icon = bsicons::bs_icon("play-fill"),
+                            show_label = TRUE
                         ),
-                        actionButton(
-                            ns("save_btn"),
-                            label = tagList(
-                                bsicons::bs_icon("floppy"),
-                                tags$span(class = "i18n", `data-key` = "Save", tr("Save"))
-                            ),
-                            class = "btn-outline-secondary",
-                            disabled = "disabled"
-                        ),
-                        actionButton(
+                        bslib::toolbar_divider(),
+                        bslib::toolbar_input_button(
                             ns("delete_btn"),
-                            label = tagList(
-                                bsicons::bs_icon("trash"),
-                                tags$span(class = "i18n", `data-key` = "Delete", tr("Delete"))
-                            ),
-                            class = "btn-outline-danger",
-                            disabled = "disabled"
+                            label = tags$span(class = "i18n", `data-key` = "Delete", tr("Delete")),
+                            icon = bsicons::bs_icon("trash"),
+                            show_label = TRUE,
+                            disabled = TRUE
                         )
+                    )
+                ),
+                div(
+                    class = "card-body",
+                    textInput(
+                        ns("equation"),
+                        label = NULL,
+                        placeholder = "y ~ x1 + x2",
+                        width = "100%"
                     ),
                     tags$small(
                         class = "text-muted i18n",
