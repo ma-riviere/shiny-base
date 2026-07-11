@@ -1,14 +1,7 @@
--- Base schema for Shiny apps with Auth0 authentication
--- Contains: users, sessions, bookmarks tables
--- Compatible with both PostgreSQL and SQLite
-
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    auth0_sub VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_users_auth0_sub ON users(auth0_sub);
+-- App-private base schema: sessions, bookmarks.
+-- users/datasets/models are in schema-shared.sql (shared with plumber2-base in
+-- production; single namespace here since SQLite has no schemas).
+-- SQLite version
 
 -- Sessions table
 -- Tracks active and historical user sessions for admin dashboard

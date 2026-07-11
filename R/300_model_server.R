@@ -236,7 +236,8 @@ model_server <- function(
                         user_id = user_id,
                         dataset_id = selected_dataset_id(),
                         formula = input$equation,
-                        model_obj = values$fitted_model
+                        model_obj = values$fitted_model,
+                        metrics = values$metrics
                     )
 
                     values$loaded_model_id <- model_id

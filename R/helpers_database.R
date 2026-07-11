@@ -11,10 +11,11 @@
 # @param offset Number of records to skip (default: 0)
 # @return Data frame with dataset metadata (id, user_id, name, row_count, col_count, created_at, updated_at)
 db_get_user_datasets <- function(user_id, limit = NULL, offset = 0) {
-    # Build query with dbplyr
+    # Dimensions are persisted (n_rows/n_cols, kept by every writer of the
+    # shared datasets table), so the data blob is never fetched or parsed here.
     query <- dplyr::tbl(db_pool, "datasets") |>
         dplyr::filter(user_id == !!user_id) |>
-        dplyr::select(id, user_id, name, data, created_at, updated_at) |>
+        dplyr::select(id, user_id, name, row_count = n_rows, col_count = n_cols, created_at, updated_at) |>
         dplyr::arrange(dplyr::desc(created_at))
 
     # Apply pagination if specified
@@ -24,37 +25,7 @@ db_get_user_datasets <- function(user_id, limit = NULL, offset = 0) {
             utils::tail(limit)
     }
 
-    datasets <- dplyr::collect(query)
-
-    if (purrr::is_empty(datasets) || nrow(datasets) == 0) {
-        # Ensure consistent columns even for empty results
-        datasets$row_count <- integer(0)
-        datasets$col_count <- integer(0)
-        datasets$data <- NULL
-        return(datasets)
-    }
-
-    # Calculate row_count and col_count from JSON data (single parse per dataset)
-    stats <- vapply(
-        datasets$data,
-        \(json_str) {
-            data_parsed <- yyjsonr::read_json_str(json_str)
-            if (is.data.frame(data_parsed)) {
-                c(row = nrow(data_parsed), col = ncol(data_parsed))
-            } else {
-                c(row = length(data_parsed), col = 1L)
-            }
-        },
-        integer(2)
-    )
-
-    datasets$row_count <- stats["row", ]
-    datasets$col_count <- stats["col", ]
-
-    # Remove data column before returning
-    datasets$data <- NULL
-
-    return(datasets)
+    return(dplyr::collect(query))
 }
 
 # Get total count of datasets for a user (for pagination)
@@ -81,14 +52,21 @@ db_get_dataset <- function(dataset_id, user_id) {
 }
 
 # Create a new dataset. Returns number of rows affected (1 on success).
-db_create_dataset <- function(user_id, name, data_df) {
-    data_json <- yyjsonr::write_json_str(data_df)
+db_create_dataset <- function(user_id, name, data_df, description = NULL) {
+    # {columns, rows} envelope (parity with plumber2-base, which reads the same
+    # shared table): jsonb normalizes OBJECT key order, so the column order
+    # must ride in an array, which jsonb preserves.
+    data_json <- yyjsonr::write_json_str(list(columns = names(data_df), rows = data_df))
 
     db_execute(
-        "INSERT INTO datasets (user_id, name, data) VALUES ({user_id}, {name}, {data_json})",
+        "INSERT INTO datasets (user_id, name, description, data, n_rows, n_cols)
+         VALUES ({user_id}, {name}, {description}, {data_json}, {n_rows}, {n_cols})",
         user_id = user_id,
         name = name,
+        description = description %||% NA_character_,
         data_json = data_json,
+        n_rows = nrow(data_df),
+        n_cols = ncol(data_df),
         pool = db_pool
     )
 }
@@ -118,9 +96,16 @@ db_delete_dataset <- function(dataset_id, user_id) {
     )
 }
 
-# Parse dataset JSON data back to data frame
+# Parse dataset JSON data back to a data frame, restoring column order from the
+# {columns, rows} envelope. Wrapped-shape check first: yyjsonr promotes the
+# wrapper object itself to a data.frame whose $rows holds the real data.
 db_parse_dataset_data <- function(data_json) {
-    yyjsonr::read_json_str(data_json)
+    parsed <- yyjsonr::read_json_str(data_json)
+    if (!is.null(parsed$columns) && !is.null(parsed$rows)) {
+        df <- as.data.frame(parsed$rows)
+        return(df[, unlist(parsed$columns, use.names = FALSE), drop = FALSE])
+    }
+    return(parsed)
 }
 
 # ------ MODEL CRUD OPERATIONS ------------------------------------------------
@@ -159,8 +144,9 @@ db_get_model <- function(model_id, user_id) {
 # @param dataset_id Dataset ID
 # @param formula Formula string (will be normalized)
 # @param model_obj Fitted model object (will be serialized)
+# @param metrics Named list of fit metrics (stored as JSON, parity with plumber2-base)
 # @return Model ID (new or existing)
-db_upsert_model <- function(user_id, dataset_id, formula, model_obj) {
+db_upsert_model <- function(user_id, dataset_id, formula, model_obj, metrics) {
     # Verify the dataset belongs to this user before attaching a model to it.
     # dataset_id comes from client-settable shared UI state, so this closes the
     # write-side IDOR (a user saving a model against another user's dataset).
@@ -178,41 +164,25 @@ db_upsert_model <- function(user_id, dataset_id, formula, model_obj) {
 
     # Serialize model to raw bytes
     model_blob <- serialize(model_obj, NULL)
+    metrics_json <- yyjsonr::write_json_str(metrics, auto_unbox = TRUE)
 
-    # Check if model exists
-    existing <- db_query(
-        "SELECT id FROM models WHERE user_id = {user_id} AND dataset_id = {dataset_id} AND formula = {formula}",
+    # Atomic upsert: the models table is shared with plumber2-base, so a
+    # check-then-insert would race with a concurrent writer. ON CONFLICT +
+    # RETURNING work on both PostgreSQL and SQLite (>= 3.35).
+    result <- db_query(
+        "INSERT INTO models (user_id, dataset_id, formula, metrics, model_blob)
+         VALUES ({user_id}, {dataset_id}, {formula}, {metrics_json}, {model_blob})
+         ON CONFLICT (user_id, dataset_id, formula)
+         DO UPDATE SET metrics = EXCLUDED.metrics, model_blob = EXCLUDED.model_blob,
+                       updated_at = CURRENT_TIMESTAMP
+         RETURNING id",
         user_id = user_id,
         dataset_id = dataset_id,
-        formula = formula_clean
+        formula = formula_clean,
+        metrics_json = metrics_json,
+        model_blob = model_blob
     )
-
-    if (nrow(existing) > 0) {
-        db_execute(
-            "UPDATE models SET model_blob = {model_blob}, updated_at = CURRENT_TIMESTAMP WHERE id = {id}",
-            model_blob = model_blob,
-            id = existing$id[1]
-        )
-        return(existing$id[1])
-    } else {
-        db_execute(
-            "INSERT INTO models (user_id, dataset_id, formula, model_blob)
-             VALUES ({user_id}, {dataset_id}, {formula}, {model_blob})",
-            user_id = user_id,
-            dataset_id = dataset_id,
-            formula = formula_clean,
-            model_blob = model_blob
-        )
-        # Get last inserted ID by re-querying (portable across SQLite/PostgreSQL)
-        result <- db_query(
-            "SELECT id FROM models WHERE user_id = {user_id} AND dataset_id = {dataset_id}
-             AND formula = {formula} ORDER BY id DESC LIMIT 1",
-            user_id = user_id,
-            dataset_id = dataset_id,
-            formula = formula_clean
-        )
-        return(result$id[1])
-    }
+    return(result$id[1])
 }
 
 # Delete a model by ID (scoped to the owning user - prevents IDOR)
@@ -226,10 +196,11 @@ db_delete_model <- function(model_id, user_id) {
 
 # Deserialize model blob back to R object.
 # Trust boundary: unserialize() of attacker-controlled bytes can execute code via
-# S4/refclass dispatch. Safe today only because the app is the sole writer of
-# models.model_blob and db_get_model() is user-scoped (a user loads only their own
-# rows). If DB write access is ever exposed (import feature, shared DB role), add an
-# HMAC over the blob and verify it here before unserialize(). See SECURITY.md P3-4.
+# S4/refclass dispatch. models.model_blob now lives in the shared schema with TWO
+# writers (this app and plumber2-base) — both same-owner, same trust domain, and
+# db_get_model() stays user-scoped, so this remains an accepted risk. If any less
+# trusted writer ever gains access (import feature, third app), add an HMAC over
+# the blob and verify it here before unserialize(). See SECURITY.md P3-4.
 db_unserialize_model <- function(model_blob) {
     unserialize(model_blob)
 }
