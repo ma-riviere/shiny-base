@@ -14,14 +14,12 @@ upload_dataset_server <- function(id) {
 
         # Trigger for regenerating the fileInput (workaround since shinyjs::reset doesn't work for fileInput)
         file_input_trigger <- reactiveVal(0)
+        validator_rules_added <- reactiveVal(FALSE)
+        validator_enabled <- reactiveVal(FALSE)
 
         # ------ VALIDATION ----------------------------------------------------
 
         iv <- shinyvalidate::InputValidator$new()
-        iv$add_rule("file", sv_file_required(message = tr("Please select at least one CSV file")))
-        iv$add_rule("file", sv_file_extension(c("csv"), message = tr("Only CSV files are allowed")))
-        iv$add_rule("file", sv_file_size(MAX_FILE_SIZE_MB))
-        iv$enable()
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -33,6 +31,8 @@ upload_dataset_server <- function(id) {
                 values$error <- NULL
                 values$status <- NULL
                 values$parsed_files <- list()
+                iv$disable()
+                validator_enabled(FALSE)
                 file_input_trigger(file_input_trigger() + 1) # Force re-render of fileInput
                 showModal(upload_dataset_modal_ui(ns))
             },
@@ -45,6 +45,19 @@ upload_dataset_server <- function(id) {
         # Parse uploaded files and validate
         observeEvent(input$file, label = "upload_parse_file", {
             req(input$file)
+
+            if (!validator_rules_added()) {
+                iv$add_rule("file", sv_file_required(message = tr("Please select at least one CSV file")))
+                iv$add_rule("file", sv_file_extension(c("csv"), message = tr("Only CSV files are allowed")))
+                iv$add_rule("file", sv_file_size(MAX_FILE_SIZE_MB))
+                validator_rules_added(TRUE)
+            }
+
+            if (!validator_enabled()) {
+                iv$enable()
+                validator_enabled(TRUE)
+            }
+
             req(iv$is_valid())
 
             parsed_list <- list()
