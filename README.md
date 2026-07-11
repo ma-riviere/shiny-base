@@ -1,3 +1,5 @@
+> **ARCHIVED (2026-07-11):** This branch preserves the dedicated-VPS deployment (deploy-shiny submodule: OpenTofu + Ansible + Docker Swarm + app-owned Traefik). The app now deploys to the shared "main" server via the deploy-server platform; see `main`.
+
 # Shiny Base
 
 A modular Shiny application template with Auth0 authentication, database integration, and usage analytics.
