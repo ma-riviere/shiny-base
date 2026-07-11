@@ -51,6 +51,20 @@ services:
       traefik.http.middlewares.sb-sec-headers.headers.contentTypeNosniff: "true"
       traefik.http.middlewares.sb-sec-headers.headers.frameDeny: "true"
       traefik.http.middlewares.sb-sec-headers.headers.referrerPolicy: strict-origin-when-cross-origin
+      # Static CSP (see CLAUDE.md "Content-Security-Policy"). script/style must
+      # stay unsafe-inline/unsafe-eval for Shiny + htmlwidgets; the value is in
+      # the strict fallback directives and connect-src.
+      traefik.http.middlewares.sb-sec-headers.headers.contentSecurityPolicy: >-
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data:;
+        connect-src 'self' wss://shiny-base.ma-riviere.com;
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+        frame-ancestors 'none'
       # Login-gated demo app: ask crawlers not to index
       traefik.http.middlewares.sb-sec-headers.headers.customresponseheaders.X-Robots-Tag: "noindex, nofollow"
     networks:
