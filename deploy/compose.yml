@@ -1,0 +1,73 @@
+# Production stack for the deploy-server platform. CI pushes this file verbatim
+# to /srv/apps/shiny-base/compose.yml (`deploy-app push-compose`), where the
+# platform-provisioned db.env and the Ansible-delivered app.env sit beside it
+# and the edge/postgres networks are external. Contract (deploy-server
+# examples/README.md): pinned image tag, no ports:, restart policy,
+# no-new-privileges, container healthcheck (defined in the Dockerfile),
+# Traefik-only ingress.
+#
+# CI substitutes IMAGE_TAG with the commit SHA before pushing this file.
+name: shiny-base
+
+services:
+  shiny:
+    image: ghcr.io/ma-riviere/shiny-base:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    init: true
+    # mirai daemons and bookmark-on-disconnect need time to wind down cleanly
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    # Shared host: cap the app so concurrent model fits cannot starve the
+    # other stacks (see also MIRAI_WORKERS below)
+    cpus: 2
+    mem_limit: 4g
+    # db.env: platform-generated PG* credentials (schema-per-app shared DB).
+    # app.env: Ansible-delivered from the gitignored repo-root master copy
+    # (apps[].app_env_file in deploy-server config.yml): ENV, APP_URL,
+    # AUTH0_*, SMTP, OTel, state dir paths.
+    env_file:
+      - db.env
+      - app.env
+    environment:
+      # global.R caps mirai::daemons() with this; availableCores() - 1 on the
+      # shared host would oversubscribe it (multiplied by shiny-server's
+      # simple_scheduler R processes)
+      MIRAI_WORKERS: "2"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.sb-shiny.rule: "Host(`shiny-base.ma-riviere.com`)"
+      traefik.http.routers.sb-shiny.entrypoints: websecure
+      traefik.http.routers.sb-shiny.tls: "true"
+      traefik.http.routers.sb-shiny.tls.certresolver: letsencrypt
+      # Cloudflare Authenticated Origin Pulls: the TLS handshake requires
+      # Cloudflare's origin-pull client cert (option shipped by the platform's
+      # traefik role), so direct-to-origin requests fail.
+      traefik.http.routers.sb-shiny.tls.options: cloudflare-origin-pull@file
+      traefik.http.routers.sb-shiny.middlewares: sb-sec-headers
+      traefik.http.services.sb-shiny.loadbalancer.server.port: "3838"
+      # Cloudflare is the edge; these still apply on direct origin access
+      traefik.http.middlewares.sb-sec-headers.headers.stsSeconds: "31536000"
+      traefik.http.middlewares.sb-sec-headers.headers.contentTypeNosniff: "true"
+      traefik.http.middlewares.sb-sec-headers.headers.frameDeny: "true"
+      traefik.http.middlewares.sb-sec-headers.headers.referrerPolicy: strict-origin-when-cross-origin
+      # Login-gated demo app: ask crawlers not to index
+      traefik.http.middlewares.sb-sec-headers.headers.customresponseheaders.X-Robots-Tag: "noindex, nofollow"
+    networks:
+      - edge
+      - postgres
+    volumes:
+      # ./data is the platform's per-app persistent state (restic-backed-up);
+      # the dirs must exist owned by uid 997 (container shiny user) before
+      # first start, otherwise Docker creates them root-owned
+      - ./data/bookmarks:/srv/shiny-server/shiny_bookmarks
+      - ./data/logs:/var/log/shiny-server
+      - ./data/shinylogs:/srv/shiny-server/shinylogs
+
+networks:
+  edge:
+    external: true
+    name: edge
+  postgres:
+    external: true
+    name: postgres

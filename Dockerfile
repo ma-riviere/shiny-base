@@ -25,3 +25,8 @@ COPY --chown=shiny:shiny . /srv/shiny-server/
 # Use HEAD request to avoid spawning R processes for auth-protected apps
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -sf --head http://localhost:3838/ || exit 1
+
+# Prestart gate (DB reachable, schema applied, state dirs writable) before the
+# base image's entrypoint; a prestart failure stops the container so the
+# platform's health-gated rollout fails instead of shipping a broken app
+CMD ["bash", "-c", "Rscript /srv/shiny-server/docker/prestart.R && exec /usr/local/bin/docker-shiny.sh"]

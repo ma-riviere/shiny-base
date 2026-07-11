@@ -1,4 +1,7 @@
 .Renviron*
+app.env
+deploy/app.env
+deploy/db.env
 *.Rproj
 .Rproj.user
 .Rhistory

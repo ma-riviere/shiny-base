@@ -1,27 +1,27 @@
 name: CI/CD Pipeline
 
+# Build, test, push to GHCR, then deploy through the deploy-server contract
+# (push-compose + deploy over the forced-command SSH key; the server
+# health-gates the rollout with `docker compose up --wait`).
+# Rollback = dispatch with a previous commit SHA as image_tag: build is
+# skipped and that exact image is redeployed.
+
 on:
     push:
         branches: [main]
     pull_request:
         branches: [main]
+    # Empty image_tag rebuilds and deploys HEAD (e.g. after a base-image
+    # refresh); a previous commit SHA rolls back without rebuilding.
     workflow_dispatch:
         inputs:
-            run_tests:
-                description: "Force run tests"
+            image_tag:
+                description: "Existing image tag to deploy (leave empty to build from the current commit)"
                 required: false
-                type: boolean
-                default: false
-            force_rebuild:
-                description: "Force rebuild of Docker image"
-                required: false
-                type: boolean
-                default: false
-            force_deploy:
-                description: "Force deploy to production"
-                required: false
-                type: boolean
-                default: false
+                default: ""
+
+permissions:
+    contents: read
 
 jobs:
     format-check:
@@ -56,7 +56,7 @@ jobs:
                   fi
                   echo "Changed files:"
                   echo "$CHANGED"
-                  if echo "$CHANGED" | grep -qE '\.R$|renv\.lock$|^Dockerfile|^docker-compose\.yml$|^\.Rprofile$|^\.dockerignore$|^packages-.*\.txt$|^(www|data|database|tests|r-utils|deploy-shiny)/|^r-utils$|^deploy-shiny$|^\.github/workflows/'; then
+                  if echo "$CHANGED" | grep -qE '\.R$|renv\.lock$|^Dockerfile|^deploy/|^\.Rprofile$|^\.dockerignore$|^packages-.*\.txt$|^(www|data|database|tests|r-utils)/|^r-utils$|^\.github/workflows/'; then
                     echo "r_changed=true" >> $GITHUB_OUTPUT
                   else
                     echo "r_changed=false" >> $GITHUB_OUTPUT
@@ -65,9 +65,7 @@ jobs:
     tests:
         runs-on: ubuntu-latest
         needs: check-r-changes
-        if: |
-            (github.event_name == 'workflow_dispatch' && github.event.inputs.run_tests == 'true') ||
-            (github.event_name != 'workflow_dispatch' && needs.check-r-changes.outputs.r_changed == 'true')
+        if: github.event_name != 'workflow_dispatch' && needs.check-r-changes.outputs.r_changed == 'true'
         permissions:
             contents: read
             checks: write
@@ -160,12 +158,13 @@ jobs:
                   include_passed: true
 
     build:
+        # Skipped on rollback dispatches: the requested tag already exists on GHCR.
         if: |
             !cancelled() &&
             github.ref == 'refs/heads/main' &&
             (
-              (github.event_name == 'workflow_dispatch' && github.event.inputs.force_rebuild == 'true') ||
-              (github.event_name != 'workflow_dispatch' && needs.format-check.result == 'success' && (needs.tests.result == 'success' || needs.tests.result == 'skipped'))
+              (github.event_name == 'workflow_dispatch' && inputs.image_tag == '') ||
+              (github.event_name == 'push' && needs.format-check.result == 'success' && (needs.tests.result == 'success' || needs.tests.result == 'skipped'))
             )
         needs: [format-check, tests]
         runs-on: ubuntu-latest
@@ -190,51 +189,47 @@ jobs:
                   docker build \
                     --pull \
                     --secret id=github_pat,env=GITHUB_PAT \
-                    -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
-                  docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+                    -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
+                  docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
 
     deploy:
+        # Run after a successful build, or without one on rollback dispatches.
         if: |
             !cancelled() &&
             github.ref == 'refs/heads/main' &&
+            github.event_name != 'pull_request' &&
             (
-              (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true') ||
-              (github.event_name != 'workflow_dispatch' && needs.build.result == 'success')
+              needs.build.result == 'success' ||
+              (github.event_name == 'workflow_dispatch' && inputs.image_tag != '')
             )
         needs: [build]
         runs-on: ubuntu-latest
+        concurrency:
+            group: deploy-shiny-base-prod
+            cancel-in-progress: false
         steps:
             - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-              with:
-                  submodules: true
-                  token: ${{ secrets.CICD_GITHUB_PAT }}
-            - name: Load configuration
+
+            # DEPLOY_KNOWN_HOSTS carries the host keys pinned on the trusted dev
+            # machine (deploy-server ansible/known_hosts). Never replace this with
+            # ssh-keyscan at deploy time: that trusts whoever answers on the network.
+            - name: Configure SSH
               run: |
-                  echo "DEPLOYMENT_USER=shiny" >> $GITHUB_ENV
-                  echo "PORTS_SSH=2222" >> $GITHUB_ENV
-                  echo "DEPLOYMENT_SERVER=shiny-base.ma-riviere.com" >> $GITHUB_ENV
-                  echo "PROJECT_APP_NAME=shiny-base" >> $GITHUB_ENV
-            - name: Deploy to production
+                  install -m 700 -d ~/.ssh
+                  printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+                  chmod 600 ~/.ssh/deploy_key
+                  printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+                  chmod 600 ~/.ssh/known_hosts
+
+            - name: Push compose file
               env:
-                  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-                  REGISTRY_IMAGE: ghcr.io/${{ github.repository }}
-                  IMAGE_TAG: ${{ github.ref_name }}
+                  INPUT_TAG: ${{ inputs.image_tag }}
               run: |
-                  mkdir -p ~/.ssh
-                  chmod 700 ~/.ssh
-                  echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
-                  chmod 600 ~/.ssh/id_ed25519
-                  scp -o StrictHostKeyChecking=no -P 2222 docker-compose.yml shiny@${DEPLOYMENT_SERVER}:~/
-                  ssh -o StrictHostKeyChecking=no -p 2222 shiny@${DEPLOYMENT_SERVER} "
-                    docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.CICD_GITHUB_PAT }}
-                    export REGISTRY_IMAGE=${REGISTRY_IMAGE}
-                    export IMAGE_TAG=${IMAGE_TAG}
-                    # each image is ~8GB on a 38GB disk: clear superseded images
-                    # BEFORE pulling (running images stay referenced; a rollback
-                    # would re-pull from GHCR)
-                    docker container prune -f
-                    docker image prune -af
-                    docker pull \${REGISTRY_IMAGE}:\${IMAGE_TAG}
-                    # stack deploy (not service update) so compose spec changes
-                    # (replicas, env, labels) are applied, not just the image
-                    docker stack deploy --with-registry-auth -c docker-compose.yml shiny-base"
+                  sed "s|\${IMAGE_TAG:-local}|${INPUT_TAG:-${GITHUB_SHA}}|g" deploy/compose.yml \
+                    | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -p "${{ secrets.DEPLOY_PORT }}" \
+                      "deploy@${{ secrets.DEPLOY_HOST }}" push-compose
+
+            - name: Deploy app
+              run: |
+                  ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -p "${{ secrets.DEPLOY_PORT }}" \
+                    "deploy@${{ secrets.DEPLOY_HOST }}" deploy

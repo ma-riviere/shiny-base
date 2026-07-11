@@ -10,7 +10,13 @@ shinyutils::load_subfolders("R")
 # ------ CONFIG ----------------------------------------------------------------
 
 # Setup async processing for ExtendedTask (model fitting)
-mirai::daemons(max(parallelly::availableCores() - 1, 1))
+# MIRAI_WORKERS caps the daemons on shared hosts (each shiny-server R process
+# spawns its own set); default: all local cores but one
+mirai_workers <- suppressWarnings(as.integer(Sys.getenv("MIRAI_WORKERS", "")))
+if (is.na(mirai_workers)) {
+    mirai_workers <- max(parallelly::availableCores() - 1, 1)
+}
+mirai::daemons(mirai_workers)
 
 options(
     # Auth0
