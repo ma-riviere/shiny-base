@@ -14,7 +14,8 @@ explore_ui <- function(id) {
         # ----- DATASET SUMMARY ------------------------------------------------
         div(
             class = "mb-4",
-            dataset_row_ui(ns("summary_row"), clickable = FALSE, can_delete = TRUE) # Hiding it server-side if needed
+            uiOutput(ns("dataset_summary")),
+            dataset_actions_ui(ns("actions")) # Hidden download anchor
         ),
 
         # ----- DATA PREVIEW ---------------------------------------------------

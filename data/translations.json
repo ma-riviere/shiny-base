@@ -333,6 +333,18 @@
             "fr": "Supprimer le modèle"
         },
         {
+            "en": "Rename dataset",
+            "fr": "Renommer le jeu de données"
+        },
+        {
+            "en": "Download dataset",
+            "fr": "Télécharger le jeu de données"
+        },
+        {
+            "en": "Delete dataset",
+            "fr": "Supprimer le jeu de données"
+        },
+        {
             "en": "No saved models for this dataset",
             "fr": "Aucun modèle enregistré pour ce jeu de données"
         },

@@ -55,7 +55,8 @@ home_ui <- function(id) {
                 ),
                 div(
                     class = "card-body",
-                    uiOutput(ns("dataset_list"))
+                    uiOutput(ns("dataset_list")),
+                    dataset_actions_ui(ns("actions")) # Hidden download anchor
                 )
             )
         )

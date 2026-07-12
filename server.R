@@ -57,7 +57,21 @@ server <- function(input, output, session) {
         # Model table delete button (side-effecting event-priority input).
         # Note: "model-selected_model" is intentionally NOT excluded - it carries
         # the model selection and must bookmark/restore like a normal input.
-        "model-model_action_delete"
+        "model-model_action_delete",
+        # Dataset row inputs (side-effecting event-priority inputs; the selection
+        # itself bookmarks via the sidebar's dataset select input)
+        "home-dataset_click",
+        "home-actions-edit",
+        "home-actions-download",
+        "home-actions-delete",
+        "home-actions-confirm_delete",
+        "explore-actions-edit",
+        "explore-actions-download",
+        "explore-actions-delete",
+        "explore-actions-confirm_delete",
+        # Rename modal inputs (transient, modal not open on restore)
+        "edit_dataset-new_dataset_name",
+        "edit_dataset-confirm_rename"
     )
     shiny::setBookmarkExclude(bookmark_exclude)
 
@@ -121,7 +135,6 @@ server <- function(input, output, session) {
             "refresh_models",
             "refresh_user_cards",
             "show_upload_modal",
-            "show_edit_dataset_modal",
             "show_profile_modal",
             "profile_updated",
             "refresh_logs",
@@ -167,7 +180,7 @@ server <- function(input, output, session) {
 
         profile_modal_server("profile")
         upload_dataset_server("upload")
-        edit_dataset_server("edit_dataset")
+        edit_dataset_module <- edit_dataset_server("edit_dataset")
         home_server(
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
@@ -175,14 +188,16 @@ server <- function(input, output, session) {
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
             },
-            selected_dataset_id = selected_dataset_id
+            selected_dataset_id = selected_dataset_id,
+            on_edit = edit_dataset_module$open
         )
         explore_server(
             "explore",
             selected_dataset_id = selected_dataset_id,
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
-            }
+            },
+            on_edit = edit_dataset_module$open
         )
         model_server(
             "model",

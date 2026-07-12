@@ -1,5 +1,7 @@
 # Edit dataset server module (handles rename modal logic)
-# Triggered via gargoyle event with dataset_id stored in session$userData
+# Returns an `open(dataset_id, dataset_name)` callback that shows the modal:
+# callers (the dataset_actions instances) invoke it directly, so there is no
+# trigger/payload indirection and re-editing the same dataset just works.
 edit_dataset_server <- function(id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
@@ -8,15 +10,10 @@ edit_dataset_server <- function(id) {
             pending_rename_id = NULL
         )
 
-        # Show modal when triggered
-        on("show_edit_dataset_modal", label = "edit_dataset_show_modal", {
-            dataset_id <- session$userData$edit_dataset_id
-            dataset_name <- session$userData$edit_dataset_name
-            req(dataset_id, dataset_name)
-
+        open <- function(dataset_id, dataset_name) {
             values$pending_rename_id <- dataset_id
             showModal(edit_dataset_modal_ui(ns, current_name = dataset_name))
-        })
+        }
 
         # Confirm rename
         observeEvent(input$confirm_rename, label = "edit_dataset_confirm_rename", {
@@ -62,5 +59,7 @@ edit_dataset_server <- function(id) {
                 }
             )
         })
+
+        return(list(open = open))
     })
 }

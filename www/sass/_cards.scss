@@ -148,21 +148,20 @@
     }
 
     // Inner link/container (holds Name, Age, Size)
-    // Also target anchor tags explicitly (actionLink generates <a> which defaults to inline)
+    // The clickable flavour is a native <button> (input_button): strip its chrome
     .dataset-row-link,
-    a.dataset-row-link {
+    button.dataset-row-link {
         display: grid;
         grid-template-columns: 2fr 1fr 1.5fr;
         gap: $spacing-md;
         align-items: center;
         text-decoration: none;
         color: inherit;
-
-        // Fix for Shiny actionLink wrapping content in a span
-        // This ensures the children (cols) fall directly into the parent grid
-        .action-label {
-            display: contents;
-        }
+        background: none;
+        border: none;
+        padding: 0;
+        font: inherit;
+        text-align: left;
 
         &.clickable {
             cursor: pointer;

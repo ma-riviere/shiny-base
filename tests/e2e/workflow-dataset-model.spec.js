@@ -64,9 +64,8 @@ test.describe.serial('Workflow: Dataset and Model', () => {
         // Check we are on explore page
         await expect(sharedPage.locator(`.navbar .nav-link[data-value="${PAGES.EXPLORE}"]`)).toHaveClass(/active/);
 
-        // Check dataset name is shown in explore page
-        // 'summary_row' shows name. selector: #explore-summary_row-name
-        await expect(sharedPage.locator('#explore-summary_row-name')).toContainText(datasetName);
+        // Check dataset name is shown in the explore page summary row
+        await expect(sharedPage.locator('#explore-dataset_summary .dataset-name')).toContainText(datasetName);
     });
 
     test('should fit a model (auto-saved)', async () => {
@@ -102,11 +101,12 @@ test.describe.serial('Workflow: Dataset and Model', () => {
         await waitForShiny(sharedPage);
 
         // Use the summary row delete button which is available on Explore page
-        await clickButton(sharedPage, 'explore-summary_row-delete');
+        // (row action buttons have no ids: select by their data-shiny-input target)
+        await sharedPage.click('button[data-shiny-input="explore-actions-delete"]');
 
         // Confirm in modal
         await expect(sharedPage.locator('.modal')).toBeVisible();
-        await clickButton(sharedPage, 'explore-summary_row-confirm_delete');
+        await clickButton(sharedPage, 'explore-actions-confirm_delete');
 
         // Should nav home automatically due to callback
         await waitForShiny(sharedPage);

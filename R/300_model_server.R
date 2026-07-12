@@ -319,12 +319,12 @@ model_server <- function(
         # ------ SAVED MODELS PICKER -------------------------------------------
         # Compact click-to-select list (rendered into the sidebar) of this
         # dataset's saved models. Demonstrates the "one observer for all rows"
-        # pattern (see set_input_js() in helpers_tables.R) with two flavours:
+        # pattern (see input_button() in helpers_inputs.R) with two flavours:
         #   - Select: clicking a row sets a STABLE value input (`selected_model`),
         #             deduplicated, so the selection bookmarks/restores like any input.
-        #   - Delete: a per-row ACTION button (`model_action_delete` = {id} with
-        #             priority 'event', so repeat clicks re-fire). It sits OUTSIDE
-        #             the clickable area (sibling, not child), so clicking it does
+        #   - Delete: a per-row ACTION button (`model_action_delete`, priority
+        #             'event', so repeat clicks re-fire). It sits OUTSIDE the
+        #             clickable area (sibling, not child), so clicking it does
         #             not select; bookmark-excluded.
 
         output$saved_models <- renderUI({
@@ -339,32 +339,24 @@ model_server <- function(
                 ))
             }
 
-            # One delete button per row
-            delete_btns <- create_table_action_button(
-                ns("model_action_delete"),
-                models$id,
-                icon = "trash",
-                title = tr("Delete model"),
-                class = "model-picker-delete"
-            )
-
             sel_id <- selected_model_id() %||% -1L
             rows <- lapply(seq_len(nrow(models)), function(i) {
-                select_js <- set_input_js(ns("selected_model"), models$id[i])
                 div(
                     class = paste("model-picker-row", if (isTRUE(models$id[i] == sel_id)) "selected"),
-                    div(
-                        class = "model-picker-select",
-                        role = "button",
-                        tabindex = "0",
-                        onclick = select_js,
-                        onkeydown = sprintf(
-                            "if(event.key==='Enter'||event.key===' '){event.preventDefault();%s}",
-                            select_js
-                        ),
-                        span(class = "model-picker-formula", models$formula[i])
+                    input_button(
+                        ns("selected_model"),
+                        models$id[i],
+                        span(class = "model-picker-formula", models$formula[i]),
+                        class = "model-picker-select"
                     ),
-                    HTML(delete_btns[i])
+                    input_button(
+                        ns("model_action_delete"),
+                        models$id[i],
+                        event = TRUE,
+                        bsicons::bs_icon("trash"),
+                        class = "model-picker-delete",
+                        title = tr("Delete model")
+                    )
                 )
             })
 
@@ -420,9 +412,13 @@ model_server <- function(
         })
 
         # Delete a model when any row's "Delete" button is clicked (single observer).
+        # The id arrives as a string: match with as.character (as.integer warns
+        # on malformed input, fatal under shinytest2's warn = 2).
         observeEvent(input$model_action_delete, label = "model_table_delete", {
-            model_id <- as.integer(input$model_action_delete$id)
-            req(model_belongs(model_id))
+            models <- user_models()
+            row_idx <- match(as.character(input$model_action_delete), as.character(models$id))
+            req(!is.na(row_idx))
+            model_id <- models$id[row_idx]
 
             tryCatch(
                 {

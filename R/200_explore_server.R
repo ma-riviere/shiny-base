@@ -1,7 +1,8 @@
 explore_server <- function(
     id,
     selected_dataset_id = reactive(NULL),
-    nav_select_callback = NULL
+    nav_select_callback = NULL,
+    on_edit
 ) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
@@ -63,23 +64,13 @@ explore_server <- function(
             }
         )
 
-        # Initialize summary row module ONCE when first dataset is loaded
-        # (row_id is reactive so module updates when user switches datasets)
-        observeEvent(
-            values$dataset,
-            label = "dataset_init_summary_row",
-            {
-                dataset_row_server(
-                    "summary_row",
-                    all_datasets = reactive(values$dataset),
-                    row_id = reactive(values$dataset$id),
-                    on_click = NULL,
-                    nav_select_callback = nav_select_callback
-                )
-                # RBAC: hide delete button if user has no permission (hidden by default in UI)
-                if (!can("delete:dataset")) shinyjs::hide("summary_row-delete")
-            },
-            once = TRUE
+        # Summary-row action handlers (edit / download / delete), shared
+        # "one observer for all rows" module (single row here)
+        dataset_actions_server(
+            "actions",
+            datasets = reactive(values$dataset),
+            on_edit = on_edit,
+            nav_select_callback = nav_select_callback
         )
 
         # Upload modal trigger
@@ -90,6 +81,15 @@ explore_server <- function(
         )
 
         # ------ OUTPUT --------------------------------------------------------
+
+        output$dataset_summary <- renderUI({
+            req(values$dataset)
+            dataset_row_ui(
+                NS(ns("actions")),
+                values$dataset,
+                can_delete = can("delete:dataset")
+            )
+        })
 
         output$dataset_description <- renderUI({
             if (!has_data()) {

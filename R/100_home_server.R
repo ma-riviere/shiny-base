@@ -2,20 +2,19 @@
 # Displays dataset list with filtering and handles dataset row clicks.
 #
 # @param selected_dataset_id reactiveVal for selected dataset ID (write on row click)
+# @param on_edit Callback opening the rename modal (forwarded to dataset_actions)
 home_server <- function(
     id,
     row_count_filter = reactive(c(0, 100000)),
     age_filter = reactive(c(Sys.Date() - 365, Sys.Date())),
     nav_select_callback = NULL,
-    selected_dataset_id
+    selected_dataset_id,
+    on_edit
 ) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
         values <- reactiveValues(datasets = NULL)
-
-        # Cache for initialized row module IDs (Initialize Once pattern)
-        loaded_row_ids <- reactiveVal(character(0))
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -67,33 +66,25 @@ home_server <- function(
             label = "home_open_upload"
         )
 
-        # Initialize row module servers ONCE per new dataset ID
-        observeEvent(values$datasets, label = "home_init_row_modules", {
-            req(values$datasets)
-            current_ids <- paste0("row_", values$datasets$id)
-            new_ids <- setdiff(current_ids, loaded_row_ids())
+        # ------ MODULE --------------------------------------------------------
 
-            # Use lapply instead of for loop to avoid lazy evaluation trap.
-            # for loops reuse the same environment - by the time reactives execute,
-            # they see the LAST value of the loop variable. lapply creates a new
-            # environment per iteration, freezing each value.
-            lapply(new_ids, \(rid) {
-                numeric_id <- as.integer(sub("row_", "", rid, fixed = TRUE))
-                dataset_row_server(
-                    rid,
-                    all_datasets = reactive(values$datasets),
-                    row_id = reactive({
-                        numeric_id
-                    }),
-                    on_click = \(dataset_id) {
-                        selected_dataset_id(dataset_id)
-                        if (!is.null(nav_select_callback)) {
-                            nav_select_callback("explore")
-                        }
-                    }
-                )
-            })
-            loaded_row_ids(union(loaded_row_ids(), new_ids))
+        # Shared row-action handlers (edit / download / delete): one instance
+        # covering ALL rows ("one observer for all rows" pattern)
+        dataset_actions_server(
+            "actions",
+            datasets = reactive(values$datasets),
+            on_edit = on_edit
+        )
+
+        # Row click (single observer for all rows): select the dataset and
+        # navigate. Event-priority input, so re-clicking the same row re-fires.
+        observeEvent(input$dataset_click, label = "home_dataset_click", {
+            row_idx <- match(as.character(input$dataset_click), as.character(values$datasets$id))
+            req(!is.na(row_idx))
+            selected_dataset_id(values$datasets$id[row_idx])
+            if (!is.null(nav_select_callback)) {
+                nav_select_callback("explore")
+            }
         })
 
         # ------ OUTPUT --------------------------------------------------------
@@ -117,14 +108,17 @@ home_server <- function(
                 )
             }
 
-            # Render each dataset row using module UI
+            # Render each dataset row straight from data (no per-row module);
+            # actions target the shared dataset_actions instance
             can_delete <- can("delete:dataset")
+            actions_ns <- NS(ns("actions"))
             dataset_rows <- purrr::map(
-                datasets$id,
-                \(id) {
+                seq_len(nrow(datasets)),
+                \(i) {
                     dataset_row_ui(
-                        ns(paste0("row_", id)),
-                        clickable = TRUE,
+                        actions_ns,
+                        datasets[i, ],
+                        select_input_id = ns("dataset_click"),
                         can_delete = can_delete
                     )
                 }
