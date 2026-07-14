@@ -16,6 +16,7 @@ logs/
 data/shinylogs/
 TODO.md
 NOTES.md
+CLAUDE.md
 SECURITY.md
 tests.qmd
 server-info.txt
