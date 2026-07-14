@@ -51,12 +51,40 @@ db_get_dataset <- function(dataset_id, user_id) {
     return(result[1, ])
 }
 
+# yyjsonr drops data.frame rownames on write (jsonlite emitted them as a "_row"
+# string field per row object and restores it on parse). Keep meaningful
+# rownames through the same jsonlite-compatible field: injected into the
+# serialized rows ONLY - never listed in `columns`, never counted in n_cols -
+# and restored to real rownames on read. Numeric-looking rownames (subset
+# leftovers like "3", "5") are noise and are not persisted.
+# SYNC CONTRACT: mirrored in plumber2-base back/R/datasets.R (shared datasets).
+inject_rownames <- function(df) {
+    if (.row_names_info(df) <= 0L) {
+        return(df)
+    }
+    if (!is.character(utils::type.convert(rownames(df), as.is = TRUE))) {
+        return(df)
+    }
+    df[["_row"]] <- rownames(df)
+    rownames(df) <- NULL
+    return(df)
+}
+
+restore_rownames <- function(df) {
+    if (is.data.frame(df) && "_row" %in% names(df)) {
+        rownames(df) <- df[["_row"]]
+        df[["_row"]] <- NULL
+    }
+    return(df)
+}
+
 # Create a new dataset. Returns number of rows affected (1 on success).
 db_create_dataset <- function(user_id, name, data_df, description = NULL) {
     # {columns, rows} envelope (parity with plumber2-base, which reads the same
     # shared table): jsonb normalizes OBJECT key order, so the column order
-    # must ride in an array, which jsonb preserves.
-    data_json <- yyjsonr::write_json_str(list(columns = names(data_df), rows = data_df))
+    # must ride in an array, which jsonb preserves. Rownames ride inside the
+    # row objects as "_row" (inject_rownames above).
+    data_json <- yyjsonr::write_json_str(list(columns = names(data_df), rows = inject_rownames(data_df)))
 
     db_execute(
         "INSERT INTO datasets (user_id, name, description, data, n_rows, n_cols)
@@ -102,7 +130,7 @@ db_delete_dataset <- function(dataset_id, user_id) {
 db_parse_dataset_data <- function(data_json) {
     parsed <- yyjsonr::read_json_str(data_json)
     if (!is.null(parsed$columns) && !is.null(parsed$rows)) {
-        df <- as.data.frame(parsed$rows)
+        df <- restore_rownames(as.data.frame(parsed$rows))
         return(df[, unlist(parsed$columns, use.names = FALSE), drop = FALSE])
     }
     return(parsed)
