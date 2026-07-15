@@ -48,9 +48,10 @@ function getConfig() {
 
     const renviron = hasRenviron ? loadRenviron(renvironPath) : {};
 
-    // Skip Auth0 login if BYPASS_AUTH0=TRUE in .Renviron/env or running in CI
-    const bypassAuth0 = renviron.BYPASS_AUTH0 === 'TRUE' ||
-        process.env.BYPASS_AUTH0 === 'TRUE' ||
+    // Skip Auth0 login if AUTH0_DISABLE=true (case-insensitive, matching
+    // auth0r::auth0_disabled()) in .Renviron/env or running in CI
+    const bypassAuth0 = (renviron.AUTH0_DISABLE || '').toLowerCase() === 'true' ||
+        (process.env.AUTH0_DISABLE || '').toLowerCase() === 'true' ||
         !!process.env.CI;
 
     // APP_PORT: .Renviron > env var > default 9090

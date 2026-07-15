@@ -1,10 +1,11 @@
 /**
- * Auth0 flow tests (auth0r 0.2.0): logout confirmation skip via id_token_hint,
- * bookmark restoration through a login redirect, and concurrent logins from
- * two tabs (pending logins live in an encrypted transaction-map cookie, so one
- * tab's callback must not clobber the other's state).
+ * Auth0 flow tests (auth0r >= 0.4.0): logout straight back to the login form
+ * (OIDC /oidc/logout with id_token_hint), bookmark restoration through a login
+ * redirect, and concurrent logins from two tabs (pending logins live in an
+ * encrypted transaction-map cookie, so one tab's callback must not clobber the
+ * other's state).
  *
- * These flows need real Auth0: everything is skipped when BYPASS_AUTH0=TRUE.
+ * These flows need real Auth0: everything is skipped when AUTH0_DISABLE=true.
  * Each test builds its own browser context (login flows can't share a page).
  */
 const path = require('path');
@@ -92,9 +93,10 @@ test.describe('Auth0 flows', () => {
         }).toPass({ timeout: 30000 });
         await page.click("[id='._auth0logout_']");
 
-        // /v2/logout must chain straight back to the Auth0 login form: if the
-        // tenant showed the end-user logout confirmation interstitial instead,
-        // no username input would ever appear and this times out.
+        // /oidc/logout (with id_token_hint) must chain straight back to the
+        // Auth0 login form: if the tenant showed the end-user logout
+        // confirmation interstitial instead, no username input would ever
+        // appear and this times out.
         await page.waitForURL(/auth0\.com/, { timeout: 15000 });
         await expect(page.locator(AUTH0_USERNAME_INPUT).first()).toBeVisible({ timeout: 15000 });
         await context.close();

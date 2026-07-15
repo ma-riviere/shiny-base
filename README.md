@@ -13,7 +13,7 @@ A sandbox app for trying out production-Shiny patterns end to end: Auth0 login t
 
 ## Running it
 
-Needs an Auth0 tenant (or `options(auth0_disable = TRUE)`) and the environment variables listed in `.Renviron.example`:
+Needs an Auth0 tenant (or `AUTH0_DISABLE=true` in the environment) and the environment variables listed in `.Renviron.example`:
 
 ```r
 renv::restore()

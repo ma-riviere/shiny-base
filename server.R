@@ -5,17 +5,11 @@ server <- function(input, output, session) {
     # Track initialization steps; hide loader when all complete
     init_state <- reactiveValues(
         auth = FALSE, # Auth0 check complete (or disabled)
-        modules = FALSE, # Modules initialized
-        blocked = FALSE # User blocked (unverified email, suspended, etc.)
+        modules = FALSE # Modules initialized
     )
     restore_ready <- is_restore_ready(session)
 
     observe(label = "server_hide_loader", {
-        # Hide loader immediately if user is blocked (so they see the modal)
-        if (isTRUE(init_state$blocked)) {
-            waiter::waiter_hide()
-            return()
-        }
         req(init_state$auth, init_state$modules, restore_ready())
         waiter::waiter_hide()
     })
@@ -78,7 +72,7 @@ server <- function(input, output, session) {
     # ------ SESSION TRACKING & BOOKMARK ON DISCONNECT --------------------------
     # Track session in DB and save bookmark when user disconnects.
     # onSessionEnded runs after WebSocket closes, so we can't notify the user.
-    if (!isTRUE(getOption("auth0_disable"))) {
+    if (!auth0r::auth0_disabled()) {
         session$onSessionEnded(function() {
             # End session tracking (graceful disconnect)
             # Check pool validity first - onStop() may have closed it already
@@ -96,7 +90,7 @@ server <- function(input, output, session) {
     # Register bookmarks in DB and clean up previous ones for this user.
     # Only runs when Auth0 is enabled (user identity required).
     onBookmark(function(state) {
-        if (isTRUE(getOption("auth0_disable"))) {
+        if (auth0r::auth0_disabled()) {
             return()
         }
 
@@ -122,11 +116,11 @@ server <- function(input, output, session) {
         log_debug("[SERVER] onRestore: captured {length(state$input)} input values")
     })
 
-    # ------ EMAIL VERIFICATION GATE -------------------------------------------
-    # Modules are instantiated inside the gate to prevent unverified users from
-    # accessing any app functionality. The gate uses observe() with bindEvent()
-    # and once=TRUE to run exactly once when auth0_info becomes available.
-    # When auth0_disable is TRUE, skip the gate entirely.
+    # ------ MODULE INITIALIZATION ---------------------------------------------
+    # auth0_server() is default-deny (auth0r >= 0.4.0): this server function
+    # only runs with validated claims, and the email-verified policy is
+    # enforced by the authorize callback at the bottom of this file. When
+    # AUTH0_DISABLE=true, the wrapper is bypassed entirely.
 
     init_modules <- function() {
         # Initialize event triggers for cross-module communication
@@ -218,7 +212,7 @@ server <- function(input, output, session) {
         }
     }
 
-    if (isTRUE(getOption("auth0_disable"))) {
+    if (auth0r::auth0_disabled()) {
         init_state$auth <- TRUE
         session$userData$user <- db_get_or_create_guest_user(session$token)
         init_modules()
@@ -238,56 +232,41 @@ server <- function(input, output, session) {
         }) |>
             bindEvent(TRUE, once = TRUE)
     } else {
-        observe(label = "server_auth_gate", {
-            req(session$userData$auth0_info)
+        # Default-deny wrapper guarantees validated, authorized claims here:
+        # session$userData is populated before this server function runs, so
+        # the authenticated-user setup is ordinary synchronous initialization.
+        auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
+        if (!purrr::is_empty(auth0_sub)) {
+            session$userData$user <- db_get_or_create_user(auth0_sub)
 
-            if (!isTRUE(session$userData$auth0_info$email_verified)) {
-                init_state$blocked <- TRUE
-                showModal(modalDialog(
-                    title = "Email Verification Required",
-                    p("Please verify your email address to access this application."),
-                    actionButton("reload_page", "I've verified - Reload"),
-                    footer = NULL,
-                    easyClose = FALSE
-                ))
-                return()
-            }
+            # Start session tracking
+            tryCatch(
+                {
+                    session$userData$session_db_id <- db_session_start(
+                        session$token,
+                        session$userData$user$id,
+                        auth0_sub
+                    )
+                },
+                error = \(e) {
+                    log_warn("[SESSION] Failed to start session: {e$message}")
+                }
+            )
+        }
 
-            # Set user - auth0_info is already available at this point
-            auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
-            if (!purrr::is_empty(auth0_sub)) {
-                session$userData$user <- db_get_or_create_user(auth0_sub)
+        init_modules()
+        init_state$auth <- TRUE
+        init_state$modules <- TRUE
 
-                # Start session tracking
-                tryCatch(
-                    {
-                        session$userData$session_db_id <- db_session_start(
-                            session$token,
-                            session$userData$user$id,
-                            auth0_sub
-                        )
-                    },
-                    error = \(e) {
-                        log_warn("[SESSION] Failed to start session: {e$message}")
-                    }
-                )
-            }
-
-            init_modules()
-            init_state$auth <- TRUE
-            init_state$modules <- TRUE
-
-            # Session heartbeat: update updated_at every 5 minutes
-            observe(label = "server_session_heartbeat", {
-                invalidateLater(5 * 60 * 1000)
-                req(session$userData$session_db_id)
-                tryCatch(
-                    db_session_heartbeat(session$userData$session_db_id),
-                    error = \(e) log_debug("[SESSION] Heartbeat failed: {e$message}")
-                )
-            })
-        }) |>
-            bindEvent(session$userData$auth0_info, once = TRUE)
+        # Session heartbeat: update updated_at every 5 minutes
+        observe(label = "server_session_heartbeat", {
+            invalidateLater(5 * 60 * 1000)
+            req(session$userData$session_db_id)
+            tryCatch(
+                db_session_heartbeat(session$userData$session_db_id),
+                error = \(e) log_debug("[SESSION] Heartbeat failed: {e$message}")
+            )
+        })
 
         # ------ I18N ----------------------------------------------------------
 
@@ -300,9 +279,6 @@ server <- function(input, output, session) {
         # Only apply if navbar language doesn't already have a non-default value
         # (e.g., from bookmark restoration).
         observe(label = "server_resolve_lang_with_auth", {
-            # Wait for auth0_info to be available
-            req(session$userData$auth0_info)
-
             user_id <- purrr::pluck(session$userData$auth0_info, "sub")
 
             # Fetch user_metadata from Auth0 if we have a user_id
@@ -329,13 +305,8 @@ server <- function(input, output, session) {
                 apply_language(resolved_lang, session)
             }
         }) |>
-            bindEvent(session$userData$auth0_info, once = TRUE)
+            bindEvent(TRUE, once = TRUE)
     }
-
-    # Reload button (outside gate so it works for unverified users)
-    observeEvent(input$reload_page, label = "server_reload_page", {
-        session$reload()
-    })
 
     # ------ BOOKMARK RESTORATION OFFER ----------------------------------------
     # On fresh login (not page refresh), check if user has a recent bookmark
@@ -355,7 +326,7 @@ server <- function(input, output, session) {
             }
 
             # Skip if Auth0 is disabled (no user identity)
-            if (isTRUE(getOption("auth0_disable"))) {
+            if (auth0r::auth0_disabled()) {
                 return()
             }
 
@@ -425,4 +396,19 @@ server <- function(input, output, session) {
     )
 }
 
-auth0r::auth0_server(server, info = auth0_info)
+# Default-deny: application server logic never runs without validated claims.
+# The email-verified policy lives here (app policy, not package policy); denied
+# sessions get an inert page with the display-safe reason below.
+auth0r::auth0_server(
+    server,
+    info = auth0_config,
+    authorize = function(claims, userinfo) {
+        if (isTRUE(claims$email_verified %||% userinfo$email_verified)) {
+            return(TRUE)
+        }
+        auth0r::auth0_authorization_result(
+            FALSE,
+            "Please verify your email address, then reload this page."
+        )
+    }
+)

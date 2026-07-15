@@ -2,9 +2,10 @@
 # Profile modal for current user (editable)
 # Uses shinyutils::extract_profile_info()
 
-# Profile modal UI (editable, for current user)
-profile_modal_ui <- function(ns, auth_info) {
-    info <- extract_profile_info(auth_info)
+# Profile modal UI (editable, for current user). Roles come from the VALIDATED
+# ID-token claims (get_user_roles), not from the userinfo profile object.
+profile_modal_ui <- function(ns, auth_info, roles = shinyutils::get_user_roles()) {
+    info <- extract_profile_info(auth_info, roles = roles)
 
     modalDialog(
         title = tr("Profile"),

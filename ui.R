@@ -54,7 +54,7 @@ ui <- function(request) {
                 shinyutils::use_js_helpers(),
                 tags$script(src = sprintf("js/app.js?v=%s", as.integer(Sys.time())))
             ),
-            auth0r::use_auth0(),
+            # auth0r >= 0.4.0 injects its client helpers (use_auth0) itself
             shinyjs::useShinyjs(),
             shiny.i18n::usei18n(i18n)
         ),
@@ -63,4 +63,4 @@ ui <- function(request) {
     )
 }
 
-auth0r::auth0_ui_with_cookies(ui, info = auth0_info)
+auth0r::auth0_ui_with_cookies(ui, info = auth0_config)

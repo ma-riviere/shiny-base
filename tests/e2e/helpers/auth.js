@@ -30,7 +30,7 @@ async function login(page, options = {}) {
 
     const currentUrl = page.url();
     if (!currentUrl.includes('auth0.com')) {
-        console.log('✓ Already authenticated or BYPASS_AUTH0=TRUE');
+        console.log('✓ Already authenticated or AUTH0_DISABLE=true');
         return false;
     }
 

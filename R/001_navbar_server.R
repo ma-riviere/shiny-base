@@ -8,7 +8,7 @@ navbar_server <- function(id) {
         # ------ UI ------------------------------------------------------------
 
         # Disable user menu items when auth0 is bypassed
-        if (isTRUE(getOption("auth0_disable"))) {
+        if (auth0r::auth0_disabled()) {
             shinyjs::addClass("profile_link", "disabled")
             shinyjs::addClass("logout_wrapper", "disabled")
         }

@@ -95,7 +95,7 @@ test.describe('Authentication & RBAC - Dev role', () => {
 
 // ----- RBAC - ADMIN ROLE -----------------------------------------------------
 // Tests for actual admin role (requires --project=admin)
-// Skipped when BYPASS_AUTH0=TRUE (no real user roles)
+// Skipped when AUTH0_DISABLE=true (no real user roles)
 
 test.describe('RBAC - Admin role', () => {
     let sharedPage;
@@ -140,7 +140,7 @@ test.describe('RBAC - Admin role', () => {
 
 // ----- RBAC - USER ROLE ------------------------------------------------------
 // Tests for regular user role (requires --project=user)
-// Skipped when BYPASS_AUTH0=TRUE (no real user roles)
+// Skipped when AUTH0_DISABLE=true (no real user roles)
 
 test.describe('RBAC - User role', () => {
     let sharedPage;

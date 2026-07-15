@@ -19,9 +19,6 @@ if (is.na(mirai_workers)) {
 mirai::daemons(mirai_workers)
 
 options(
-    # Auth0
-    auth0_disable = isTRUE(getOption("shiny.testmode")) || isTRUE(as.logical(Sys.getenv("BYPASS_AUTH0", "FALSE"))),
-
     # Database
     db_path_dev = "database/dev.db",
 
@@ -88,10 +85,20 @@ shinyutils::setup_global_error_emails()
 
 # ------ AUTH0 -----------------------------------------------------------------
 
-# Will return NULL if auth0 is disabled (e.g. auth0_disable = TRUE or BYPASS_AUTH0 = TRUE)
+# The bypass is env-only (AUTH0_DISABLE=true, read by auth0r::auth0_disabled());
+# dev roles come from DEV_ROLES (see shinyutils::get_user_roles). The bypass is
+# a development tool: refuse to start production with it active.
+# suppressWarnings: this first call emits auth0r's once-per-process bypass
+# warning, which shinytest2's `warn = 2` would turn fatal; shinyutils logs the
+# bypass state anyway.
+if (suppressWarnings(auth0r::auth0_disabled()) && Sys.getenv("ENV") == "prod") {
+    stop("AUTH0_DISABLE=true must not be active in production.")
+}
+
+# Will return NULL if auth0 is disabled (AUTH0_DISABLE=true)
 auth0_mgmt <- shinyutils::init_auth0()
 
-auth0_info <- if (isTRUE(getOption("auth0_disable"))) NULL else auth0r::auth0_info()
+auth0_config <- if (auth0r::auth0_disabled()) NULL else auth0r::auth0_settings()
 
 # ------ DATABASE --------------------------------------------------------------
 

@@ -19,8 +19,20 @@ AUTH0_AUDIENCE=https://ma-riviere.eu.auth0.com/api/v2/
 AUTH0_CLIENT_ID=
 AUTH0_CLIENT_SECRET=
 AUTH0_COOKIE_KEY=
+# Canonical app root (exact callback/logout URL registered in Auth0);
+# required in production, optional for loopback dev
+AUTH0_APP_URL=http://localhost:9090
+# Dedicated Management API M2M credentials (fallback: primary client above)
+# AUTH0_MGMT_CLIENT_ID=
+# AUTH0_MGMT_CLIENT_SECRET=
 
-BYPASS_AUTH0=FALSE
+# Auth bypass (read by auth0r::auth0_disabled(), case-insensitive "true").
+# Uncomment to run the app locally without Auth0. Never pin it to false:
+# .Renviron overrides the process env, and shinytest2/CI enable the bypass
+# through the environment and rely on the app subprocess inheriting it.
+# AUTH0_DISABLE=true
+# Roles granted to the bypass session (comma-separated)
+DEV_ROLES=admin
 
 # Email (Brevo)
 EMAIL_TO=
