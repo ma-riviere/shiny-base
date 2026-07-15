@@ -292,15 +292,17 @@
     },
     "auth0r": {
       "Package": "auth0r",
-      "Version": "0.3.0",
+      "Version": "0.4.0",
       "Source": "GitHub",
       "Title": "R Interface to Auth0 APIs",
       "Authors@R": "person(\"Marc-Aurèle\", \"Rivière\", role = c(\"aut\", \"cre\"), email = \"marc.aurele.riviere@gmail.com\")",
-      "Description": "One-stop Auth0 integration for R: OIDC authorization-code flow with PKCE, strict ID-token and RFC 9068 access-token verification against the tenant JWKS, rotating refresh token helpers, encryption-at-rest utilities, Management API client with idempotent provisioning, and framework adapters for Shiny and plumber2/fireproof.",
+      "Description": "Auth0 integration for R: OIDC authorization-code flow with PKCE, strict ID-token and RFC 9068 access-token verification against the tenant JWKS, rotating refresh token helpers, encryption-at-rest utilities, Management API client with idempotent provisioning, and framework adapters for Shiny and plumber2/fireproof.",
       "License": "MIT + file LICENSE",
       "Encoding": "UTF-8",
+      "Depends": [
+        "R (>= 4.1.0)"
+      ],
       "Roxygen": "list(markdown = TRUE)",
-      "RoxygenNote": "7.3.3",
       "Imports": [
         "R6",
         "httr2",
@@ -318,27 +320,27 @@
         "withr",
         "webfakes",
         "shiny",
-        "shinyjs",
         "later",
         "cookies",
         "plumber2",
         "fireproof",
-        "reqres"
+        "reqres",
+        "fiery",
+        "storr",
+        "knitr",
+        "rmarkdown"
       ],
+      "VignetteBuilder": "knitr",
       "Config/testthat/edition": "3",
-      "RemoteType": "github",
-      "RemoteHost": "api.github.com",
-      "RemoteRepo": "auth0r",
-      "RemoteUsername": "ma-riviere",
-      "RemotePkgRef": "ma-riviere/auth0r",
-      "RemoteRef": "HEAD",
-      "RemoteSha": "022c9561db7a3cd5f405061692a18ffe9bba42a5",
-      "NeedsCompilation": "no",
+      "Config/roxygen2/version": "8.0.0",
       "Author": "Marc-Aurèle Rivière [aut, cre]",
       "Maintainer": "Marc-Aurèle Rivière <marc.aurele.riviere@gmail.com>",
-      "Depends": [
-        "R (>= 4.1.0)"
-      ]
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "ma-riviere",
+      "RemoteRepo": "auth0r",
+      "RemoteRef": "main",
+      "RemoteSha": "dc54c41c7a55d95d6a405dc829ae14fd03edef66"
     },
     "base64enc": {
       "Package": "base64enc",
@@ -3782,7 +3784,7 @@
     },
     "shinyutils": {
       "Package": "shinyutils",
-      "Version": "0.2.0",
+      "Version": "0.2.1",
       "Source": "GitHub",
       "Title": "Reusable Utilities for Shiny Applications",
       "Authors@R": "person(\"Marc-Aurele\", \"Riviere\", email = \"ma@riviere.io\", role = c(\"aut\", \"cre\"))",
@@ -3834,7 +3836,7 @@
       "RemoteUsername": "ma-riviere",
       "RemotePkgRef": "ma-riviere/shinyutils",
       "RemoteRef": "HEAD",
-      "RemoteSha": "61cb8ee48ee388a04bbf94eda3e0523799874134",
+      "RemoteSha": "b8b390315761ea0157c1fcccf2795e63dea70ad3",
       "NeedsCompilation": "no",
       "Author": "Marc-Aurele Riviere [aut, cre]",
       "Maintainer": "Marc-Aurele Riviere <ma@riviere.io>",
