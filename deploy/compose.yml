@@ -25,7 +25,7 @@ services:
     # db.env: platform-generated PG* credentials (schema-per-app shared DB).
     # app.env: Ansible-delivered from the gitignored repo-root master copy
     # (apps[].app_env_file in deploy-server config.yml): ENV, APP_URL,
-    # AUTH0_*, SMTP, OTel, state dir paths.
+    # AUTH0_*, email (Resend), OTel, state dir paths.
     env_file:
       - db.env
       - app.env

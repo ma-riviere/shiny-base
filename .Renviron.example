@@ -34,13 +34,10 @@ AUTH0_APP_URL=http://localhost:9090
 # Roles granted to the bypass session (comma-separated)
 DEV_ROLES=admin
 
-# Email (Brevo)
+# Email (Resend API; EMAIL_FROM must be on a domain verified in Resend)
 EMAIL_TO=
 EMAIL_FROM=shiny@ma-riviere.com
-SMTP_HOST=smtp-relay.brevo.com
-SMTP_PORT=587
-SMTP_USER=
-SMTP_KEY=
+RESEND_API_KEY=
 
 SEND_ERROR_EMAILS=TRUE
 

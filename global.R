@@ -40,13 +40,11 @@ options(
     log_console_threshold = if (Sys.getenv("ENV") == "prod") 400L else 500L, # INFO in prod, DEBUG in dev
     log_file_threshold = 500L, # DEBUG
 
-    # Email (see shinyutils::send_error_email for usage)
+    # Email via the Resend API (see shinyutils::send_error_email for usage)
+    # EMAIL_FROM must be on a domain verified in Resend (no mailbox needed)
     email_to = Sys.getenv("EMAIL_TO"),
-    email_from = Sys.getenv("EMAIL_FROM", "noreply@app.local"),
-    smtp_host = Sys.getenv("SMTP_HOST"),
-    smtp_port = as.integer(Sys.getenv("SMTP_PORT", "587")),
-    smtp_user = Sys.getenv("SMTP_USER"),
-    smtp_key_envvar = "SMTP_KEY",
+    email_from = Sys.getenv("EMAIL_FROM"),
+    resend_api_key_envvar = "RESEND_API_KEY",
 
     # Error handling (see shinyutils::setup_global_error_emails)
     error_email_enabled = isTRUE(as.logical(Sys.getenv("SEND_ERROR_EMAILS", "FALSE"))),
