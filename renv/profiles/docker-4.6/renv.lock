@@ -292,7 +292,7 @@
     },
     "auth0r": {
       "Package": "auth0r",
-      "Version": "0.4.0",
+      "Version": "0.4.1",
       "Source": "GitHub",
       "Title": "R Interface to Auth0 APIs",
       "Authors@R": "person(\"Marc-Aurèle\", \"Rivière\", role = c(\"aut\", \"cre\"), email = \"marc.aurele.riviere@gmail.com\")",
@@ -340,7 +340,7 @@
       "RemoteUsername": "ma-riviere",
       "RemoteRepo": "auth0r",
       "RemoteRef": "main",
-      "RemoteSha": "dc54c41c7a55d95d6a405dc829ae14fd03edef66"
+      "RemoteSha": "5ce2378f4484bcbd57b02f1f67ef6650190b9b78"
     },
     "base64enc": {
       "Package": "base64enc",
@@ -3784,7 +3784,7 @@
     },
     "shinyutils": {
       "Package": "shinyutils",
-      "Version": "0.3.0",
+      "Version": "0.4.0",
       "Source": "GitHub",
       "Title": "Reusable Utilities for Shiny Applications",
       "Authors@R": "person(\"Marc-Aurele\", \"Riviere\", email = \"ma@riviere.io\", role = c(\"aut\", \"cre\"))",
@@ -3836,7 +3836,7 @@
       "RemoteUsername": "ma-riviere",
       "RemotePkgRef": "ma-riviere/shinyutils",
       "RemoteRef": "HEAD",
-      "RemoteSha": "0f88fc99c563896bb8543d64a14a95a577c2ef35",
+      "RemoteSha": "aefff7fe6e1ec0e4bc11ecaeda3d8dba6c19c4c4",
       "NeedsCompilation": "no",
       "Author": "Marc-Aurele Riviere [aut, cre]",
       "Maintainer": "Marc-Aurele Riviere <ma@riviere.io>",
