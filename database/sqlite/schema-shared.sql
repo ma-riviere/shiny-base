@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     nickname TEXT,
     is_guest BOOLEAN NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_seen_at TIMESTAMP
+    last_seen_at TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'active'
 );
 
 CREATE TABLE IF NOT EXISTS datasets (

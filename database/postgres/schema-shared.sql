@@ -48,3 +48,5 @@ CREATE TABLE IF NOT EXISTS models (
 CREATE INDEX IF NOT EXISTS models_user_id_idx ON models (user_id);
 
 CREATE INDEX IF NOT EXISTS models_dataset_id_idx ON models (dataset_id);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'banned', 'deleted'));

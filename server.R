@@ -40,6 +40,8 @@ server <- function(input, output, session) {
         "sidebar-admin_users_view",
         "sidebar-admin_show_only_recent",
         # Admin/role related inputs (modals, role management)
+        "admin-auth0-ban_user",
+        "admin-auth0-confirm_ban",
         "admin-auth0-edit_role",
         "admin-auth0-active_sessions-edit_role",
         "admin-auth0-roles-add_role",
@@ -239,6 +241,17 @@ server <- function(input, output, session) {
         if (!purrr::is_empty(auth0_sub)) {
             session$userData$user <- db_get_or_create_user(auth0_sub)
 
+            # Cross-app ban enforcement: users.status lives in the shared schema,
+            # so a ban is instantly authoritative for the plumber2 API (checked on
+            # every request). This login check and the heartbeat check below are
+            # the Shiny-side equivalents, since a Shiny session is long-lived.
+            if (!identical(session$userData$user$status, "active")) {
+                log_warn("[AUTH] Rejecting {auth0_sub}: account status is {session$userData$user$status}")
+                showNotification(tr("Your account has been suspended"), type = "error", duration = NULL)
+                shinyjs::delay(3000, session$close())
+                return()
+            }
+
             # Start session tracking
             tryCatch(
                 {
@@ -261,11 +274,23 @@ server <- function(input, output, session) {
         # Session heartbeat: update updated_at every 5 minutes
         observe(label = "server_session_heartbeat", {
             invalidateLater(5 * 60 * 1000)
-            req(session$userData$session_db_id)
-            tryCatch(
-                db_session_heartbeat(session$userData$session_db_id),
-                error = \(e) log_debug("[SESSION] Heartbeat failed: {e$message}")
-            )
+            # Only the heartbeat write depends on session tracking having started:
+            # the ban check below must run even if db_session_start failed.
+            if (!is.null(session$userData$session_db_id)) {
+                tryCatch(
+                    db_session_heartbeat(session$userData$session_db_id),
+                    error = \(e) log_debug("[SESSION] Heartbeat failed: {e$message}")
+                )
+            }
+
+            # Ban applied mid-session (from this app or the Auth0 dashboard poller):
+            # only ever closes THIS session, never anyone else's.
+            status <- tryCatch(db_get_user_status(session$userData$user$id), error = \(e) NULL)
+            if (!is.null(status) && !identical(status, "active")) {
+                log_warn("[AUTH] Closing session: account status is {status}")
+                showNotification(tr("Your account has been suspended"), type = "error", duration = NULL)
+                shinyjs::delay(3000, session$close())
+            }
         })
 
         # ------ I18N ----------------------------------------------------------

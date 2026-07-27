@@ -27,7 +27,7 @@ private_ddl_files <- file.path(app_root, "database", "postgres", "schema-base.sq
 # table, so a column added in one repo but not yet applied here must fail the
 # deploy loudly instead of surfacing as runtime SQL errors.
 shared_expected_columns <- list(
-    users = c("id", "auth0_sub", "email", "nickname", "is_guest", "created_at", "last_seen_at"),
+    users = c("id", "auth0_sub", "email", "nickname", "is_guest", "created_at", "last_seen_at", "status"),
     datasets = c("id", "user_id", "name", "description", "data", "n_rows", "n_cols", "created_at", "updated_at"),
     models = c("id", "user_id", "dataset_id", "formula", "metrics", "model_blob", "created_at", "updated_at")
 )

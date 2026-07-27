@@ -387,6 +387,10 @@
         {
             "en": "Available variables:",
             "fr": "Variables disponibles :"
+        },
+        {
+            "en": "Your account has been suspended",
+            "fr": "Votre compte a été suspendu"
         }
     ]
 }
