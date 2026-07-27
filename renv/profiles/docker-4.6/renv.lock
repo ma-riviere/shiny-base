@@ -3836,7 +3836,7 @@
       "RemoteUsername": "ma-riviere",
       "RemotePkgRef": "ma-riviere/shinyutils",
       "RemoteRef": "HEAD",
-      "RemoteSha": "aefff7fe6e1ec0e4bc11ecaeda3d8dba6c19c4c4",
+      "RemoteSha": "3c74a12546b67b08e6601da526be64158e0e8bb9",
       "NeedsCompilation": "no",
       "Author": "Marc-Aurele Riviere [aut, cre]",
       "Maintainer": "Marc-Aurele Riviere <ma@riviere.io>",
