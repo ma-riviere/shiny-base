@@ -32,3 +32,7 @@ tests/e2e/blob-report/
 tests/e2e/*.png
 tests/e2e/temp_data/
 test-results/
+
+# Local, machine-specific MCP server configs
+.mcp.json
+.codex/config.toml
