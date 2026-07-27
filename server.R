@@ -239,7 +239,14 @@ server <- function(input, output, session) {
         # the authenticated-user setup is ordinary synchronous initialization.
         auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
         if (!purrr::is_empty(auth0_sub)) {
-            session$userData$user <- db_get_or_create_user(auth0_sub)
+            # This app renders profile fields from Auth0, but the shared users
+            # table is also read directly by plumber2-base (its admin panel has
+            # no Management API lookup), so the claims are mirrored on login.
+            session$userData$user <- db_get_or_create_user(
+                auth0_sub,
+                email = purrr::pluck(session$userData$auth0_info, "email"),
+                nickname = purrr::pluck(session$userData$auth0_info, "nickname")
+            )
 
             # Cross-app ban enforcement: users.status lives in the shared schema,
             # so a ban is instantly authoritative for the plumber2 API (checked on
