@@ -53,32 +53,23 @@ test.describe('Authentication & RBAC - Dev role', () => {
 
     // ----- Authentication tests -----
 
-    test('should be authenticated after login', async () => {
+    test('should be authenticated and land on home with all navbar tabs', async () => {
         // Verify not on Auth0 page
         await expect(sharedPage).toHaveURLNotContaining('auth0.com');
 
-        // Verify navbar is visible (app loaded)
-        await expect(sharedPage.locator('.navbar')).toBeVisible();
-    });
+        // Home page is the default after login
+        await expect(sharedPage).toBeOnPage(PAGES.HOME);
 
-    test('should show correct navbar tabs', async () => {
         // All roles should see home, explore, model
         await expect(sharedPage.locator(`.nav-link[data-value="${PAGES.HOME}"]`)).toBeVisible();
         await expect(sharedPage.locator(`.nav-link[data-value="${PAGES.EXPLORE}"]`)).toBeVisible();
         await expect(sharedPage.locator(`.nav-link[data-value="${PAGES.MODEL}"]`)).toBeVisible();
     });
 
-    test('should be on home page by default', async () => {
-        await expect(sharedPage).toBeOnPage(PAGES.HOME);
-    });
-
     // ----- RBAC tests for dev role -----
 
-    test('should see admin tab (ENV=dev grants admin)', async () => {
+    test('should see admin tab with system and otel sub-tabs (ENV=dev grants admin)', async () => {
         await expect(sharedPage.locator(`.nav-link[data-value="${PAGES.ADMIN}"]`)).toBeVisible();
-    });
-
-    test('should see system and otel sub-tabs in admin panel', async () => {
         await navigateTo(sharedPage, PAGES.ADMIN);
 
         await expect(sharedPage.locator(SELECTORS.admin.systemTab)).toBeVisible();
@@ -124,11 +115,8 @@ test.describe('RBAC - Admin role', () => {
         await sharedPage.context().close();
     });
 
-    test('should see admin tab', async () => {
+    test('should see admin tab with ALL sub-tabs including users', async () => {
         await expect(sharedPage.locator(`.nav-link[data-value="${PAGES.ADMIN}"]`)).toBeVisible();
-    });
-
-    test('should see ALL admin sub-tabs including users', async () => {
         await navigateTo(sharedPage, PAGES.ADMIN);
 
         await expect(sharedPage.locator(SELECTORS.admin.systemTab)).toBeVisible();

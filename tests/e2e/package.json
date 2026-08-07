@@ -14,8 +14,7 @@
         "test:workflow": "npx playwright test workflow-dataset-model.spec.js --project=dev",
         "test:debug": "npx playwright test --debug",
         "report": "npx playwright show-report",
-        "setup": "npx playwright install chromium",
-        "legacy": "node run-all.js"
+        "setup": "npx playwright install chromium"
     },
     "dependencies": {
         "@faker-js/faker": "^10.1.0",

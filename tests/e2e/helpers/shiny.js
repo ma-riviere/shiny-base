@@ -33,32 +33,6 @@ async function waitForReactivity(page, buffer = 500) {
 }
 
 /**
- * Wait for a Shiny output to have content (not empty/loading).
- * @param {Page} page - Playwright page
- * @param {string} outputId - Shiny output ID (without # or namespace)
- * @param {Object} options
- * @param {string} options.namespace - Module namespace prefix (e.g., 'home')
- * @param {number} options.timeout - Max wait time (default: 10000)
- */
-async function waitForOutput(page, outputId, options = {}) {
-    const { namespace = '', timeout = 10000 } = options;
-    const fullId = namespace ? `${namespace}-${outputId}` : outputId;
-
-    await page.waitForFunction(
-        (id) => {
-            const el = document.getElementById(id);
-            if (!el) return false;
-            // Check not recalculating
-            if (el.classList.contains('recalculating')) return false;
-            // Check has content
-            return el.textContent.trim().length > 0;
-        },
-        fullId,
-        { timeout }
-    );
-}
-
-/**
  * Wait for waiter/loading overlay to disappear.
  * Checks multiple conditions: element removed, display none, opacity 0, or pointer-events none.
  * @param {Page} page - Playwright page
@@ -97,29 +71,6 @@ async function waitForModal(page, options = {}) {
 }
 
 /**
- * Wait for a modal to close.
- * @param {Page} page - Playwright page
- * @param {Object} options
- * @param {string} options.id - Modal element ID
- * @param {number} options.timeout - Max wait time (default: 5000)
- */
-async function waitForModalClose(page, options = {}) {
-    const { id, timeout = 5000 } = options;
-    const selector = id ? `#${id}.modal` : '.modal.show';
-    await page.waitForSelector(selector, { state: 'hidden', timeout });
-}
-
-/**
- * Execute JavaScript in Shiny context and return result.
- * @param {Page} page - Playwright page
- * @param {Function|string} fn - Function or JS code to execute
- * @returns {Promise<any>} - Result of execution
- */
-async function evalShiny(page, fn) {
-    return page.evaluate(fn);
-}
-
-/**
  * Get current Shiny input value.
  * @param {Page} page - Playwright page
  * @param {string} inputId - Input ID (with namespace if needed)
@@ -146,11 +97,8 @@ async function setInputValue(page, inputId, value, options = { priority: 'event'
 module.exports = {
     waitForShiny,
     waitForReactivity,
-    waitForOutput,
     waitForWaiterHide,
     waitForModal,
-    waitForModalClose,
-    evalShiny,
     getInputValue,
     setInputValue
 };

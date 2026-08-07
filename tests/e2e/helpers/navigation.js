@@ -10,11 +10,6 @@
  */
 const { waitForReactivity, waitForWaiterHide } = require('./shiny');
 
-// Shared pages from shinyutils (available in all apps using shiny-base template)
-const SHARED_PAGES = {
-    ADMIN: 'admin'
-};
-
 /**
  * Navigate to a specific page/tab in the navbar.
  * @param {Page} page - Playwright page
@@ -54,77 +49,7 @@ async function getCurrentPage(page) {
     });
 }
 
-/**
- * Check if a specific page/tab is visible in the navbar.
- * Useful for testing permission-gated pages like admin.
- * @param {Page} page - Playwright page
- * @param {string} pageName - Page value to check
- * @returns {Promise<boolean>}
- */
-async function isPageVisible(page, pageName) {
-    const selector = `[data-value="${pageName}"]`;
-    const element = await page.$(selector);
-    return element !== null;
-}
-
-/**
- * Open the user dropdown menu in navbar.
- * @param {Page} page - Playwright page
- */
-async function openUserMenu(page) {
-    // User menu has the user-nickname class and is a nav-link dropdown-toggle
-    await page.click('.navbar .nav-link.dropdown-toggle:has(.user-nickname)');
-    await page.waitForSelector('.dropdown-menu.show', { state: 'visible' });
-}
-
-/**
- * Close any open dropdown menu.
- * @param {Page} page - Playwright page
- */
-async function closeDropdowns(page) {
-    // Click outside dropdowns to close them
-    await page.click('body', { position: { x: 10, y: 10 } });
-    await page.waitForSelector('.dropdown-menu.show', { state: 'hidden' }).catch(() => { });
-}
-
-/**
- * Open the profile modal from user menu.
- * @param {Page} page - Playwright page
- */
-async function openProfile(page) {
-    await openUserMenu(page);
-    await page.click('#navbar-profile_link');
-    await page.waitForSelector('.modal.show', { state: 'visible' });
-}
-
-/**
- * Change the app language via navbar selector.
- * @param {Page} page - Playwright page
- * @param {string} lang - Language code (e.g., 'en', 'fr')
- */
-async function changeLanguage(page, lang) {
-    // Language selector is a selectInput with id navbar-language
-    await page.selectOption('#navbar-language', lang);
-    await waitForReactivity(page);
-}
-
-/**
- * Get current language selection.
- * @param {Page} page - Playwright page
- * @returns {Promise<string>} - Current language code
- */
-async function getCurrentLanguage(page) {
-    return page.inputValue('#navbar-language');
-}
-
 module.exports = {
-    SHARED_PAGES,
     navigateTo,
-    getCurrentPage,
-    isPageVisible,
-    openUserMenu,
-    closeDropdowns,
-    openProfile,
-    changeLanguage,
-    getCurrentLanguage
+    getCurrentPage
 };
