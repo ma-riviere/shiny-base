@@ -67,6 +67,12 @@ services:
         frame-ancestors 'none'
       # Login-gated demo app: ask crawlers not to index
       traefik.http.middlewares.sb-sec-headers.headers.customresponseheaders.X-Robots-Tag: "noindex, nofollow"
+      # The app uses no device features: deny them, even to injected code
+      traefik.http.middlewares.sb-sec-headers.headers.permissionsPolicy: >-
+        accelerometer=(), camera=(), geolocation=(), gyroscope=(),
+        magnetometer=(), microphone=(), payment=(), usb=()
+      # Shiny Server adds "X-Powered-By: Shiny Server"; an empty value makes Traefik strip it
+      traefik.http.middlewares.sb-sec-headers.headers.customresponseheaders.X-Powered-By: ""
     networks:
       - edge
       - postgres
