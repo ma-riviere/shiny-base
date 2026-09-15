@@ -18,12 +18,13 @@ async function copyToClipboard(text, successMsg) {
 // Delegated click handler for input_button() (R/helpers_inputs.R): one
 // document-level listener covers every such button in the app, wherever it is
 // rendered and whatever input it targets (fully generic, nothing row- or
-// dataset-specific). Sets the input named by `data-shiny-input` to
-// `data-value`; `data-event` marks a repeatable action (priority: 'event'),
+// dataset-specific). The attributes mirror the Shiny.setInputValue() call:
+// sets the input named by `data-shiny-input` to `data-shiny-value`;
+// `data-shiny-priority="event"` marks a repeatable action (priority: 'event'),
 // otherwise the value is a stable, deduplicated selection.
 // NB: `this.dataset` is the DOM API for data-* attributes (HTMLElement.dataset),
 // unrelated to the app's "datasets".
 $(document).on("click", "button[data-shiny-input]", function () {
-    var options = this.dataset.event === "true" ? { priority: "event" } : undefined;
-    Shiny.setInputValue(this.dataset.shinyInput, this.dataset.value, options);
+    var options = this.dataset.shinyPriority ? { priority: this.dataset.shinyPriority } : undefined;
+    Shiny.setInputValue(this.dataset.shinyInput, this.dataset.shinyValue, options);
 });

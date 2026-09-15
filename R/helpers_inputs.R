@@ -1,7 +1,9 @@
 # Generic dynamic-interactivity helpers shared across modules.
 
 # Build a <button> wired to the app-wide delegated click handler (www/js/app.js):
-# clicking it sets the input named by `data-shiny-input` to `data-value`.
+# clicking it sets the input named by `data-shiny-input` to `data-shiny-value`.
+# The attributes mirror the `Shiny.setInputValue(input, value, { priority })`
+# call the handler makes.
 #
 # Core of the "one observer for all rows" pattern: every row's button targets
 # the SAME input id; the value identifies the clicked row, so a single
@@ -11,9 +13,10 @@
 #   - event = FALSE (default): stable SELECTION. Sets the bare value, which
 #     Shiny deduplicates (re-setting to the same value is a no-op). It behaves
 #     like any input and is bookmark-restorable. Read `input$<id>`.
-#   - event = TRUE: repeatable ACTION. Sets the value with `priority: 'event'`,
-#     so the handler fires on every click - even repeats of the same row
-#     (delete, edit, ...). Exclude from bookmarks.
+#   - event = TRUE: repeatable ACTION. Sets `data-shiny-priority="event"`, so
+#     the value is sent with `priority: 'event'` and the handler fires on every
+#     click - even repeats of the same row (delete, edit, ...). Exclude from
+#     bookmarks.
 #
 # A native <button> gives Enter/Space activation, focus, and the button role
 # for free (no role/tabindex/onkeydown wiring), and htmltools escapes every
@@ -35,8 +38,8 @@ input_button <- function(input_id, value, ..., event = FALSE, class = NULL, titl
         title = title,
         `aria-label` = title,
         `data-shiny-input` = input_id,
-        `data-value` = as.character(value),
-        `data-event` = if (isTRUE(event)) "true",
+        `data-shiny-value` = as.character(value),
+        `data-shiny-priority` = if (isTRUE(event)) "event",
         ...
     ))
 }
