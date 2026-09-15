@@ -115,3 +115,39 @@ test_that("a runaway query is cut by the mirai walltime", {
     outcome <- resolve_promise(promises::as.promise(slow))
     expect_true(!is.null(outcome$error))
 })
+
+test_that("the client is bound to the dataset snapshot it was built with", {
+    start_chat_daemon()
+    state <- new.env()
+    state$tool_calls <- 0L
+    state$query <- NULL
+
+    small <- data.frame(id = 1:12, val = seq(2, 24, by = 2))
+    big <- data.frame(id = 1:47, val = seq_len(47))
+
+    # A rebind builds a NEW client; the previous one must not leak into it
+    tool_small <- dataset_chat_query_tool(small, state)
+    tool_big <- dataset_chat_query_tool(big, state)
+    expect_match(resolve_promise(tool_small(sql = "SELECT count(*) AS n FROM dataset"))$value, '"n"\n12')
+    expect_match(resolve_promise(tool_big(sql = "SELECT count(*) AS n FROM dataset"))$value, '"n"\n47')
+})
+
+test_that("the system prompt carries the dataset notes and the answer language", {
+    dataset <- list(name = "Sales", description = "Quarterly figures")
+    data <- data.frame(region = "north", amount = 1.5, count = 2L, ok = TRUE, when = Sys.Date())
+
+    prompt <- dataset_chat_system_prompt(dataset, data, "fr")
+    expect_match(prompt, "Answer in French", fixed = TRUE)
+    expect_match(prompt, "Name: Sales", fixed = TRUE)
+    expect_match(prompt, "Description: Quarterly figures", fixed = TRUE)
+    expect_match(prompt, "has 1 rows and 5 columns", fixed = TRUE)
+    expect_match(prompt, '- "region" (VARCHAR)', fixed = TRUE)
+    expect_match(prompt, '- "amount" (DOUBLE)', fixed = TRUE)
+    expect_match(prompt, '- "count" (INTEGER)', fixed = TRUE)
+    expect_match(prompt, '- "ok" (BOOLEAN)', fixed = TRUE)
+    expect_match(prompt, '- "when" (DATE)', fixed = TRUE)
+
+    # No dataset selected: the model is told so, and gets no tool
+    expect_match(dataset_chat_system_prompt(NULL, NULL, "en"), "No dataset is selected", fixed = TRUE)
+    expect_match(dataset_chat_system_prompt(NULL, NULL, "en"), "Answer in English", fixed = TRUE)
+})

@@ -27,10 +27,11 @@ dataset_chat_ui <- function(id) {
         title = div(
             class = "d-flex align-items-center gap-2",
             tags$span(class = "i18n", `data-key` = "Dataset assistant", tr("Dataset assistant")),
+            # Attributes cannot carry the i18n span markup tr() returns at UI build time: plain English
             tags$span(
                 class = "text-muted",
                 title = paste0("[", chat_provider_label(), "] ", getOption("chat_model")),
-                `aria-label` = paste0(tr("Model in use"), ": ", getOption("chat_model")),
+                `aria-label` = paste0("Model in use: ", getOption("chat_model")),
                 bsicons::bs_icon("info-circle")
             ),
             actionButton(
@@ -41,7 +42,7 @@ dataset_chat_ui <- function(id) {
         ),
         shinychat::chat_ui(
             ns("chat"),
-            placeholder = tr("Ask a question about this dataset"),
+            placeholder = "Ask a question about this dataset",
             show_history = FALSE,
             drawer = FALSE,
             allow_attachments = FALSE,

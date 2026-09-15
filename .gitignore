@@ -10,13 +10,15 @@ deploy/db.env
 .vscode/
 .ansible/
 .claude/settings.local.json
+.claude/skills/
 cache/
 shiny_bookmarks/
 logs/
 data/shinylogs/
 TODO.md
-NOTES.md
+NOTES*.md
 CLAUDE.md
+PLAN*.md
 SECURITY.md
 tests.qmd
 server-info.txt
