@@ -30,6 +30,8 @@ explore_ui <- function(id) {
                 )
             )
         ),
+        # ----- DATASET ASSISTANT (floating launcher + offcanvas) ---------------
+        if (isTRUE(getOption("chat_enabled"))) dataset_chat_ui(ns("chat")),
         # ----- EMPTY STATE ----------------------------------------------------
         shinyjs::hidden(
             div(

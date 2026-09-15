@@ -391,6 +391,34 @@
         {
             "en": "Your account has been suspended",
             "fr": "Votre compte a été suspendu"
+        },
+        {
+            "en": "Ask about this dataset",
+            "fr": "Interroger ce jeu de données"
+        },
+        {
+            "en": "Dataset assistant",
+            "fr": "Assistant de données"
+        },
+        {
+            "en": "Model in use",
+            "fr": "Modèle utilisé"
+        },
+        {
+            "en": "New chat",
+            "fr": "Nouvelle discussion"
+        },
+        {
+            "en": "Ask a question about this dataset",
+            "fr": "Posez une question sur ce jeu de données"
+        },
+        {
+            "en": "100% private: your data stays on our own server.",
+            "fr": "100% privé : vos données restent sur notre propre serveur."
+        },
+        {
+            "en": "Your question and dataset values go to an external provider.",
+            "fr": "Vos questions et données sont envoyées à un fournisseur externe."
         }
     ]
 }

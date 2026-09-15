@@ -76,6 +76,9 @@ services:
     networks:
       - edge
       - postgres
+      # Local CPU model for the dataset assistant (deploy-main `llm` role,
+      # http://llm:8080/v1, no auth, never through Traefik)
+      - llm
     volumes:
       # ./data is the platform's per-app persistent state (restic-backed-up);
       # the dirs must exist owned by uid 997 (container shiny user) before
@@ -91,3 +94,6 @@ networks:
   postgres:
     external: true
     name: postgres
+  llm:
+    external: true
+    name: llm

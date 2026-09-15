@@ -73,6 +73,16 @@ explore_server <- function(
             nav_select_callback = nav_select_callback
         )
 
+        # Dataset assistant: feature flag (CHAT_ENABLED) + permission. No req()
+        # at module top level (a silent error here would abort init_modules).
+        if (isTRUE(getOption("chat_enabled")) && can("chat:dataset")) {
+            dataset_chat_server(
+                "chat",
+                dataset = reactive(values$dataset),
+                data = reactive(values$data)
+            )
+        }
+
         # Upload modal trigger
         observeEvent(
             input$open_upload,

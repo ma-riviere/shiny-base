@@ -1,0 +1,73 @@
+// Dataset assistant (210_dataset_chat): a floating launcher pinned bottom-right
+// that opens a bslib::offcanvas() panel holding the shinychat widget. Only the
+// launcher needs styling; the panel and the chat are stock components.
+
+.chat-launcher {
+    position: fixed;
+    right: $spacing-lg;
+    bottom: $spacing-lg;
+    z-index: 1040;
+    border-radius: 2rem;
+    box-shadow: $shadow-md;
+}
+
+// Rotating conic gradient behind the launcher (same look as plumber2-base):
+// ::after is the sharp ring sticking out past the button, ::before the blurred
+// halo. Both sit at z-index -1, so the button's own opaque background hides
+// their centers (the button must NOT create a stacking context - no
+// transform/opacity on it). Animating the angle needs @property; without it
+// (older Firefox) the gradient is simply static.
+@property --chat-glow-angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.chat-launcher::before,
+.chat-launcher::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    z-index: -1;
+    border-radius: inherit;
+    background: conic-gradient(
+        from var(--chat-glow-angle),
+        $primary-dark,
+        $primary-light,
+        $info,
+        $primary-light,
+        $primary-dark
+    );
+    animation: chat-glow-spin 4s linear infinite;
+}
+
+.chat-launcher::before {
+    filter: blur(0.75rem);
+    opacity: 0.7;
+}
+
+@keyframes chat-glow-spin {
+    to {
+        --chat-glow-angle: 360deg;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .chat-launcher::before,
+    .chat-launcher::after {
+        animation: none;
+    }
+}
+
+// The offcanvas body is a flex column: let the chat widget take the full height
+// so the transcript scrolls inside the panel, not the page.
+.chat-panel .offcanvas-body {
+    display: flex;
+    flex-direction: column;
+    padding: $spacing-sm $spacing-md;
+}
+
+.chat-panel .offcanvas-footer {
+    padding: $spacing-xs $spacing-md $spacing-sm;
+    font-size: 0.8125rem;
+}

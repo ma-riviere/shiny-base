@@ -67,7 +67,35 @@ server <- function(input, output, session) {
         "explore-actions-confirm_delete",
         # Rename modal inputs (transient, modal not open on restore)
         "edit_dataset-new_dataset_name",
-        "edit_dataset-confirm_rename"
+        "edit_dataset-confirm_rename",
+        # Dataset assistant (210_dataset_chat): widget buttons + panel state, and
+        # every input shinychat 0.5.0 creates (a restored user_input would re-send
+        # the prompt). Exact names here; the disconnect save below also drops the
+        # whole namespace by prefix, which covers inputs added by later versions.
+        "explore-chat-launcher",
+        "explore-chat-new_chat",
+        "explore-chat-panel",
+        paste0(
+            "explore-chat-chat_",
+            c(
+                "user_input",
+                "cancel",
+                "greeting",
+                "greeting_requested",
+                "greeting_dismissed",
+                "history_browser_token",
+                "history_current_id",
+                "history_url_id",
+                "history_conversation_id",
+                "history_select",
+                "history_new",
+                "history_rename",
+                "history_delete",
+                "message_edit",
+                "message_navigate",
+                "slash_command"
+            )
+        )
     )
     shiny::setBookmarkExclude(bookmark_exclude)
 
@@ -84,7 +112,12 @@ server <- function(input, output, session) {
                     error = \(e) log_warn("[SESSION] Failed to end session: {e$message}")
                 )
             }
-            save_bookmark_on_disconnect(session, input, exclude = bookmark_exclude)
+            save_bookmark_on_disconnect(
+                session,
+                input,
+                exclude = bookmark_exclude,
+                exclude_prefix = "explore-chat-"
+            )
         })
     }
 

@@ -27,6 +27,7 @@ roles:
     - "write:model"
     - "delete:model"
     - "fit:model"
+    - "chat:dataset"
 
   # Regular user: no delete
   user:
@@ -36,3 +37,4 @@ roles:
     - "write:dataset"
     - "write:model"
     - "fit:model"
+    - "chat:dataset"

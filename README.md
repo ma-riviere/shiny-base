@@ -6,6 +6,7 @@ A sandbox app for trying out production-Shiny patterns end to end: Auth0 login t
 
 - Auth0 authentication (OAuth2 + PKCE) via a custom `auth0r` package, integrated with Shiny's server-side bookmarking
 - Non-blocking model fitting with `ExtendedTask` + `mirai`
+- Dataset assistant on the Explore page: a `shinychat` + `ellmer` chatbot backed by a local llama.cpp model, answering from sandboxed DuckDB queries over the selected dataset (off unless `CHAT_ENABLED=true`)
 - Role-based permissions (`data/permissions.yaml`), admin panel, i18n, session tracking, OpenTelemetry traces
 - PostgreSQL in production, SQLite in dev and tests; users/datasets/models live in a schema shared with `plumber2-base`, the same app rebuilt on plumber2
 - bslib (Bootstrap 5) UI, tested with shinytest2 and Playwright
