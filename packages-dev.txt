@@ -37,6 +37,9 @@ httr2
 data.table
 parallelly
 mirai
+shinychat
+ellmer
+duckdb
 butcher
 digest
 waiter
