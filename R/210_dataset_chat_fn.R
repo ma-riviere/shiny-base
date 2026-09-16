@@ -102,9 +102,10 @@ dataset_chat_query_tool <- function(data, state) {
                 return("Error: one statement only, without semicolons.")
             }
             state$query <- mirai::mirai(
-                run_dataset_query(sql, data),
+                run_dataset_query(sql, data, example),
                 sql = sql,
                 data = data,
+                example = example,
                 run_dataset_query = run_dataset_query,
                 .timeout = CHAT_QUERY_TIMEOUT_MS,
                 .compute = "chat"
@@ -120,7 +121,7 @@ dataset_chat_query_tool <- function(data, state) {
         name = "query",
         description = paste(
             "Run ONE DuckDB SELECT statement over the read-only table `dataset`.",
-            sprintf("Column names must be double-quoted exactly as listed, e.g. %s.", example),
+            sprintf("Column names double-quoted exactly as listed, aliases without dots, e.g. %s.", example),
             "Aggregate before selecting rows and keep a LIMIT: results are capped at 200 rows."
         ),
         arguments = list(
@@ -136,10 +137,19 @@ dataset_chat_query_tool <- function(data, state) {
 # aggregate, the context in which the quotes get dropped; the plain alias
 # shows that dots do not belong in aliases either (`AS avg_Sepal.Length` was
 # the next mistake once the quotes were right).
+# The name must carry letters: uploaded CSVs often start with an index column
+# (`...1`, `X`), and `avg("...1") AS avg__1` demonstrates neither rule.
 dataset_chat_sql_example <- function(data) {
     columns <- names(data)
     needs_quotes <- !grepl("^[A-Za-z_][A-Za-z0-9_]*$", columns)
-    column <- if (any(needs_quotes)) columns[needs_quotes][1] else columns[1]
+    informative <- needs_quotes & grepl("[A-Za-z]", columns)
+    column <- if (any(informative)) {
+        columns[informative][1]
+    } else if (any(needs_quotes)) {
+        columns[needs_quotes][1]
+    } else {
+        columns[1]
+    }
     alias <- tolower(gsub("[^A-Za-z0-9]+", "_", column))
     expression <- if (is.numeric(data[[column]])) {
         sprintf('avg("%s") AS avg_%s', column, alias)
@@ -151,7 +161,7 @@ dataset_chat_sql_example <- function(data) {
 
 # Runs INSIDE the chat daemon: everything it needs travels with it (no app
 # globals, hence the literal defaults). Returns text for the model, never errors.
-run_dataset_query <- function(sql, data, max_rows = 200L, max_chars = 4000L) {
+run_dataset_query <- function(sql, data, example = "", max_rows = 200L, max_chars = 4000L) {
     # Limits and extension switches go in the driver config, BEFORE the lock
     # (locked settings refuse later changes); external access stays on until the
     # data.frame is materialized (it also gates data.frame replacement scans).
@@ -182,14 +192,23 @@ run_dataset_query <- function(sql, data, max_rows = 200L, max_chars = 4000L) {
     result <- tryCatch(DBI::dbGetQuery(con, wrapped), error = \(e) e)
     if (inherits(result, "error")) {
         text <- paste0("Error: ", conditionMessage(result))
-        # Unresolved names are nearly always unquoted identifiers: repeat the
-        # exact quoted columns so the retry does not need a DESCRIBE round trip
+        # The two mistakes the small model repeats verbatim until told exactly
+        # what to change: an unquoted name (parsed as table.column, so DuckDB
+        # cannot resolve it) and a dot inside the ALIAS (a parser error).
         if (grepl("Binder Error", text, fixed = TRUE)) {
             columns <- paste0('"', utils::head(names(data), 40L), '"', collapse = ", ")
             if (ncol(data) > 40L) {
                 columns <- paste0(columns, ", ...")
             }
             text <- paste0(text, "\nHint: column names must be double-quoted exactly as listed: ", columns)
+        } else if (grepl('syntax error at or near "."', text, fixed = TRUE)) {
+            text <- paste0(
+                text,
+                "\nHint: an alias cannot contain a dot. Quote the column, then alias it with letters",
+                " and underscores only",
+                if (nzchar(example)) paste0(", e.g. ", example) else "",
+                "."
+            )
         }
         return(text)
     }

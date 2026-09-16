@@ -86,6 +86,21 @@ test_that("output is capped and DuckDB errors are returned as text", {
     expect_no_match(run_dataset_query("SELECT 1 FROM nope", query_fixture), "Hint:")
 })
 
+# Both mistakes loop forever without a correction: the model re-sends the query
+# verbatim (measured against the live model, 2026-09-16).
+test_that("a dotted alias is answered with the alias rule and the example", {
+    dotted_alias <- run_dataset_query(
+        'SELECT avg("val") AS avg_val.x FROM dataset',
+        query_fixture,
+        example = 'SELECT avg("a.b") AS avg_a_b FROM dataset'
+    )
+    expect_match(dotted_alias, "^Error: Parser Error")
+    expect_match(dotted_alias, "Hint: an alias cannot contain a dot", fixed = TRUE)
+    expect_match(dotted_alias, 'e.g. SELECT avg("a.b") AS avg_a_b FROM dataset.', fixed = TRUE)
+    # Without an example (direct calls, tests) the rule is still stated
+    expect_match(run_dataset_query('SELECT avg("val") AS a.b FROM dataset', query_fixture), "underscores only\\.$")
+})
+
 test_that("the tool description shows a quoted example built from the dataset's own columns", {
     state <- new.env()
     dotted <- dataset_chat_query_tool(data.frame(id = 1L, Sepal.Length = 5.1, Species = "setosa"), state)
@@ -94,6 +109,12 @@ test_that("the tool description shows a quoted example built from the dataset's 
     expect_match(dotted@arguments@properties$sql@description, example, fixed = TRUE)
     plain <- dataset_chat_query_tool(data.frame(region = "north", amount = 1.5), state)
     expect_match(plain@description, 'SELECT count(DISTINCT "region") AS n_region FROM dataset', fixed = TRUE)
+
+    # Uploaded CSVs often lead with an index column: it needs quotes but
+    # demonstrates neither rule, so a real name wins (prod dataset shape)
+    indexed <- data.frame(check.names = FALSE, "...1" = 1L, "Sepal.Length" = 5.1, "Species" = "setosa")
+    expect_match(dataset_chat_sql_example(indexed), example, fixed = TRUE)
+    expect_match(dataset_chat_sql_example(data.frame(check.names = FALSE, "...1" = 1L)), '"...1"', fixed = TRUE)
 })
 
 test_that("the tool refuses semicolons, enforces the per-turn budget and runs through the chat daemon", {
