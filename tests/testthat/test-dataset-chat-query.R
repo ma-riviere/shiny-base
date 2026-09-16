@@ -80,7 +80,20 @@ test_that("output is capped and DuckDB errors are returned as text", {
     long <- run_dataset_query("SELECT repeat('z', 500) AS z FROM dataset LIMIT 50", query_fixture)
     expect_lte(nchar(long), 4000L + 60L)
     expect_match(long, "\\[truncated")
-    expect_match(run_dataset_query("SELECT nope FROM dataset", query_fixture), "^Error: Binder Error")
+    unresolved <- run_dataset_query("SELECT nope FROM dataset", query_fixture)
+    expect_match(unresolved, "^Error: Binder Error")
+    expect_match(unresolved, 'Hint: column names must be double-quoted exactly as listed: "id", "grp", "val", "note"$')
+    expect_no_match(run_dataset_query("SELECT 1 FROM nope", query_fixture), "Hint:")
+})
+
+test_that("the tool description shows a quoted example built from the dataset's own columns", {
+    state <- new.env()
+    dotted <- dataset_chat_query_tool(data.frame(id = 1L, Sepal.Length = 5.1, Species = "setosa"), state)
+    example <- 'SELECT avg("Sepal.Length") AS avg_sepal_length FROM dataset'
+    expect_match(dotted@description, paste0("e.g. ", example, "."), fixed = TRUE)
+    expect_match(dotted@arguments@properties$sql@description, example, fixed = TRUE)
+    plain <- dataset_chat_query_tool(data.frame(region = "north", amount = 1.5), state)
+    expect_match(plain@description, 'SELECT count(DISTINCT "region") AS n_region FROM dataset', fixed = TRUE)
 })
 
 test_that("the tool refuses semicolons, enforces the per-turn budget and runs through the chat daemon", {

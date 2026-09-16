@@ -87,7 +87,11 @@ dataset_chat_sql_type <- function(column) {
 
 # `state` is a module-level environment: the in-flight mirai (so the Stop
 # button and session end can cancel it) and the per-turn call counter.
+# The description carries a quoted example built from the dataset's own columns:
+# small models drop the quotes around dotted names (`Sepal.Length` = table
+# `Sepal`, column `Length` to DuckDB) whatever the system prompt says.
 dataset_chat_query_tool <- function(data, state) {
+    example <- dataset_chat_sql_example(data)
     ellmer::tool(
         coro::async(function(sql) {
             state$tool_calls <- state$tool_calls + 1L
@@ -116,12 +120,33 @@ dataset_chat_query_tool <- function(data, state) {
         name = "query",
         description = paste(
             "Run ONE DuckDB SELECT statement over the read-only table `dataset`.",
+            sprintf("Column names must be double-quoted exactly as listed, e.g. %s.", example),
             "Aggregate before selecting rows and keep a LIMIT: results are capped at 200 rows."
         ),
         arguments = list(
-            sql = ellmer::type_string("A single SELECT statement (CTEs allowed, no semicolons).")
+            sql = ellmer::type_string(sprintf(
+                "A single SELECT statement (CTEs allowed, no semicolons), every column name in double quotes, e.g. %s.",
+                example
+            ))
         )
     )
+}
+
+# Prefers a column whose name needs quoting (dots, spaces, ...) and an
+# aggregate, the context in which the quotes get dropped; the plain alias
+# shows that dots do not belong in aliases either (`AS avg_Sepal.Length` was
+# the next mistake once the quotes were right).
+dataset_chat_sql_example <- function(data) {
+    columns <- names(data)
+    needs_quotes <- !grepl("^[A-Za-z_][A-Za-z0-9_]*$", columns)
+    column <- if (any(needs_quotes)) columns[needs_quotes][1] else columns[1]
+    alias <- tolower(gsub("[^A-Za-z0-9]+", "_", column))
+    expression <- if (is.numeric(data[[column]])) {
+        sprintf('avg("%s") AS avg_%s', column, alias)
+    } else {
+        sprintf('count(DISTINCT "%s") AS n_%s', column, alias)
+    }
+    return(sprintf("SELECT %s FROM dataset", expression))
 }
 
 # Runs INSIDE the chat daemon: everything it needs travels with it (no app
@@ -156,7 +181,17 @@ run_dataset_query <- function(sql, data, max_rows = 200L, max_chars = 4000L) {
     wrapped <- sprintf("SELECT * FROM (\n%s\n) AS chat_query LIMIT %d", sql, max_rows + 1L)
     result <- tryCatch(DBI::dbGetQuery(con, wrapped), error = \(e) e)
     if (inherits(result, "error")) {
-        return(paste0("Error: ", conditionMessage(result)))
+        text <- paste0("Error: ", conditionMessage(result))
+        # Unresolved names are nearly always unquoted identifiers: repeat the
+        # exact quoted columns so the retry does not need a DESCRIBE round trip
+        if (grepl("Binder Error", text, fixed = TRUE)) {
+            columns <- paste0('"', utils::head(names(data), 40L), '"', collapse = ", ")
+            if (ncol(data) > 40L) {
+                columns <- paste0(columns, ", ...")
+            }
+            text <- paste0(text, "\nHint: column names must be double-quoted exactly as listed: ", columns)
+        }
+        return(text)
     }
 
     truncated <- nrow(result) > max_rows
