@@ -25,9 +25,9 @@ module.exports = defineConfig({
     // Parallel execution: one worker per role (dev, admin, user)
     workers: process.env.CI ? 3 : 3,
 
-    // Reporter
+    // Reporter (CI: results.xml is what the workflow's junit publisher reads)
     reporter: process.env.CI
-        ? [['github'], ['html', { open: 'never' }]]
+        ? [['github'], ['junit', { outputFile: 'results.xml' }], ['html', { open: 'never' }]]
         : [['list'], ['html', { open: 'on-failure' }]],
 
     // Shared settings for all projects

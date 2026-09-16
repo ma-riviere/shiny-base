@@ -110,7 +110,8 @@ jobs:
               if: steps.detect-tests.outputs.has_shinytest2 == 'true'
               run: |
                   echo "SHINYTEST2_APP_DRIVER_TEST_ON_CRAN=1" >> .Renviron
-                  R -e 'shinytest2::test_app(reporter = testthat::JunitReporter$new(file = "junit_shinytest2.xml"))'
+                  # Absolute path: testthat resolves a relative reporter file against tests/testthat
+                  R -e 'shinytest2::test_app(reporter = testthat::JunitReporter$new(file = file.path(getwd(), "junit_shinytest2.xml")))'
 
             # ---- Playwright e2e ----
             - name: Install Node.js
@@ -145,7 +146,9 @@ jobs:
               working-directory: tests/e2e
               env:
                   CI: true
-              run: npx playwright test --reporter=junit
+              # Reporters come from playwright.config.js (CI: github + junit file + html);
+              # a --reporter flag here would replace them and print the XML to stdout
+              run: npx playwright test
 
             # ---- Results ----
             - name: Publish test results
