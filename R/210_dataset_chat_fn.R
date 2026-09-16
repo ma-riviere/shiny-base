@@ -1,13 +1,11 @@
-# Dataset assistant helpers (210_dataset_chat): the ellmer client bound to one
-# dataset snapshot, its single `query` tool, and the sandboxed DuckDB runner the
-# tool executes in the dedicated `chat` mirai daemon.
+# The assistant gets a snapshot of the selected dataset and one tool, query().
+# ellmer calls the model; a separate mirai worker runs its SQL against an in-memory DuckDB.
 #
-# SECURITY: the SQL is model-written from user prompts and dataset values, so it
-# is untrusted. Bounds: one statement (semicolons refused, then wrapped as a
-# subquery so anything but a SELECT is a syntax error), a fresh in-memory DuckDB
-# per call with external access disabled and the configuration locked, a 20 s
-# walltime (mirai .timeout), 200 rows / 4 000 chars of output, and a tool-call
-# budget per user turn. Prompts, answers and SQL are never logged.
+# Treat generated SQL as untrusted: prompts and dataset values can steer the model.
+# The tool refuses semicolons, then the worker wraps the query in a read-only subquery.
+# Each call gets a fresh DB with external access disabled and settings locked.
+# Limits: 20 seconds per query, 200 rows / 4,000 characters of output, eight calls per question.
+# The app does not log prompts, answers or SQL.
 
 CHAT_TOOL_BUDGET <- 8L
 CHAT_QUERY_TIMEOUT_MS <- 20000L
@@ -15,8 +13,8 @@ CHAT_MAX_TOKENS <- 2048L
 
 CHAT_SYSTEM_PROMPT <- paste(readLines("data/chat-system-prompt.md", warn = FALSE), collapse = "\n")
 
-# Client bound to ONE dataset snapshot (row + data.frame). NULL dataset = idle
-# client (no tool, prompt says so): chat_server() needs a client at creation.
+# Create a client for this dataset's metadata and data.frame.
+# chat_server() needs a client before selection, so NULL creates one without a query tool.
 dataset_chat_client <- function(dataset, data, language, state) {
     api_key <- Sys.getenv("CHAT_API_KEY", "")
     client <- ellmer::chat_openai_compatible(
@@ -47,10 +45,8 @@ dataset_chat_system_prompt <- function(dataset, data, language) {
     return(paste(prompt, notes, sep = "\n\n"))
 }
 
-# The DATASET.md equivalent of plumber2-base: shape + columns, so the model
-# knows the exact (quoted) identifiers without a first DESCRIBE round trip.
-# Name and description are user-supplied text: they sit inside the <dataset>
-# block, which the prompt declares untrusted.
+# Give the model column names/types and dataset size upfront, saving a DESCRIBE query.
+# The prompt marks the <dataset> block as untrusted because it includes user-supplied text.
 dataset_chat_notes <- function(dataset, data) {
     description <- dataset$description %||% ""
     columns <- sprintf('- "%s" (%s)', names(data), vapply(data, dataset_chat_sql_type, character(1)))
@@ -85,11 +81,10 @@ dataset_chat_sql_type <- function(column) {
 
 # ------ TOOL ------------------------------------------------------------------
 
-# `state` is a module-level environment: the in-flight mirai (so the Stop
-# button and session end can cancel it) and the per-turn call counter.
-# The description carries a quoted example built from the dataset's own columns:
-# small models drop the quotes around dotted names (`Sepal.Length` = table
-# `Sepal`, column `Length` to DuckDB) whatever the system prompt says.
+# Share the running query and call count with the server module through the state environment.
+# This lets the Stop button or a closed session cancel the query.
+# Include an example using this dataset's columns: Ling drops quotes despite the system prompt.
+# E.g. unquoted Sepal.Length means column Length in table Sepal to DuckDB.
 dataset_chat_query_tool <- function(data, state) {
     example <- dataset_chat_sql_example(data)
     ellmer::tool(
@@ -133,12 +128,9 @@ dataset_chat_query_tool <- function(data, state) {
     )
 }
 
-# Prefers a column whose name needs quoting (dots, spaces, ...) and an
-# aggregate, the context in which the quotes get dropped; the plain alias
-# shows that dots do not belong in aliases either (`AS avg_Sepal.Length` was
-# the next mistake once the quotes were right).
-# The name must carry letters: uploaded CSVs often start with an index column
-# (`...1`, `X`), and `avg("...1") AS avg__1` demonstrates neither rule.
+# Demonstrate both rules: quote the column name and use an alias without dots.
+# Prefer names like Sepal.Length over CSV index columns (...1, X), which make poor examples.
+# Use an aggregate because that is where Ling was dropping quotes and adding dotted aliases.
 dataset_chat_sql_example <- function(data) {
     columns <- names(data)
     needs_quotes <- !grepl("^[A-Za-z_][A-Za-z0-9_]*$", columns)
@@ -159,12 +151,11 @@ dataset_chat_sql_example <- function(data) {
     return(sprintf("SELECT %s FROM dataset", expression))
 }
 
-# Runs INSIDE the chat daemon: everything it needs travels with it (no app
-# globals, hence the literal defaults). Returns text for the model, never errors.
+# Runs in the chat worker, which cannot read app globals; pass its inputs explicitly.
+# Query errors become text the model can use to correct its SQL.
 run_dataset_query <- function(sql, data, example = "", max_rows = 200L, max_chars = 4000L) {
-    # Limits and extension switches go in the driver config, BEFORE the lock
-    # (locked settings refuse later changes); external access stays on until the
-    # data.frame is materialized (it also gates data.frame replacement scans).
+    # Set limits and disable extensions before locking the configuration; later changes would fail.
+    # Keep external access until the data.frame is copied into a table: DuckDB needs it to read R data.
     driver <- duckdb::duckdb(
         config = list(
             threads = "1",
@@ -192,9 +183,8 @@ run_dataset_query <- function(sql, data, example = "", max_rows = 200L, max_char
     result <- tryCatch(DBI::dbGetQuery(con, wrapped), error = \(e) e)
     if (inherits(result, "error")) {
         text <- paste0("Error: ", conditionMessage(result))
-        # The two mistakes the small model repeats verbatim until told exactly
-        # what to change: an unquoted name (parsed as table.column, so DuckDB
-        # cannot resolve it) and a dot inside the ALIAS (a parser error).
+        # Ling repeats failed SQL unless the error says what to change.
+        # Missing column quotes cause a Binder error; a dot in an unquoted alias causes a parser error.
         if (grepl("Binder Error", text, fixed = TRUE)) {
             columns <- paste0('"', utils::head(names(data), 40L), '"', collapse = ", ")
             if (ncol(data) > 40L) {

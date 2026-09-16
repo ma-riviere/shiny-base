@@ -15,8 +15,7 @@ if (is.na(mirai_workers)) {
     mirai_workers <- max(parallelly::availableCores() - 1, 1)
 }
 mirai::daemons(mirai_workers)
-# Dedicated worker for the dataset assistant's SQL queries (210_dataset_chat):
-# model fits must not be able to occupy every worker while a chat waits
+# Give chat queries their own worker so model fits cannot occupy all available workers.
 if (isTRUE(as.logical(Sys.getenv("CHAT_ENABLED", "FALSE")))) {
     mirai::daemons(1, .compute = "chat")
 }
@@ -60,16 +59,15 @@ options(
     auth0_roles_claim = "https://shiny-base.ma-riviere.com/roles",
     permissions_file = "data/permissions.yaml",
 
-    # Dataset assistant (210_dataset_chat): off by default, like plumber2-base.
-    # Defaults target deploy-main's local CPU model on the `llm` Docker network
-    # (dev: SSH tunnel, `ssh -L 8080:127.0.0.1:8080 main` + CHAT_BASE_URL=http://127.0.0.1:8080/v1).
+    # Dataset assistant: enable with CHAT_ENABLED=true. Defaults use the server's local model on the llm network.
+    # For dev, run ssh -L 8080:127.0.0.1:8080 main and set CHAT_BASE_URL=http://127.0.0.1:8080/v1.
     chat_enabled = isTRUE(as.logical(Sys.getenv("CHAT_ENABLED", "FALSE"))),
     chat_base_url = Sys.getenv("CHAT_BASE_URL", "http://llm:8080/v1"),
     chat_model = Sys.getenv("CHAT_MODEL", "Ling-3.0-tiny"),
 
     # Security
-    # Sanitize error messages shown to the client in prod (avoid leaking internals);
-    # keep full errors in dev. The full error still reaches logs/error emails.
+    # Hide ordinary Shiny error details in production; keep full errors in logs and error emails.
+    # This does not sanitize messages passed explicitly to toasts.
     shiny.sanitize.errors = Sys.getenv("ENV") == "prod",
     # Upload cap. Must exceed the 10 MB ceiling enforced by the upload module's
     # validator, else Shiny rejects the request before shinyvalidate runs (default 5 MB).
@@ -93,12 +91,10 @@ shinyutils::setup_global_error_emails()
 
 # ------ AUTH0 -----------------------------------------------------------------
 
-# The bypass is env-only (AUTH0_DISABLE=true, read by auth0r::auth0_disabled());
-# dev roles come from DEV_ROLES (see shinyutils::get_user_roles). The bypass is
-# a development tool: refuse to start production with it active.
-# suppressWarnings: this first call emits auth0r's once-per-process bypass
-# warning, which shinytest2's `warn = 2` would turn fatal; shinyutils logs the
-# bypass state anyway.
+# AUTH0_DISABLE=true skips login for development; DEV_ROLES sets the bypass user's roles.
+# Refuse to start production with login disabled.
+# Suppress auth0r's first bypass warning because shinytest2 turns warnings into errors.
+# shinyutils still logs that login is disabled.
 if (suppressWarnings(auth0r::auth0_disabled()) && Sys.getenv("ENV") == "prod") {
     stop("AUTH0_DISABLE=true must not be active in production.")
 }

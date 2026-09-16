@@ -1,7 +1,6 @@
-# Dataset assistant `query` tool (R/210_dataset_chat_fn.R): the SQL is model-written
-# from user prompts and dataset values, so these tests pin the sandbox, not the
-# model. No Shiny session needed: run_dataset_query() is the pure runner the
-# tool ships to the `chat` mirai daemon.
+# Check that the assistant's query tool limits untrusted SQL and returns useful errors.
+# These tests call the query runner in a chat worker; they need neither a model nor a Shiny session.
+# The tool and runner live in R/210_dataset_chat_fn.R.
 
 query_fixture <- data.frame(
     id = 1:300,
@@ -86,8 +85,8 @@ test_that("output is capped and DuckDB errors are returned as text", {
     expect_no_match(run_dataset_query("SELECT 1 FROM nope", query_fixture), "Hint:")
 })
 
-# Both mistakes loop forever without a correction: the model re-sends the query
-# verbatim (measured against the live model, 2026-09-16).
+# Ling repeats the same failed SQL until the tool says what to change, exhausting the call budget.
+# Keep corrections for missing column quotes and dotted aliases (verified with the live model).
 test_that("a dotted alias is answered with the alias rule and the example", {
     dotted_alias <- run_dataset_query(
         'SELECT avg("val") AS avg_val.x FROM dataset',

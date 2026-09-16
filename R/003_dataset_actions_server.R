@@ -1,7 +1,6 @@
-# Shared dataset actions module: ONE instance per hosting page, one observer per
-# action type for ALL rows (edit / download / delete), fed by the event-priority
-# inputs wired in dataset_row_ui(). Replaces the old module-per-row dataset_row
-# pattern, whose per-row observers were never destroyed after dataset deletion.
+# One instance per page handles edit/download/delete for every dataset row.
+# Buttons send the dataset ID to a shared input for each action (see dataset_row_ui()).
+# No per-row server is needed, so deleting rows leaves no unused observers behind.
 #
 # @param datasets Reactive data.frame of the datasets the host currently
 #   displays (validates client-supplied ids, provides names).
@@ -22,10 +21,9 @@ dataset_actions_server <- function(
             download_id = NULL
         )
 
-        # Guard: ids come from the client, as strings (matched with as.character:
-        # as.integer warns on malformed input, fatal under shinytest2's warn = 2);
-        # only act on datasets the host displays (DB calls are additionally
-        # user-scoped). Returns the matched row, with its properly typed id.
+        # Only accept IDs from the page's dataset list; DB calls also check ownership.
+        # Match as strings: as.integer() warns on malformed input, fatal under shinytest2's warn = 2.
+        # Return the server's row, including its correctly typed ID.
         dataset_from_id <- function(raw_id) {
             data <- datasets()
             row_idx <- match(as.character(raw_id), as.character(data$id))

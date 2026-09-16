@@ -1,9 +1,9 @@
 /**
  * App-specific E2E test configuration.
  *
- * Constants specific to THIS app. Generic helpers (helpers/*) should NOT
- * import from this file; test files import both. Only what a spec uses lives
- * here: add a selector when a test needs it, next to the R file that owns it.
+ * Keep this app's page names and selectors here; test files import these alongside the helpers.
+ * Helpers stay independent of this file so they can be reused in other apps.
+ * Add selectors when a test needs them, grouped by the R file that creates the element.
  *
  * Usage:
  *   const { PAGES, SELECTORS } = require('./app-config');

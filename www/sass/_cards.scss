@@ -147,8 +147,8 @@
         margin-bottom: 0;
     }
 
-    // Inner link/container (holds Name, Age, Size)
-    // The clickable flavour is a native <button> (input_button): strip its chrome
+    // Row content (name, age, size). Clickable rows use input_button().
+    // Remove the button's default appearance so it looks like the rest of the row.
     .dataset-row-link,
     button.dataset-row-link {
         display: grid;
@@ -174,7 +174,7 @@
         }
     }
 
-    // Hover effect applied to the whole row when the link is hovered
+    // Highlight the whole row when its selection button is hovered.
     &:has(.clickable:hover),
     &:has(.clickable:focus) {
         background: $white;
@@ -182,7 +182,7 @@
         box-shadow: $shadow-sm;
     }
 
-    // Fallback hover for older browsers or if :has isn't supported perfectly
+    // Also highlight on row hover, including in browsers without :has().
     &:hover {
         background: $white;
         border-color: $primary;

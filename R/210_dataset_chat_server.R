@@ -1,7 +1,5 @@
-# Dataset assistant server: one shinychat chat bound to the Explore page's
-# current dataset. shinychat owns the streaming loop, the Stop button and the
-# tool/thinking display; this module only rebinds the client when the dataset
-# changes and keeps the running SQL query cancellable.
+# Connect the Explore page's selected dataset to shinychat.
+# shinychat displays and streams replies. This module switches datasets and cancels running SQL queries.
 #
 # @param dataset Reactive: the dataset row (NULL when nothing is selected)
 # @param data Reactive: the parsed data.frame (NULL when nothing is selected)
@@ -9,7 +7,7 @@ dataset_chat_server <- function(id, dataset, data) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
-        # Shared with the tool closures: in-flight mirai + per-turn call counter
+        # The query tool also uses this environment to track its worker and calls per question.
         state <- new.env(parent = emptyenv())
         state$tool_calls <- 0L
         state$query <- NULL
@@ -28,9 +26,8 @@ dataset_chat_server <- function(id, dataset, data) {
 
         # ------ REACTIVE ------------------------------------------------------
 
-        # Target snapshot, applied by the observer below. Indirection needed
-        # because chat$clear() aborts while a response streams and set_client()
-        # silently defers the swap: both must wait for an idle chat.
+        # Keep the requested dataset here until the current reply ends.
+        # clear() aborts during streaming and set_client() defers the change, so wait until both can run.
         pending <- reactiveVal(NULL)
 
         observeEvent(

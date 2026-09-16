@@ -27,7 +27,7 @@ dataset_chat_ui <- function(id) {
         title = div(
             class = "d-flex align-items-center gap-2",
             tags$span(class = "i18n", `data-key` = "Dataset assistant", tr("Dataset assistant")),
-            # Attributes cannot carry the i18n span markup tr() returns at UI build time: plain English
+            # tr() returns HTML during UI construction, which would show as text in attributes. Use English here.
             tags$span(
                 class = "text-muted",
                 title = paste0("[", chat_provider_label(), "] ", getOption("chat_model")),

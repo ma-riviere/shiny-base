@@ -56,7 +56,7 @@ test.describe.serial('Workflow: Dataset and Model', () => {
         const row = sharedPage.locator('.dataset-row').filter({ hasText: datasetName }).first();
         await expect(row).toBeVisible();
 
-        // Click the link part
+        // Click the dataset selection button, separate from its edit/download/delete buttons.
         await row.locator('.dataset-row-link').click();
         await waitForShiny(sharedPage);
         await waitForWaiterHide(sharedPage).catch(() => { });

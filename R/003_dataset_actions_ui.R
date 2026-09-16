@@ -1,13 +1,8 @@
-# Dataset row rendering + shared action UI ("one observer for all rows" pattern)
-#
-# dataset_row_ui() renders a row straight from data (no per-row module): every
-# button targets the SAME input of the hosting page's dataset_actions module
-# instance (see input_button() in helpers_inputs.R and the delegated click
-# handler in www/js/app.js), carrying the dataset id. Same architecture as the
-# saved-models picker.
+# Render dataset rows without creating a server module for each row.
+# Each action sends the dataset ID to the page's shared handler (dataset_actions_server()).
+# input_button() and www/js/app.js connect the buttons to those inputs, as in the model picker.
 
-# Hidden download anchor backing the single downloadHandler of
-# dataset_actions_server() (per-row download buttons proxy through it).
+# Downloads use one hidden link per page. Row buttons choose the dataset, then click this link.
 dataset_actions_ui <- function(id) {
     ns <- NS(id)
     return(shinyjs::hidden(downloadLink(ns("download_file"), label = NULL)))

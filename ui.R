@@ -16,11 +16,9 @@ ui <- function(request) {
             underline = FALSE
         ),
         header = tagList(
-            # Serve js-cookie same-origin: cookies::cookie_dependency() declares it
-            # with a CDN href that the CSP blocks (no Cookies global -> no cookie
-            # input -> app init hangs). htmltools dedupes by name, highest version
-            # wins, so this file-based copy (shipped in the cookies package)
-            # replaces the CDN one.
+            # Serve the cookies package's bundled js-cookie file from the app.
+            # Its default CDN URL is blocked by our CSP; without it, cookie inputs never reach R and startup waits.
+            # htmltools keeps the highest version for each dependency name, so this replaces the CDN dependency.
             htmltools::htmlDependency(
                 name = "js-cookie",
                 version = "3.0.1.9000",

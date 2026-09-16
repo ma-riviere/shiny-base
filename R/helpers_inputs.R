@@ -1,29 +1,18 @@
-# Generic dynamic-interactivity helpers shared across modules.
+# Buttons shared by the dataset rows and saved-model picker.
 
-# Build a <button> wired to the app-wide delegated click handler (www/js/app.js):
-# clicking it sets the input named by `data-shiny-input` to `data-shiny-value`.
-# The attributes mirror the `Shiny.setInputValue(input, value, { priority })`
-# call the handler makes.
+# Every row sends its ID to the same Shiny input, so one observer handles all rows.
+# www/js/app.js listens for clicks and passes these data attributes to Shiny.setInputValue().
 #
-# Core of the "one observer for all rows" pattern: every row's button targets
-# the SAME input id; the value identifies the clicked row, so a single
-# observeEvent handles them all.
+# Two uses:
+#   - Selection (event = FALSE): repeated clicks on the same row do nothing.
+#     Shiny saves/restores the selected ID as a normal input.
+#   - Action (event = TRUE): priority: 'event' sends every click, including repeats
+#     on the same row (edit, delete, ...). Exclude these inputs from bookmarks.
 #
-# Two flavours:
-#   - event = FALSE (default): stable SELECTION. Sets the bare value, which
-#     Shiny deduplicates (re-setting to the same value is a no-op). It behaves
-#     like any input and is bookmark-restorable. Read `input$<id>`.
-#   - event = TRUE: repeatable ACTION. Sets `data-shiny-priority="event"`, so
-#     the value is sent with `priority: 'event'` and the handler fires on every
-#     click - even repeats of the same row (delete, edit, ...). Exclude from
-#     bookmarks.
-#
-# A native <button> gives Enter/Space activation, focus, and the button role
-# for free (no role/tabindex/onkeydown wiring), and htmltools escapes every
-# attribute, so ids/values/titles are injection-safe (unlike inline onclick
-# strings). Server side, match the value with `as.character()` against the ids:
-# it arrives as a string, and `as.integer()` warns on malformed input (fatal
-# under shinytest2's `warn = 2`).
+# A native button supports keyboard focus and Enter/Space without extra JS.
+# htmltools escapes attribute values, so names and IDs cannot become HTML or JS.
+# The ID reaches R as a string: match it against as.character(ids) from the server's data.
+# as.integer() would warn on malformed input, which fails tests under shinytest2's warn = 2.
 #
 # @param input_id Namespaced input id (use `ns("...")`).
 # @param value Row identifier, usually the primary key (scalar).

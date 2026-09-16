@@ -1,6 +1,6 @@
-# In containers (IN_CONTAINER set by the docker-shiny base images) the library is
-# already restored into R_LIBS_SITE: renv activation would shadow it with an empty
-# project library. Locally, dev sessions activate the renv dev profile as usual.
+# Containers already have their packages in R_LIBS_SITE (IN_CONTAINER comes from the base image).
+# Activating renv there would hide that library behind an empty project library.
+# Local sessions use the dev renv profile.
 if (!nzchar(Sys.getenv("IN_CONTAINER"))) {
     source("r-utils/init.R")
     source("renv/activate.R")

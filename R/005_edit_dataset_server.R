@@ -1,7 +1,6 @@
-# Edit dataset server module (handles rename modal logic)
-# Returns an `open(dataset_id, dataset_name)` callback that shows the modal:
-# callers (the dataset_actions instances) invoke it directly, so there is no
-# trigger/payload indirection and re-editing the same dataset just works.
+# Own the rename modal and return open(dataset_id, dataset_name) for other modules to call.
+# server.R passes this callback to the dataset actions. Each call opens the modal,
+# including repeated edits of the same dataset (a reactiveVal would ignore an unchanged ID).
 edit_dataset_server <- function(id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns

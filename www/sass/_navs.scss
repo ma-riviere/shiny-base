@@ -1,8 +1,7 @@
 // Navigation components
 
-// Tabs inside cards (bslib::navset_card_tab)
-// We transform the default "folder tab" look into a modern "underline" style
-// This feels cleaner and more premium
+// Tabs inside cards (bslib::navset_card_tab).
+// Underline the active tab; use one shared border below the tab row.
 .card {
     .card-header {
         background-color: $white;

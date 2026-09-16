@@ -1,6 +1,5 @@
-# Model page server module
-# Handles async model fitting (a successful fit is saved immediately,
-# feature parity with plumber2-base) and deletion.
+# Fit models in a worker, save successful fits immediately, and load/delete saved models.
+# As in plumber2-base, fitting also saves: there is no separate Save action.
 #
 # @param selected_dataset_id reactiveVal for currently selected dataset ID (read-only here)
 # @param active_page Reactive for the currently active nav page
@@ -22,9 +21,8 @@ model_server <- function(
             fitted_model = NULL,
             metrics = NULL,
             loaded_model_id = NULL, # Track if current model is saved (for delete)
-            # Formula string + dataset id captured at fit-click time: the async
-            # result must not be saved against a dataset selected mid-fit, and
-            # the equation input may have been edited while the task ran.
+            # Keep the equation and dataset from the click: either input can change while fitting.
+            # Save with the original equation, and discard results if the dataset has changed.
             fit_request = NULL
         )
 
@@ -317,15 +315,11 @@ model_server <- function(
         })
 
         # ------ SAVED MODELS PICKER -------------------------------------------
-        # Compact click-to-select list (rendered into the sidebar) of this
-        # dataset's saved models. Demonstrates the "one observer for all rows"
-        # pattern (see input_button() in helpers_inputs.R) with two flavours:
-        #   - Select: clicking a row sets a STABLE value input (`selected_model`),
-        #             deduplicated, so the selection bookmarks/restores like any input.
-        #   - Delete: a per-row ACTION button (`model_action_delete`, priority
-        #             'event', so repeat clicks re-fire). It sits OUTSIDE the
-        #             clickable area (sibling, not child), so clicking it does
-        #             not select; bookmark-excluded.
+        # Show this dataset's saved models in the sidebar, using input_button() for each row.
+        # Selection sets selected_model, a normal input saved in bookmarks.
+        # Delete sends model_action_delete with priority: 'event', so repeated clicks still fire.
+        # Its button is outside the selection button, so deleting a row does not also select it.
+        # Exclude delete events from bookmarks to avoid replaying an action on restore.
 
         output$saved_models <- renderUI({
             req(has_data())
@@ -370,8 +364,7 @@ model_server <- function(
             !is.na(model_id) && isTRUE(model_id %in% user_models()$id)
         }
 
-        # Select a model when its row is clicked. `selected_model` is a stable
-        # value input; setting the shared state lets model_load_saved load it.
+        # Set the module's selected ID; the selection observer loads the model.
         observeEvent(input$selected_model, label = "model_table_select", {
             req(nzchar(input$selected_model))
             model_id <- as.integer(input$selected_model)
@@ -379,9 +372,8 @@ model_server <- function(
             selected_model_id(model_id)
         })
 
-        # Keep the bookmarkable `selected_model` input in sync with the shared
-        # state, so the selection survives bookmarking no matter how it changed
-        # (row click, save, fit, delete, restore).
+        # Copy the module's selection to an input so disconnect bookmarks can save it.
+        # This also covers changes from fitting, deleting or restoring a model.
         observeEvent(
             selected_model_id(),
             ignoreNULL = FALSE,
@@ -396,9 +388,8 @@ model_server <- function(
             }
         )
 
-        # Restore the bookmarked selection once the dataset's data is available.
-        # The selection lives in a shared reactiveVal (not a native input), so on
-        # restore we seed it from the captured bookmark (mirrors the dataset path).
+        # Once the dataset is loaded, copy the bookmarked input into the module's selected ID.
+        # Do this once: later selections come from user actions.
         observeEvent(values$data, label = "model_restore_selection", once = TRUE, {
             restored <- get_restored_input("selected_model")
             req(!is.null(restored), is.null(selected_model_id()))

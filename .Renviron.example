@@ -26,10 +26,9 @@ AUTH0_APP_URL=http://localhost:9090
 # AUTH0_MGMT_CLIENT_ID=
 # AUTH0_MGMT_CLIENT_SECRET=
 
-# Auth bypass (read by auth0r::auth0_disabled(), case-insensitive "true").
-# Uncomment to run the app locally without Auth0. Never pin it to false:
-# .Renviron overrides the process env, and shinytest2/CI enable the bypass
-# through the environment and rely on the app subprocess inheriting it.
+# Uncomment to skip Auth0 locally (auth0r accepts "true" case-insensitively).
+# Leave this unset rather than setting false: .Renviron overrides inherited environment variables.
+# shinytest2/CI pass AUTH0_DISABLE=true to the app process through that environment.
 # AUTH0_DISABLE=true
 # Roles granted to the bypass session (comma-separated)
 DEV_ROLES=admin

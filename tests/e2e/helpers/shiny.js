@@ -1,7 +1,7 @@
 /**
  * Shiny-specific helpers for E2E tests.
  *
- * Provides utilities for waiting on Shiny's reactive system and UI states.
+ * Wait for connections, loading overlays and modal changes; read or set Shiny inputs.
  *
  * Usage:
  *   const { waitForShiny, waitForReactivity } = require('./helpers/shiny');
@@ -9,8 +9,8 @@
  */
 
 /**
- * Wait for Shiny app to be fully loaded and connected.
- * Checks for Shiny object and shiny:connected event.
+ * Wait until Shiny reports an active connection.
+ * This does not check whether outputs have finished rendering.
  * @param {Page} page - Playwright page
  * @param {number} timeout - Max wait time in ms (default: 15000)
  */
@@ -22,8 +22,8 @@ async function waitForShiny(page, timeout = 15000) {
 }
 
 /**
- * Wait for Shiny reactivity to settle after an action.
- * Waits for network idle + a short buffer for reactive chain completion.
+ * Wait for network idle, then allow a short delay for Shiny updates.
+ * This is a fixed wait, not proof that all reactive work has finished.
  * @param {Page} page - Playwright page
  * @param {number} buffer - Additional wait after networkidle (default: 500ms)
  */

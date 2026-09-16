@@ -1,7 +1,5 @@
-# Dataset CRUD operations
-#
-# App-specific database operations for the datasets table.
-# Base operations (users, sessions, bookmarks) are in shinyutils package.
+# Read and write this app's datasets and models.
+# shinyutils handles users, sessions and bookmarks.
 
 # Get all datasets for a user (metadata only, no data column)
 # Supports pagination with limit and offset parameters.
@@ -11,8 +9,8 @@
 # @param offset Number of records to skip (default: 0)
 # @return Data frame with dataset metadata (id, user_id, name, row_count, col_count, created_at, updated_at)
 db_get_user_datasets <- function(user_id, limit = NULL, offset = 0) {
-    # Dimensions are persisted (n_rows/n_cols, kept by every writer of the
-    # shared datasets table), so the data blob is never fetched or parsed here.
+    # Read the stored dimensions (n_rows/n_cols) instead of fetching and parsing the full dataset.
+    # Both apps must update these columns whenever they write data.
     query <- dplyr::tbl(db_pool, "datasets") |>
         dplyr::filter(user_id == !!user_id) |>
         dplyr::select(id, user_id, name, row_count = n_rows, col_count = n_cols, created_at, updated_at) |>
@@ -40,7 +38,7 @@ db_get_user_datasets_count <- function(user_id) {
     as.integer(result$count)
 }
 
-# Get a single dataset with full data (scoped to the owning user - prevents IDOR)
+# Get a single dataset with full data (filtered by owner so another user cannot access it)
 db_get_dataset <- function(dataset_id, user_id) {
     result <- dplyr::tbl(db_pool, "datasets") |>
         dplyr::filter(id == !!dataset_id, user_id == !!user_id) |>
@@ -51,13 +49,11 @@ db_get_dataset <- function(dataset_id, user_id) {
     return(result[1, ])
 }
 
-# yyjsonr drops data.frame rownames on write (jsonlite emitted them as a "_row"
-# string field per row object and restores it on parse). Keep meaningful
-# rownames through the same jsonlite-compatible field: injected into the
-# serialized rows ONLY - never listed in `columns`, never counted in n_cols -
-# and restored to real rownames on read. Numeric-looking rownames (subset
-# leftovers like "3", "5") are noise and are not persisted.
-# SYNC CONTRACT: mirrored in plumber2-base back/R/datasets.R (shared datasets).
+# Preserve meaningful rownames when saving JSON: yyjsonr drops them by default.
+# Store them as a _row field in each row, then restore them when reading.
+# This matches jsonlite's format; _row is neither a dataset column nor part of n_cols.
+# Skip numeric-looking rownames (e.g. "3", "5" left after subsetting).
+# Keep this format in sync with plumber2-base's back/R/datasets.R: both apps read the same data.
 inject_rownames <- function(df) {
     if (.row_names_info(df) <= 0L) {
         return(df)
@@ -80,10 +76,8 @@ restore_rownames <- function(df) {
 
 # Create a new dataset. Returns number of rows affected (1 on success).
 db_create_dataset <- function(user_id, name, data_df, description = NULL) {
-    # {columns, rows} envelope (parity with plumber2-base, which reads the same
-    # shared table): jsonb normalizes OBJECT key order, so the column order
-    # must ride in an array, which jsonb preserves. Rownames ride inside the
-    # row objects as "_row" (inject_rownames above).
+    # Store column order separately: Postgres jsonb reorders object keys but preserves arrays.
+    # Both apps read this {columns, rows} format. Each row may also carry _row for its rowname.
     data_json <- yyjsonr::write_json_str(list(columns = names(data_df), rows = inject_rownames(data_df)))
 
     db_execute(
@@ -99,7 +93,7 @@ db_create_dataset <- function(user_id, name, data_df, description = NULL) {
     )
 }
 
-# Update a dataset name by ID (scoped to the owning user - prevents IDOR)
+# Update a dataset name by ID (filtered by owner so another user cannot access it)
 db_update_dataset_name <- function(dataset_id, new_name, user_id) {
     db_execute(
         "UPDATE datasets SET name = {new_name} WHERE id = {dataset_id} AND user_id = {user_id}",
@@ -109,7 +103,7 @@ db_update_dataset_name <- function(dataset_id, new_name, user_id) {
     )
 }
 
-# Delete a dataset by ID (also deletes linked models; scoped to the owning user - prevents IDOR)
+# Delete a dataset by ID (also deletes linked models; filtered by owner so another user cannot access it)
 db_delete_dataset <- function(dataset_id, user_id) {
     # Delete linked models first (manual cascade - SQLite PRAGMA foreign_keys doesn't persist across pool connections)
     db_execute(
@@ -124,9 +118,9 @@ db_delete_dataset <- function(dataset_id, user_id) {
     )
 }
 
-# Parse dataset JSON data back to a data frame, restoring column order from the
-# {columns, rows} envelope. Wrapped-shape check first: yyjsonr promotes the
-# wrapper object itself to a data.frame whose $rows holds the real data.
+# Restore data and column order from the saved {columns, rows} object.
+# Check those fields first: yyjsonr can turn the outer object into a data.frame too.
+# In that case, its rows field still contains the actual dataset.
 db_parse_dataset_data <- function(data_json) {
     parsed <- yyjsonr::read_json_str(data_json)
     if (!is.null(parsed$columns) && !is.null(parsed$rows)) {
@@ -151,10 +145,10 @@ db_get_models_for_dataset <- function(user_id, dataset_id) {
         dplyr::collect()
 }
 
-# Get a single model with full blob (scoped to the owning user - prevents IDOR)
+# Get a single model with full blob (filtered by owner so another user cannot access it)
 #
 # @param model_id Model ID
-# @param user_id User ID (authoritative owner filter)
+# @param user_id User ID used to check ownership
 # @return Single row data frame or NULL if not found
 db_get_model <- function(model_id, user_id) {
     result <- dplyr::tbl(db_pool, "models") |>
@@ -175,9 +169,8 @@ db_get_model <- function(model_id, user_id) {
 # @param metrics Named list of fit metrics (stored as JSON, parity with plumber2-base)
 # @return Model ID (new or existing)
 db_upsert_model <- function(user_id, dataset_id, formula, model_obj, metrics) {
-    # Verify the dataset belongs to this user before attaching a model to it.
-    # dataset_id comes from client-settable shared UI state, so this closes the
-    # write-side IDOR (a user saving a model against another user's dataset).
+    # Check ownership before saving: the browser can change dataset_id directly.
+    # Without this check, a user could attach a model to someone else's dataset.
     owns <- db_query(
         "SELECT 1 AS ok FROM datasets WHERE id = {dataset_id} AND user_id = {user_id}",
         dataset_id = dataset_id,
@@ -194,9 +187,9 @@ db_upsert_model <- function(user_id, dataset_id, formula, model_obj, metrics) {
     model_blob <- serialize(model_obj, NULL)
     metrics_json <- yyjsonr::write_json_str(metrics, auto_unbox = TRUE)
 
-    # Atomic upsert: the models table is shared with plumber2-base, so a
-    # check-then-insert would race with a concurrent writer. ON CONFLICT +
-    # RETURNING work on both PostgreSQL and SQLite (>= 3.35).
+    # Insert or update in one statement: both apps may save the same formula at the same time.
+    # A separate existence check followed by an insert could create a conflict.
+    # ON CONFLICT + RETURNING works in Postgres and SQLite >= 3.35.
     result <- db_query(
         "INSERT INTO models (user_id, dataset_id, formula, metrics, model_blob)
          VALUES ({user_id}, {dataset_id}, {formula}, {metrics_json}, {model_blob})
@@ -213,7 +206,7 @@ db_upsert_model <- function(user_id, dataset_id, formula, model_obj, metrics) {
     return(result$id[1])
 }
 
-# Delete a model by ID (scoped to the owning user - prevents IDOR)
+# Delete a model by ID (filtered by owner so another user cannot access it)
 db_delete_model <- function(model_id, user_id) {
     db_execute(
         "DELETE FROM models WHERE id = {model_id} AND user_id = {user_id}",
@@ -222,13 +215,11 @@ db_delete_model <- function(model_id, user_id) {
     )
 }
 
-# Deserialize model blob back to R object.
-# Trust boundary: unserialize() of attacker-controlled bytes can execute code via
-# S4/refclass dispatch. models.model_blob now lives in the shared schema with TWO
-# writers (this app and plumber2-base) — both same-owner, same trust domain, and
-# db_get_model() stays user-scoped, so this remains an accepted risk. If any less
-# trusted writer ever gains access (import feature, third app), add an HMAC over
-# the blob and verify it here before unserialize(). See SECURITY.md P3-4.
+# Rebuild the saved R model. Only deserialize blobs written by trusted code: R object
+# reconstruction can execute code through S4/reference-class methods.
+# Both this app and plumber2-base write models; we trust both and filter reads by user.
+# If imports or another writer are added, authenticate blobs before unserialize(),
+# e.g. with an HMAC (a signature made with a secret key).
 db_unserialize_model <- function(model_blob) {
     unserialize(model_blob)
 }

@@ -1,10 +1,8 @@
 # Model module helper functions
 
-# bslib 0.11.0's update_toolbar_input_button() warns "Consider providing a
-# non-empty string label" on EVERY call where label is NULL, i.e. the normal
-# "keep the current label" case. Under options(warn = 2) (shinytest2 setup)
-# that warning becomes a session-killing error. Muffle that specific spurious
-# warning until it is fixed upstream; everything else passes through.
+# Keep toolbar updates working under shinytest2's options(warn = 2).
+# bslib 0.11.0 warns when label = NULL, even though that means "keep the current label".
+# Suppress only its "non-empty string label" warning; other warnings still pass through.
 update_toolbar_button <- function(...) {
     withCallingHandlers(
         bslib::update_toolbar_input_button(...),
@@ -28,12 +26,10 @@ model_compute_metrics <- function(model) {
     )
 }
 
-# Async model fitting task body (runs in mirai subprocess)
-# `formula` MUST be the object returned by validate_formula() (helpers_formula.R),
-# never a raw string: lm() executes code from the formula during model.frame().
-# The validated object is bound to a minimal environment that travels with it
-# into the subprocess, so nothing dangerous can resolve at fit time.
-# Returns list with success/failure and model/metrics or error info
+# Fit in a mirai worker so other sessions and this page remain responsive.
+# Pass the formula from validate_formula() (helpers_formula.R): lm() can execute formula code.
+# Validation restricts the allowed expressions; the formula's environment travels with it to the worker.
+# Return success plus the model/metrics, or failure plus the error details.
 model_fit_task <- function(data, formula, log_fn, metrics_fn) {
     tryCatch(
         {
@@ -119,10 +115,8 @@ model_load_saved <- function(model_id, user_id, session, values, data = NULL, si
         {
             loaded_model <- db_unserialize_model(blob_data[[1]])
 
-            # axe_env() stripped the terms environment to baseenv(), where stats
-            # functions (e.g. poly) don't resolve and predict() fails; rebind the
-            # minimal formula env (helpers_formula.R), which holds exactly the
-            # functions a validated formula can reference.
+            # axe_env() leaves baseenv(), which cannot find stats::poly() when predict() evaluates the formula.
+            # Restore the environment used by validated formulas before calculating fitted values.
             environment(loaded_model$terms) <- formula_environment()
 
             # Restore fitted.values for summary() - axe_fitted removes these

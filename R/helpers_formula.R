@@ -1,11 +1,7 @@
-# Formula safety (CRITICAL): R formulas execute code during model.frame(), so
-# `y ~ x + system('...')` in the equation box is arbitrary code execution. Raw
-# user input is NEVER passed to as.formula(). validate_formula() parses the
-# string with str2lang() and walks the AST against a strict allowlist (dataset
-# columns, numeric literals, formula/arithmetic operators, a tiny function
-# whitelist), then builds the formula inside a minimal environment that contains
-# ONLY the whitelisted functions, so even a bug elsewhere cannot resolve
-# anything dangerous at fit time.
+# Check equation text before building a formula: model.frame() can execute formula code.
+# E.g. y ~ x + system('...') would run a command during fitting.
+# Parse the expression and check every part against allowed columns, numbers and functions.
+# Only then build the formula, with an environment that supplies the approved functions.
 # Ported from plumber-base (base-back/R/formula_safety.R).
 
 FORMULA_ALLOWED_CALLS <- c("~", "+", "-", "*", ":", "^", "(", "I", "log", "sqrt", "poly")
@@ -56,7 +52,7 @@ check_formula_node <- function(node, column_names) {
         }
         for (i in seq_along(node)[-1]) {
             # An empty arg (e.g. `poly(x,,2)`) is the empty symbol: it fails the
-            # column check below with a clear message.
+            # column-name check in the recursive call.
             check_formula_node(node[[i]], column_names)
         }
         return(invisible())
@@ -64,14 +60,11 @@ check_formula_node <- function(node, column_names) {
     stop("disallowed element in formula", call. = FALSE)
 }
 
-# Minimal evaluation environment for the formula. The whitelisted functions are
-# bound directly; the parent is baseenv() (NOT emptyenv()) because
-# model.frame() evaluates its predvars call - `list(col1, col2, ...)` - with
-# this environment as the enclosure, so plain base functions must resolve or
-# every fit fails with "could not find function 'list'". The AST allowlist
-# above is the actual security control (nothing non-whitelisted survives
-# validation); this environment only guarantees that package functions and
-# globals can never be resolved from a formula.
+# Give validated formulas access to their approved functions, including stats::poly().
+# Use baseenv() as the parent: model.frame() also needs base functions such as list().
+# With emptyenv(), every fit fails with "could not find function 'list'".
+# The expression allowlist above is the security check. This environment keeps app globals
+# and attached packages out of formula lookup, but still exposes base functions.
 formula_environment <- function() {
     env <- new.env(parent = baseenv())
     for (fn in setdiff(FORMULA_ALLOWED_CALLS, "poly")) {

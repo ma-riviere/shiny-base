@@ -50,9 +50,7 @@ server <- function(input, output, session) {
         "admin-auth0-roles-confirm_add_role",
         "admin-auth0-roles-delete_role",
         "admin-auth0-roles-confirm_delete_role",
-        # Model table delete button (side-effecting event-priority input).
-        # Note: "model-selected_model" is intentionally NOT excluded - it carries
-        # the model selection and must bookmark/restore like a normal input.
+        # Never replay a delete on restore. Keep model-selected_model so the selected model does restore.
         "model-model_action_delete",
         # Dataset row inputs (side-effecting event-priority inputs; the selection
         # itself bookmarks via the sidebar's dataset select input)
@@ -68,10 +66,8 @@ server <- function(input, output, session) {
         # Rename modal inputs (transient, modal not open on restore)
         "edit_dataset-new_dataset_name",
         "edit_dataset-confirm_rename",
-        # Dataset assistant (210_dataset_chat): widget buttons + panel state, and
-        # every input shinychat 0.5.0 creates (a restored user_input would re-send
-        # the prompt). Exact names here; the disconnect save below also drops the
-        # whole namespace by prefix, which covers inputs added by later versions.
+        # Exclude shinychat 0.5.0's inputs: restoring user_input would send the prompt again.
+        # The disconnect save also excludes the whole chat namespace, including inputs added by future versions.
         "explore-chat-launcher",
         "explore-chat-new_chat",
         "explore-chat-panel",
@@ -143,19 +139,17 @@ server <- function(input, output, session) {
     })
 
     # ------ BOOKMARK RESTORATION CAPTURE --------------------------------------
-    # Store entire state$input in session$userData during onRestore.
-    # Modules created later can access via: session$userData$restored_state[["ns-inputId"]] %||% default
-    # This is a general solution that works for any input without needing to enumerate them upfront.
+    # Keep restored inputs available to modules when they populate dynamic controls.
+    # onRestore runs before the modules' observers, so get_restored_input() can recover the selection
+    # before updateSelectInput() replaces it with a default.
     onRestore(function(state) {
         session$userData$restored_state <- state$input
         log_debug("[SERVER] onRestore: captured {length(state$input)} input values")
     })
 
     # ------ MODULE INITIALIZATION ---------------------------------------------
-    # auth0_server() is default-deny (auth0r >= 0.4.0): this server function
-    # only runs with validated claims, and the email-verified policy is
-    # enforced by the authorize callback at the bottom of this file. When
-    # AUTH0_DISABLE=true, the wrapper is bypassed entirely.
+    # auth0_server() verifies login before running this server; authorize below also checks email verification.
+    # AUTH0_DISABLE=true skips that wrapper for development and tests.
 
     init_modules <- function() {
         # Initialize event triggers for cross-module communication
@@ -234,7 +228,7 @@ server <- function(input, output, session) {
             active_page = reactive(input$nav)
         )
 
-        # Admin module - always instantiate but gated by req(can("view:admin")) inside
+        # Call the admin module for each session; it handles permissions and lazy loading internally.
         admin_server("admin", active_page = reactive(input$nav))
 
         # Admin nav panel visibility:
@@ -267,24 +261,20 @@ server <- function(input, output, session) {
         }) |>
             bindEvent(TRUE, once = TRUE)
     } else {
-        # Default-deny wrapper guarantees validated, authorized claims here:
-        # session$userData is populated before this server function runs, so
-        # the authenticated-user setup is ordinary synchronous initialization.
+        # auth0_server() has already validated the login and filled session$userData.
+        # Set up the user now; no observer is needed to wait for login information.
         auth0_sub <- purrr::pluck(session$userData$auth0_info, "sub")
         if (!purrr::is_empty(auth0_sub)) {
-            # This app renders profile fields from Auth0, but the shared users
-            # table is also read directly by plumber2-base (its admin panel has
-            # no Management API lookup), so the claims are mirrored on login.
+            # Copy profile fields to the shared users table for plumber2-base's admin panel.
+            # This app reads profiles from Auth0; the sibling app reads these DB columns.
             session$userData$user <- db_get_or_create_user(
                 auth0_sub,
                 email = purrr::pluck(session$userData$auth0_info, "email"),
                 nickname = purrr::pluck(session$userData$auth0_info, "nickname")
             )
 
-            # Cross-app ban enforcement: users.status lives in the shared schema,
-            # so a ban is instantly authoritative for the plumber2 API (checked on
-            # every request). This login check and the heartbeat check below are
-            # the Shiny-side equivalents, since a Shiny session is long-lived.
+            # Both apps use shared.users.status to enforce bans.
+            # Shiny checks on login and every five minutes below; plumber2 checks each request.
             if (!identical(session$userData$user$status, "active")) {
                 log_warn("[AUTH] Rejecting {auth0_sub}: account status is {session$userData$user$status}")
                 showNotification(tr("Your account has been suspended"), type = "error", duration = NULL)
@@ -461,9 +451,8 @@ server <- function(input, output, session) {
     )
 }
 
-# Default-deny: application server logic never runs without validated claims.
-# The email-verified policy lives here (app policy, not package policy); denied
-# sessions get an inert page with the display-safe reason below.
+# Require a verified email after auth0r validates login (except when the dev bypass is active).
+# A denied session shows this reason without starting the app's server logic.
 auth0r::auth0_server(
     server,
     info = auth0_config,

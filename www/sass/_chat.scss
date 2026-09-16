@@ -11,12 +11,10 @@
     box-shadow: $shadow-md;
 }
 
-// Rotating conic gradient behind the launcher (same look as plumber2-base):
-// ::after is the sharp ring sticking out past the button, ::before the blurred
-// halo. Both sit at z-index -1, so the button's own opaque background hides
-// their centers (the button must NOT create a stacking context - no
-// transform/opacity on it). Animating the angle needs @property; without it
-// (older Firefox) the gradient is simply static.
+// Rotate a gradient behind the launcher, matching plumber2-base.
+// ::after draws the outer ring; ::before blurs it. The button background covers their centers.
+// Both use z-index -1: do not add transform/opacity to the button, which would change their stacking.
+// @property lets the gradient angle animate. Browsers without support show a static gradient.
 @property --chat-glow-angle {
     syntax: "<angle>";
     initial-value: 0deg;

@@ -1,8 +1,8 @@
 /**
  * Navigation helpers for E2E tests.
  *
- * Generic helpers for bslib page_navbar navigation.
- * Works with any app using shinyutils patterns (auth0, admin panel, etc.).
+ * Select bslib navbar pages and read the active page.
+ * Selectors expect the navbar structure used by this app.
  *
  * Usage:
  *   const { navigateTo, getCurrentPage } = require('./helpers/navigation');

@@ -36,7 +36,7 @@
     }
 
     // Clickable area: fills the row (minus the delete button) and selects on click.
-    // A native <button> (input_button): strip its chrome, inherit the row's color
+    // Remove the native button appearance and use the row's text color.
     .model-picker-select {
         flex: 1 1 auto;
         min-width: 0;

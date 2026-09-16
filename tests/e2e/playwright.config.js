@@ -43,7 +43,7 @@ module.exports = defineConfig({
         navigationTimeout: 30000,
     },
 
-    // Global setup: login and save storage state
+    // Check that the app responds. Each test group handles its own login.
     globalSetup: require.resolve('./global-setup.js'),
 
     // Projects for different roles (auth handled in test beforeAll hooks)

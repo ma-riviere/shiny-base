@@ -1,6 +1,6 @@
 # Sidebar server module
 # Manages the dataset selection dropdown and home filters.
-# Model selection lives in the model page's saved-models table (300_model).
+# The model module (300_model) handles the saved-model picker shown in this sidebar.
 # Section visibility is handled by conditionalPanel in sidebar_ui.R (browser-side).
 #
 # @param selected_dataset_id reactiveVal for currently selected dataset ID (read/write)
@@ -20,7 +20,7 @@ sidebar_server <- function(id, selected_dataset_id) {
 
         # ------ SHARED STATE SYNC ---------------------------------------------
 
-        # Sync dropdown FROM shared state (when home page sets selected_dataset_id)
+        # Reflect selections made elsewhere, e.g. a dataset row clicked on Home.
         observeEvent(
             selected_dataset_id(),
             {
@@ -36,7 +36,7 @@ sidebar_server <- function(id, selected_dataset_id) {
             label = "sidebar_sync_shared_to_dropdown"
         )
 
-        # Sync dropdown TO shared state (when user changes dropdown)
+        # Share dropdown changes with the pages that use the selected dataset.
         observeEvent(
             input$selected_dataset,
             {
@@ -123,8 +123,8 @@ sidebar_server <- function(id, selected_dataset_id) {
                     # Max is always based on ALL user datasets
                     max_rows <- max(values$user_datasets$row_count, na.rm = TRUE)
 
-                    # Only reset value if this is the first load OR if max_rows actually changed
-                    # (e.g., dataset added/deleted), not when user manually adjusts the slider
+                    # Reset on first load or when the largest dataset changes.
+                    # Moving the slider must preserve the user's chosen range.
                     prev_max <- values$prev_max_rows
                     max_changed <- is.null(prev_max) || prev_max != max_rows
 

@@ -1,7 +1,6 @@
-# Bypass Auth0 (env-only since auth0r 0.4.0; inherited by the AppDriver's R
-# subprocess) and grant the admin dev role so permission-gated features stay
-# testable (auth0r no longer implies admin in bypass mode). Must be set before
-# load_app_env() runs global.R.
+# Skip login and grant admin permissions so tests can reach restricted features.
+# Set these before load_app_env() runs global.R; AppDriver's R process inherits them.
+# The bypass alone does not grant admin access.
 Sys.setenv(AUTH0_DISABLE = "true", DEV_ROLES = "admin")
 
 # Load application support files into testing environment

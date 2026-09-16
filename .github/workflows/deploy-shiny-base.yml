@@ -1,18 +1,16 @@
 name: CI/CD Pipeline
 
-# Build, test, push to GHCR, then deploy through the deploy-server contract
-# (push-compose + deploy over the forced-command SSH key; the server
-# health-gates the rollout with `docker compose up --wait`).
-# Rollback = dispatch with a previous commit SHA as image_tag: build is
-# skipped and that exact image is redeployed.
+# PRs: check formatting and test app changes. Pushes to main: also build, push to GHCR and deploy.
+# Deployment uses a restricted SSH key: upload Compose, then run the server's deploy command.
+# The server checks container health with docker compose up --wait.
 
 on:
     push:
         branches: [main]
     pull_request:
         branches: [main]
-    # Empty image_tag rebuilds and deploys HEAD (e.g. after a base-image
-    # refresh); a previous commit SHA rolls back without rebuilding.
+    # Manual runs skip tests. Empty image_tag builds the selected main commit (e.g. after a base-image update).
+    # Supply an existing image tag to redeploy it without rebuilding, including for rollback.
     workflow_dispatch:
         inputs:
             image_tag:
@@ -33,6 +31,7 @@ jobs:
             - name: Check R code formatting and syntax
               run: air format . --check
 
+    # Docs-only changes skip tests. App code, assets, dependencies and deployment changes trigger them.
     check-r-changes:
         runs-on: ubuntu-latest
         outputs:
@@ -47,7 +46,7 @@ jobs:
                   if [ "${{ github.event_name }}" == "pull_request" ]; then
                     CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
                   else
-                    # Diff the full push range, not just the last commit
+                    # Include every commit in the push. Manual runs have no before SHA; fall back to HEAD~1.
                     BEFORE="${{ github.event.before }}"
                     if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
                       BEFORE="HEAD~1"
@@ -96,10 +95,8 @@ jobs:
                     echo "has_e2e=false" >> $GITHUB_OUTPUT
                   fi
 
-            # ---- shinytest2 ----
-            # Exact dev library: clean = TRUE removes pre-warmed packages not in the
-            # lockfile so tests cannot rely on undeclared dependencies
-            # (no renv activation in containers: IN_CONTAINER is set by the test image)
+            # Match the dev lockfile; clean = TRUE removes unlisted packages from the base image's library.
+            # IN_CONTAINER skips project renv activation, so tests use this site library.
             - name: Install R test packages
               if: steps.detect-tests.outputs.has_shinytest2 == 'true'
               env:
@@ -110,10 +107,10 @@ jobs:
               if: steps.detect-tests.outputs.has_shinytest2 == 'true'
               run: |
                   echo "SHINYTEST2_APP_DRIVER_TEST_ON_CRAN=1" >> .Renviron
-                  # Absolute path: testthat resolves a relative reporter file against tests/testthat
+                  # Use an absolute path so testthat writes the report at the repo root.
                   R -e 'shinytest2::test_app(reporter = testthat::JunitReporter$new(file = file.path(getwd(), "junit_shinytest2.xml")))'
 
-            # ---- Playwright e2e ----
+            # Browser tests run against a local app with Auth0 disabled (job-level env above).
             - name: Install Node.js
               if: steps.detect-tests.outputs.has_e2e == 'true'
               uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -131,7 +128,7 @@ jobs:
               if: steps.detect-tests.outputs.has_e2e == 'true'
               run: |
                   R -e "shiny::runApp(port = 9090, launch.browser = FALSE)" &
-                  # Wait for app to be ready (max 60s)
+                  # Poll for an HTTP response for up to 60 seconds before starting browser tests.
                   for i in {1..60}; do
                     if curl -s http://localhost:9090 > /dev/null 2>&1; then
                       echo "App ready on port 9090"
@@ -146,16 +143,15 @@ jobs:
               working-directory: tests/e2e
               env:
                   CI: true
-              # Reporters come from playwright.config.js (CI: github + junit file + html);
-              # a --reporter flag here would replace them and print the XML to stdout
+              # Keep the reporters from playwright.config.js; --reporter would override the configured report files.
               run: npx playwright test
 
-            # ---- Results ----
+            # Publish reports even when a test fails.
             - name: Publish test results
               if: always()
               uses: mikepenz/action-junit-report@db71d41eb79864e25ab0337e395c352e84523afe # v4.3.1
               with:
-                  # One check per report path (same-named checks overwrite each other)
+                  # Separate check names prevent the two reports from overwriting each other.
                   report_paths: |
                       junit_shinytest2.xml
                       tests/e2e/results.xml
@@ -165,7 +161,8 @@ jobs:
                   include_passed: true
 
     build:
-        # Skipped on rollback dispatches: the requested tag already exists on GHCR.
+        # Pushes require formatting to pass and tests to pass or be skipped.
+        # Manual builds use an empty image_tag; a supplied tag skips the build. Both require main.
         if: |
             !cancelled() &&
             github.ref == 'refs/heads/main' &&
@@ -189,6 +186,7 @@ jobs:
                   registry: ghcr.io
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
+            # Tag the image with this commit's full SHA; deployment uses the same tag below.
             - name: Build and push
               env:
                   GITHUB_PAT: ${{ secrets.CICD_GITHUB_PAT }}
@@ -200,7 +198,7 @@ jobs:
                   docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
 
     deploy:
-        # Run after a successful build, or without one on rollback dispatches.
+        # Deploy a successful build, or an existing image requested manually. Main only, never PRs.
         if: |
             !cancelled() &&
             github.ref == 'refs/heads/main' &&
@@ -211,15 +209,15 @@ jobs:
             )
         needs: [build]
         runs-on: ubuntu-latest
+        # Serialize production deploys; do not interrupt one already running.
         concurrency:
             group: deploy-shiny-base-prod
             cancel-in-progress: false
         steps:
             - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-            # DEPLOY_KNOWN_HOSTS carries the host keys pinned on the trusted dev
-            # machine (deploy-server ansible/known_hosts). Never replace this with
-            # ssh-keyscan at deploy time: that trusts whoever answers on the network.
+            # Trust the saved server host keys. Do not fetch them with ssh-keyscan during deployment:
+            # that would trust whoever answers, without verifying the server's identity.
             - name: Configure SSH
               run: |
                   install -m 700 -d ~/.ssh
@@ -228,6 +226,9 @@ jobs:
                   printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
                   chmod 600 ~/.ssh/known_hosts
 
+            # Pin Compose's image tag before upload: manual image_tag if supplied, otherwise this commit's SHA.
+            # sed writes to stdout; the Compose file in the checkout stays unchanged.
+            # An older image tag still uses this workflow run's Compose file, not the old commit's file.
             - name: Push compose file
               env:
                   INPUT_TAG: ${{ inputs.image_tag }}

@@ -12,7 +12,7 @@ upload_dataset_server <- function(id) {
             parsed_files = list()
         )
 
-        # Trigger for regenerating the fileInput (workaround since shinyjs::reset doesn't work for fileInput)
+        # Rebuild fileInput to clear it: shinyjs::reset() cannot reset file inputs.
         file_input_trigger <- reactiveVal(0)
         validator_rules_added <- reactiveVal(FALSE)
         validator_enabled <- reactiveVal(FALSE)
@@ -123,7 +123,7 @@ upload_dataset_server <- function(id) {
 
         # Handle upload button click
         observeEvent(input$upload_btn, label = "upload_process", {
-            # Validation is handled by shinyvalidate, but double-check
+            # Check again on submission: a disabled button does not prevent requests from the browser.
             if (!iv$is_valid() || length(values$parsed_files) == 0) {
                 return()
             }

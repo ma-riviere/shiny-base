@@ -1,5 +1,4 @@
-# Translation helper using shiny.i18n
-# Provides a global Translator instance and helper functions for translations
+# Language choices for the navbar and profile modal. shinyutils initializes the translator.
 
 # Get available languages with display names and flag emoji
 get_language_choices <- function() {

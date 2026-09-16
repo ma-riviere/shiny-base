@@ -24,9 +24,7 @@ model_ui <- function(id) {
                         `data-key` = "Model Equation",
                         tr("Model Equation")
                     ),
-                    # Fit/Delete as compact toolbar controls. A successful fit is
-                    # saved immediately (parity with plumber2-base), so there is
-                    # no separate Save button.
+                    # Fitting also saves the model, as in plumber2-base. The toolbar only needs Fit and Delete.
                     bslib::toolbar(
                         align = "right",
                         bslib::toolbar_input_button(

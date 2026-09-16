@@ -88,9 +88,8 @@ async function selectDropdown(page, id, value, options = {}) {
 async function uploadFile(page, id, filepath, options = {}) {
     const { waitForCompleted = true } = options;
 
-    // Shiny fileInput id points directly to the input[type="file"]
-    // However, sometimes it's wrapped. We try the ID directly first.
-    // Note: Playwright can handle hidden file inputs.
+    // Try the file input's ID, then a file input inside a wrapper with that ID.
+    // Playwright can upload through a hidden file input.
     const selector = `#${id}`;
 
     await page.setInputFiles(selector, filepath);
