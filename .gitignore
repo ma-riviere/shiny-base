@@ -17,6 +17,7 @@ logs/
 data/shinylogs/
 TODO.md
 NOTES*.md
+!/NOTES.md
 CLAUDE.md
 PLAN*.md
 SECURITY.md
