@@ -1,4 +1,4 @@
-upload_dataset_server <- function(id) {
+upload_dataset_modal_server <- function(id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 

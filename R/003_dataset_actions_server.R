@@ -4,13 +4,13 @@
 #
 # @param datasets Reactive data.frame of the datasets the host currently
 #   displays (validates client-supplied ids, provides names).
-# @param on_edit Callback `function(dataset_id, dataset_name)` opening the
-#   rename modal (returned by edit_dataset_server()).
+# @param edit_dataset_callback Callback `function(dataset_id, dataset_name)` opening the
+#   rename modal (returned by edit_dataset_modal_server()).
 # @param nav_select_callback Optional; navigate home after a delete (explore page).
 dataset_actions_server <- function(
     id,
     datasets,
-    on_edit,
+    edit_dataset_callback,
     nav_select_callback = NULL
 ) {
     moduleServer(id, function(input, output, session) {
@@ -34,7 +34,7 @@ dataset_actions_server <- function(
         # ------ EDIT ----------------------------------------------------------
         observeEvent(input$edit, label = ns("edit"), {
             dataset <- dataset_from_id(input$edit)
-            on_edit(dataset$id, dataset$name)
+            edit_dataset_callback(dataset$id, dataset$name)
         })
 
         # ------ DELETE --------------------------------------------------------

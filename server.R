@@ -202,8 +202,8 @@ server <- function(input, output, session) {
         })
 
         profile_modal_server("profile")
-        upload_dataset_server("upload")
-        edit_dataset_module <- edit_dataset_server("edit_dataset")
+        upload_dataset_modal_server("upload")
+        edit_dataset_modal_module <- edit_dataset_modal_server("edit_dataset")
         home_server(
             "home",
             row_count_filter = reactive(sidebar_module$row_count_filter),
@@ -212,7 +212,7 @@ server <- function(input, output, session) {
                 bslib::nav_select("nav", page, session = session)
             },
             selected_dataset_id = selected_dataset_id,
-            on_edit = edit_dataset_module$open
+            edit_dataset_callback = edit_dataset_modal_module$open
         )
         explore_server(
             "explore",
@@ -220,7 +220,7 @@ server <- function(input, output, session) {
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
             },
-            on_edit = edit_dataset_module$open
+            edit_dataset_callback = edit_dataset_modal_module$open
         )
         model_server(
             "model",

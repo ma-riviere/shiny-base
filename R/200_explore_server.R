@@ -2,7 +2,7 @@ explore_server <- function(
     id,
     selected_dataset_id = reactive(NULL),
     nav_select_callback = NULL,
-    on_edit
+    edit_dataset_callback
 ) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
@@ -69,7 +69,7 @@ explore_server <- function(
         dataset_actions_server(
             "actions",
             datasets = reactive(values$dataset),
-            on_edit = on_edit,
+            edit_dataset_callback = edit_dataset_callback,
             nav_select_callback = nav_select_callback
         )
 

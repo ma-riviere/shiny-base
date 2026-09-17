@@ -131,11 +131,11 @@ An action targets something and carries data: "open the rename modal for dataset
 Two directions:
 
 - **Parent hands its own function down.** The child asks the parent to do something only the parent can do. Navigation: the navbar belongs to the top level, so the parent passes `nav_select_callback = \(page) nav_select("nav", page)` and a child calls `nav_select_callback("explore")`.
-- **A module returns a function, the parent relays it to siblings.** The rename modal has its own module. It returns `open(dataset_id, dataset_name)`, and the parent passes it to the home & explore pages as `on_edit`.
+- **A module returns a function, the parent relays it to siblings.** The rename modal has its own module. It returns `open(dataset_id, dataset_name)`, and the parent passes it to the home & explore pages as `edit_dataset_callback`.
 
 ```r
 # Owner (edit_dataset module): return the function
-edit_dataset_server <- function(id) {
+edit_dataset_modal_server <- function(id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
         values <- reactiveValues(pending_rename_id = NULL)
@@ -157,13 +157,13 @@ edit_dataset_server <- function(id) {
 }
 
 # Parent (server.R)
-edit_dataset_module <- edit_dataset_server("edit_dataset")
-home_server("home", on_edit = edit_dataset_module$open)
-explore_server("explore", on_edit = edit_dataset_module$open)
+edit_dataset_modal_module <- edit_dataset_modal_server("edit_dataset")
+home_server("home", edit_dataset_callback = edit_dataset_modal_module$open)
+explore_server("explore", edit_dataset_callback = edit_dataset_modal_module$open)
 
 # Caller (home): an action with a payload
 observeEvent(input$edit, {
-    on_edit(dataset$id, dataset$name)
+    edit_dataset_callback(dataset$id, dataset$name)
 })
 ```
 

@@ -2,14 +2,14 @@
 # Displays dataset list with filtering and handles dataset row clicks.
 #
 # @param selected_dataset_id reactiveVal for selected dataset ID (write on row click)
-# @param on_edit Callback opening the rename modal (forwarded to dataset_actions)
+# @param edit_dataset_callback Callback opening the rename modal (forwarded to dataset_actions)
 home_server <- function(
     id,
     row_count_filter = reactive(c(0, 100000)),
     age_filter = reactive(c(Sys.Date() - 365, Sys.Date())),
     nav_select_callback = NULL,
     selected_dataset_id,
-    on_edit
+    edit_dataset_callback
 ) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
@@ -73,7 +73,7 @@ home_server <- function(
         dataset_actions_server(
             "actions",
             datasets = reactive(values$datasets),
-            on_edit = on_edit
+            edit_dataset_callback = edit_dataset_callback
         )
 
         # Row click (single observer for all rows): select the dataset and
