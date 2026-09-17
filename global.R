@@ -123,6 +123,9 @@ i18n <- shinyutils::init_i18n("data/translations.json")
 # ------ BOOKMARKS -------------------------------------------------------------
 
 enableBookmarking(store = "server")
+# Store every state as <bookmark_dir>/<state_id>/, also under Shiny Server (whose own layout nests states
+# under <bookmark_state_dir>/<user>/<app>-<md5>/, where the disconnect save and the cleanup never look).
+shinyutils::use_bookmark_dir()
 
 # Run cleanup on startup
 shinyutils::bookmark_cleanup()

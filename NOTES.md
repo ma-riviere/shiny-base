@@ -620,7 +620,7 @@ The admin panel's Users tab has a ban toggle per user card (needs `manage:admin:
 
 ### Bookmarking with Auth0
 
-We use server-side bookmarking (`enableBookmarking(store = "server")`). The state is a folder `shiny_bookmarks/<state_id>/input.rds`, the URL carries its ID (`?_state_id_=<id>`).
+We use server-side bookmarking (`enableBookmarking(store = "server")`). The state is a folder `shiny_bookmarks/<state_id>/input.rds`, the URL carries its ID (`?_state_id_=<id>`). `shinyutils::use_bookmark_dir()` (global.R) makes Shiny itself read and write that layout everywhere: Shiny Server would otherwise nest states under `<bookmark_state_dir>/<user>/<app>-<hash>/`, where neither the disconnect save nor the cleanup look, so the "Welcome back" restore failed in production with "Session <id> not found" and the cleanup deleted every button-saved bookmark.
 
 **Why not URL bookmarking:** Auth0 will not preserve the app's query string, so whatever must survive the login round-trip has to be stashed in the login cookie and re-appended on the handoff redirect. That cookie is capped at 4KB, which makes it incompatible with storing complex app state. Furthermore, saving the current state on disconnect and offering to restore it when the user logs back in requires server-side persistence.
 
@@ -784,7 +784,7 @@ The healthcheck uses `HEAD /`: checks that Shiny Server responds, without starti
 
 ### Shiny Server in the container
 
-ONE R process for the app (aside from mirai/ExtendedTask), with 25 concurrent sessions max (`simple_scheduler 25`, 503 beyond). `app_idle_timeout 600` kills the process 10 min after the last user leaves. `bookmark_state_dir` specifies the bind-mounted folder for server bookmarks.
+ONE R process for the app (aside from mirai/ExtendedTask), with 25 concurrent sessions max (`simple_scheduler 25`, 503 beyond). `app_idle_timeout 600` kills the process 10 min after the last user leaves. `bookmark_state_dir` only switches Shiny Server's bookmarking support on; the app writes its states to the bind-mounted `shiny_bookmarks` folder itself (cf. "Bookmarking with Auth0"), so that directive points to a folder outside the app.
 
 > TODO: switch to `runApp()` since its one app per container? Traefik + Docker already handle routing and restarts. No more env-to-`.Renviron` environment-copying workaround, and xtail log-forwarding to docker logs. And we don't really need a connection limit & idling. But needs updated/new base images.
 
