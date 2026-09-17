@@ -3753,7 +3753,7 @@
     },
     "shinyutils": {
       "Package": "shinyutils",
-      "Version": "0.4.3",
+      "Version": "0.4.4",
       "Source": "GitHub",
       "Title": "Reusable Utilities for Shiny Applications",
       "Authors@R": "person(\"Marc-Aurele\", \"Riviere\", email = \"ma@riviere.io\", role = c(\"aut\", \"cre\"))",
@@ -3806,7 +3806,7 @@
       "RemoteUsername": "ma-riviere",
       "RemotePkgRef": "ma-riviere/shinyutils",
       "RemoteRef": "HEAD",
-      "RemoteSha": "2ebc8ea6b769b11f295089fcd88f772d6d5d1faa",
+      "RemoteSha": "54be23236be3c87000a45033e3c567601ba712d5",
       "NeedsCompilation": "no",
       "Author": "Marc-Aurele Riviere [aut, cre]",
       "Maintainer": "Marc-Aurele Riviere <ma@riviere.io>",

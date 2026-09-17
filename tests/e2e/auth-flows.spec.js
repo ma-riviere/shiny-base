@@ -127,6 +127,53 @@ test.describe('Auth0 flows', () => {
         await ctx2.close();
     });
 
+    test('the Welcome back restore survives the disconnect save of the offering session', async ({ browser }) => {
+        // Session 1: log in, navigate to explore, disconnect (bookmark A).
+        const sessionStart = Date.now();
+        const ctx1 = await browser.newContext();
+        const page1 = await ctx1.newPage();
+        await login(page1, { role: 'dev' });
+        await waitForWaiterHide(page1);
+        await navigateTo(page1, PAGES.EXPLORE);
+        await ctx1.close();
+        const bookmarkId = await waitForBookmarkOnPage(sessionStart, PAGES.EXPLORE);
+
+        // Session 2: a fresh login is offered A (not an older bookmark left by previous runs).
+        // Clicking Restore navigates this tab, which closes session 2 and fires ITS disconnect
+        // save; that save must not delete A.
+        const ctx2 = await browser.newContext();
+        const page2 = await ctx2.newPage();
+        await login(page2, { role: 'dev' });
+        await waitForWaiterHide(page2);
+        const restoreLink = page2.locator('#bookmark-restore a.btn');
+        await expect(restoreLink).toBeVisible({ timeout: 15000 });
+        expect(await restoreLink.getAttribute('href')).toContain(bookmarkId);
+        await restoreLink.click();
+
+        // The restore URL re-authenticates through Auth0: silently (SSO session, nothing to
+        // observe) or with the login form.
+        const form = page2.waitForSelector(AUTH0_USERNAME_INPUT, { timeout: 30000 }).then(() => 'form', () => null);
+        const app = page2.waitForFunction(
+            () => window.Shiny && window.Shiny.shinyapp && window.Shiny.shinyapp.isConnected(),
+            { timeout: 30000 }
+        ).then(() => 'app', () => null);
+        if (await Promise.race([form, app]) === 'form') {
+            await completeAuth0Login(page2, config.credentials.dev);
+        }
+        await waitForWaiterHide(page2);
+
+        // The nav tab alone does NOT prove the restore: static UI inputs are restored from the HTTP
+        // request, which usually wins the race against the deletion. Only the websocket-side restore
+        // (dynamic inputs, onRestore) fails, and it reports through this notification.
+        await page2.waitForTimeout(1000);
+        const notifications = await page2.evaluate(() =>
+            Array.from(document.querySelectorAll('.shiny-notification')).map(el => el.textContent).join(' | ')
+        );
+        expect(notifications).not.toContain('RestoreContext initialization');
+        expect(await getCurrentPage(page2)).toBe(PAGES.EXPLORE);
+        await ctx2.close();
+    });
+
     test('two tabs can log in concurrently', async ({ browser }) => {
         const context = await browser.newContext();
         const pageA = await context.newPage();

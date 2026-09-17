@@ -142,7 +142,10 @@ server <- function(input, output, session) {
         user <- db_get_or_create_user(auth0_sub)
         state_id <- parseQueryString(sub("^[^?]*\\?", "", url))[["_state_id_"]]
 
-        register_user_bookmark(user$id, state_id)
+        # Only the button replaces the user's previous bookmarks. A disconnect save must not: the closing
+        # session may be the one navigating to a previous bookmark's restore URL (the "Welcome back" link),
+        # and deleting that state would break the restore. Expired rows are removed by bookmark_cleanup().
+        register_user_bookmark(user$id, state_id, replace = !session$isClosed())
     })
 
     # ------ BOOKMARK RESTORATION CAPTURE --------------------------------------
