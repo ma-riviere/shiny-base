@@ -56,7 +56,7 @@ filtered_datasets <- reactive({
 
 ### Shared state: `reactiveVal` (one per shared value, created by the common ancestor)
 
-When several modules read AND write the same value, the best practice is to have the common ancestor create a `reactiveVal()` and hand it over to all the children that will need it. That way, every module holds the same value (reference), and changes are seen by all (any reactive that reads it will invalidate).
+When several modules read AND write the same value, the best practice is to have the common ancestor create a `reactiveVal()` and hand it over to all the children that will need it. That way, every module holds the same value (reference), and changes are seen by all (any reactive that reads it will invalidate). We pass states down, instead of up and down.
 
 App example: the selected dataset. The sidebar dropdown sets it, clicking a row on the home page sets it too, and the explore and model pages read it.
 
@@ -116,8 +116,10 @@ observe({ shinyutils::watch("refresh_data"); ... })
 
 **Rules:**
 
-- **No payload:** The data must live somewhere every listener can read, and the sender must update it BEFORE firing. E.g. the DB (`refresh_datasets`: listeners re-query), or `session$userData` (`profile_updated`: the navbar re-reads `session$userData$auth0_info`, which the profile module updated first)
+- **No payload:** The data must live somewhere every listener can read, and the sender must update it BEFORE firing. E.g. the DB (`refresh_datasets`: listeners re-query)
 - **Fired twice, handled once:** Two `trigger()` calls in the same observer bump the counter by two, but the listeners run once, at the next reactive flush. It's not a queue.
+
+**One listener, and it is the parent: return a reactive instead of a trigger.** `profile_modal_server()` returns `updated`, a counter bumped after each successful save (`reactive(updated())`, read-only proxy of a `reactiveVal`). The navbar reads it in the nickname output (like `watch()`) and in `observeEvent(profile_modal_module$updated(), ..., ignoreInit = TRUE)` (like `on()`). Same rule as triggers: the data (`session$userData$auth0_info`) is written BEFORE the bump, and the listener re-reads it.
 
 **PS: Why not use gargoyle?**
 
@@ -132,6 +134,9 @@ Two directions:
 
 - **Parent hands its own function down.** The child asks the parent to do something only the parent can do. Navigation: the navbar belongs to the top level, so the parent passes `nav_select_callback = \(page) nav_select("nav", page)` and a child calls `nav_select_callback("explore")`.
 - **A module returns a function, the parent relays it to siblings.** The rename modal has its own module. It returns `open(dataset_id, dataset_name)`, and the parent passes it to the home & explore pages as `edit_dataset_callback`.
+- **A module returns a function, the parent calls it itself.** The profile modal is only opened from the navbar's user menu, so it is the navbar's child: `navbar_server()` creates `profile_modal_server("profile")` and calls `profile_modal_module$open()` in its click observer. Nothing goes through `server.R`, and no trigger is needed.
+
+**Rule for modals:** opened from one module, the modal is that module's child (profile). Opened from several, it is a sibling of the callers and the parent relays its `open()` (rename modal, opened from Home and Explore). Nesting costs a longer namespace (`navbar-profile-*` in the bookmark exclusions) and a move up one level if a second opener ever appears.
 
 ```r
 # Owner (edit_dataset module): return the function

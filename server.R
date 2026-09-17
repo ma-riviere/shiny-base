@@ -34,9 +34,9 @@ server <- function(input, output, session) {
         "home-open_upload",
         "dataset-open_upload",
         "navbar-open_profile",
-        "profile-save_profile",
-        "profile-profile_nickname",
-        "profile-profile_language",
+        "navbar-profile-save_profile",
+        "navbar-profile-profile_nickname",
+        "navbar-profile-profile_language",
         "sidebar-admin_users_view",
         "sidebar-admin_show_only_recent",
         # Admin/role related inputs (modals, role management)
@@ -158,8 +158,6 @@ server <- function(input, output, session) {
             "refresh_models",
             "refresh_user_cards",
             "show_upload_modal",
-            "show_profile_modal",
-            "profile_updated",
             "refresh_logs",
             "refresh_otel"
         )
@@ -201,7 +199,6 @@ server <- function(input, output, session) {
             }
         })
 
-        profile_modal_server("profile")
         upload_dataset_modal_server("upload")
         edit_dataset_modal_module <- edit_dataset_modal_server("edit_dataset")
         home_server(
@@ -210,7 +207,7 @@ server <- function(input, output, session) {
             age_filter = reactive(sidebar_module$age_filter),
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
-            },
+            }, # Closure
             selected_dataset_id = selected_dataset_id,
             edit_dataset_callback = edit_dataset_modal_module$open
         )
@@ -219,7 +216,7 @@ server <- function(input, output, session) {
             selected_dataset_id = selected_dataset_id,
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
-            },
+            }, # Closure
             edit_dataset_callback = edit_dataset_modal_module$open
         )
         model_server(

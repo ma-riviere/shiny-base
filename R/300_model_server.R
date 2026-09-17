@@ -273,7 +273,7 @@ model_server <- function(
             )
         })
 
-        # ------ DELETE MODEL -----------------------------------------------------
+        # ------ DELETE MODEL --------------------------------------------------
 
         observeEvent(input$delete_btn, label = "model_delete_click", {
             req(values$loaded_model_id)
@@ -374,6 +374,7 @@ model_server <- function(
 
         # Copy the module's selection to an input so disconnect bookmarks can save it.
         # This also covers changes from fitting, deleting or restoring a model.
+        # Without this, fitting a new model could leave the bookmark pointing to the previously selected model.
         observeEvent(
             selected_model_id(),
             ignoreNULL = FALSE,

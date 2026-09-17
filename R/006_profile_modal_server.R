@@ -1,16 +1,23 @@
 # Profile modal server module
-# Handles displaying and saving user profile changes
+# Displays and saves the current user's profile (nickname, language).
+# Child of the navbar, the only place that opens it. Returns open() and the `updated` counter.
 
 profile_modal_server <- function(id) {
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
+        # Bumped after each successful save. A counter, not the profile itself: the data lives in
+        # session$userData$auth0_info (written before the bump), the parent re-reads it from there.
+        updated <- reactiveVal(0L)
+
         # ------ MODAL DISPLAY -------------------------------------------------
 
-        on("show_profile_modal", label = "profile_show_modal", {
-            req(session$userData$auth0_info)
+        open <- function() {
+            if (purrr::is_empty(session$userData$auth0_info)) {
+                return()
+            }
             showModal(profile_modal_ui(ns, session$userData$auth0_info))
-        })
+        }
 
         # ------ SAVE PROFILE --------------------------------------------------
 
@@ -46,8 +53,8 @@ profile_modal_server <- function(id) {
                     # Update local session data for nickname
                     session$userData$auth0_info$nickname <- new_nickname
 
-                    # Notify navbar to update display
-                    trigger("profile_updated")
+                    # Notify the parent (navbar) to re-read auth0_info
+                    updated(updated() + 1L)
 
                     removeModal()
 
@@ -68,5 +75,7 @@ profile_modal_server <- function(id) {
                 }
             )
         })
+
+        return(list(open = open, updated = reactive(updated())))
     })
 }
