@@ -221,6 +221,7 @@ server <- function(input, output, session) {
         explore_server(
             "explore",
             selected_dataset_id = selected_dataset_id,
+            preview_rows = reactive(sidebar_module$preview_rows),
             nav_select_callback = \(page) {
                 bslib::nav_select("nav", page, session = session)
             }, # Closure

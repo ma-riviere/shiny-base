@@ -32,33 +32,36 @@ table {
     }
 }
 
-// DT table styling - minimal/neutral pagination
-.dataTables_wrapper {
-    .dataTables_filter input {
-        padding: $spacing-xs $spacing-sm;
-        border: 1px solid $border-color;
-        border-radius: $border-radius;
-
-        &:focus {
-            outline: none;
-            border-color: $primary;
+// Explore data preview (220_data_preview): one <tr> output per row module
+.preview-table {
+    th,
+    td {
+        white-space: nowrap;
+        max-width: 16rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    thead th {
+        position: sticky;
+        top: 0;
+    }
+    tbody th {
+        color: $gray-500;
+        background: transparent;
+    }
+    .preview-select {
+        width: 2.5rem;
+        .shiny-input-container {
+            width: auto;
+            margin: 0;
+        }
+        .form-check {
+            min-height: 0;
+            margin: 0;
         }
     }
+}
 
-    .dataTables_info {
-        font-size: 0.875rem;
-        color: $gray-500;
-    }
-
-    // Neutral pagination buttons (no background color)
-    .pagination .page-item .page-link {
-        background-color: transparent !important;
-        border: none !important;
-        color: inherit !important;
-    }
-
-    .pagination .page-item.active .page-link {
-        font-weight: bold !important;
-        text-decoration: underline !important;
-    }
+.preview-caption {
+    margin-bottom: $spacing-sm;
 }

@@ -1,6 +1,7 @@
 explore_server <- function(
     id,
     selected_dataset_id = reactive(NULL),
+    preview_rows = reactive(c(1L, 10L)),
     nav_select_callback = NULL,
     edit_dataset_callback
 ) {
@@ -73,6 +74,14 @@ explore_server <- function(
             nav_select_callback = nav_select_callback
         )
 
+        # Data preview: one module per row (initialize once, gate while hidden), rows in range from the sidebar
+        data_preview_server(
+            "preview",
+            data = reactive(values$data),
+            dataset_id = reactive(purrr::pluck(values$dataset, "id")),
+            preview_rows = preview_rows
+        )
+
         # Dataset assistant: feature flag (CHAT_ENABLED) + permission. No req()
         # at module top level (a silent error here would abort init_modules).
         if (isTRUE(getOption("chat_enabled")) && can("chat:dataset")) {
@@ -117,20 +126,6 @@ explore_server <- function(
                 class = "i18n",
                 `data-key` = "Explore your uploaded dataset",
                 tr("Explore your uploaded dataset")
-            )
-        })
-
-        output$data_preview <- DT::renderDataTable({
-            req(has_data())
-            DT::datatable(
-                values$data,
-                options = list(
-                    pageLength = 10,
-                    scrollX = TRUE,
-                    dom = "frtip"
-                ),
-                class = "display compact",
-                rownames = FALSE
             )
         })
 

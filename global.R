@@ -2,7 +2,6 @@ suppressPackageStartupMessages({
     library(shiny)
     library(shinyutils)
     library(shiny.i18n)
-    library(DT) # Avoid Global error: object 'datatables_html' not found
 })
 
 shinyutils::load_subfolders("R")
@@ -64,6 +63,9 @@ options(
     chat_enabled = isTRUE(as.logical(Sys.getenv("CHAT_ENABLED", "FALSE"))),
     chat_base_url = Sys.getenv("CHAT_BASE_URL", "http://llm:8080/v1"),
     chat_model = Sys.getenv("CHAT_MODEL", "Ling-3.0-tiny"),
+
+    # Explore data preview: only the first N rows can be shown (one row module each, see R/220_data_preview_server.R)
+    preview_max_rows = 100L,
 
     # Security
     # Hide ordinary Shiny error details in production; keep full errors in logs and error emails.

@@ -67,6 +67,35 @@ sidebar_ui <- function(id) {
                 )
             )
         ),
+        # ------ PREVIEW SECTION -----------------------------------------------
+        # Visible only on the explore page: which rows of the selected dataset the
+        # data preview shows. The static max is the preview cap, so a restored
+        # (bookmarked) range is always representable when the slider is built;
+        # the server then lowers the max to the dataset's row count.
+        conditionalPanel(
+            condition = "input.nav === 'explore'",
+            div(
+                id = ns("preview_section"),
+                h6(
+                    class = "text-uppercase text-muted fw-semibold mb-3 i18n",
+                    `data-key` = "Preview",
+                    tr("Preview")
+                ),
+                sliderInput(
+                    ns("preview_rows"),
+                    label = tags$span(
+                        class = "i18n",
+                        `data-key` = "Rows to show",
+                        tr("Rows to show")
+                    ),
+                    min = 1,
+                    max = getOption("preview_max_rows", 100L),
+                    value = c(1, 10),
+                    step = 1,
+                    width = "100%"
+                )
+            )
+        ),
         # ------ MODEL PARAMETERS SECTION --------------------------------------
         # Visible only on model page. The saved-models picker is rendered by the
         # model module, so we host its output here via the model namespace.

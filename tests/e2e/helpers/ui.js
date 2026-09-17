@@ -104,9 +104,27 @@ async function uploadFile(page, id, filepath, options = {}) {
     }
 }
 
+/**
+ * Set a range sliderInput (ionRangeSlider) to [from, to] as a user drag would.
+ * update() moves the knobs; the change event makes Shiny's slider binding send the value.
+ * @param {Page} page - Playwright page
+ * @param {string} id - Slider input ID (without #)
+ * @param {number} from
+ * @param {number} to
+ */
+async function setSliderRange(page, id, from, to) {
+    await page.evaluate(([sliderId, fromValue, toValue]) => {
+        const $slider = $(`#${sliderId}`);
+        $slider.data('ionRangeSlider').update({ from: fromValue, to: toValue });
+        $slider.trigger('change');
+    }, [id, from, to]);
+    await waitForReactivity(page);
+}
+
 module.exports = {
     clickButton,
     fillInput,
     selectDropdown,
+    setSliderRange,
     uploadFile
 };

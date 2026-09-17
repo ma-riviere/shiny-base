@@ -15,7 +15,11 @@ sidebar_server <- function(id, selected_dataset_id) {
             user_datasets = NULL,
             row_count_filter = c(0, 100000),
             age_filter = c(Sys.Date() - 365, Sys.Date()),
-            prev_max_rows = NULL # Track previous max to detect actual changes
+            prev_max_rows = NULL, # Track previous max to detect actual changes
+            preview_rows = c(1L, 10L), # Explore data preview: c(from, to) row range
+            # Dataset the preview slider was last set for (lags selected_dataset_id by one run):
+            # tells a dataset switch (reset) from a refresh of the same dataset (keep the range)
+            prev_preview_dataset_id = NULL
         )
 
         # ------ SHARED STATE SYNC ---------------------------------------------
@@ -161,6 +165,56 @@ sidebar_server <- function(id, selected_dataset_id) {
             },
             priority = 0,
             label = "sidebar_update_slider_range"
+        )
+
+        # ------ PREVIEW ROWS (explore) ----------------------------------------
+
+        observeEvent(
+            input$preview_rows,
+            {
+                values$preview_rows <- as.integer(input$preview_rows)
+            },
+            label = "sidebar_preview_rows"
+        )
+
+        # The slider's max follows the selected dataset: min(row count, preview cap).
+        # The range resets to 1-10 on a dataset switch, keeps its value when the same
+        # dataset is refreshed (rename), and comes from the bookmark on restore when the
+        # restored dataset is the one selected. Row counts come from the dataset list
+        # already loaded for the dropdown; explore re-validates against the loaded data.
+        observeEvent(
+            list(selected_dataset_id(), values$user_datasets),
+            {
+                dataset_id <- selected_dataset_id()
+                datasets <- values$user_datasets
+                max_rows <- getOption("preview_max_rows", 100L)
+
+                n_rows <- 0L
+                if (!purrr::is_empty(dataset_id) && !purrr::is_empty(datasets)) {
+                    n_rows <- datasets$row_count[match(dataset_id, datasets$id)]
+                }
+                n_rows <- min(max(n_rows, 0L, na.rm = TRUE), max_rows)
+
+                same_dataset <- identical(values$prev_preview_dataset_id, dataset_id)
+                # First dataset of the session: take the bookmarked range if it was saved for this dataset
+                restored <- NULL
+                if (
+                    purrr::is_empty(values$prev_preview_dataset_id) &&
+                        identical(as.integer(get_restored_input("selected_dataset")), dataset_id)
+                ) {
+                    restored <- get_restored_input("preview_rows")
+                }
+                range <- if (same_dataset) input$preview_rows else restored %||% c(1L, 10L)
+                range <- pmin(pmax(as.integer(range), 1L), max(n_rows, 1L))
+
+                # A range slider needs max > min; a dataset with 0 or 1 row has nothing to slide over
+                updateSliderInput(session, "preview_rows", max = max(n_rows, 2L), value = range)
+                shinyjs::toggleState("preview_rows", condition = n_rows > 1L)
+                values$preview_rows <- range
+                values$prev_preview_dataset_id <- dataset_id
+            },
+            ignoreNULL = FALSE,
+            label = "sidebar_preview_bounds"
         )
 
         # Note: Section visibility is handled by conditionalPanel in sidebar_ui.R

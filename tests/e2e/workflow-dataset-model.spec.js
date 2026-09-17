@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('./helpers/fixtures');
 const { waitForShiny, waitForWaiterHide, login, getConfig, navigateTo, getCurrentPage } = require('./helpers');
-const { uploadFile, fillInput, clickButton, createToyDataset, deleteFile } = require('./helpers');
+const { uploadFile, fillInput, clickButton, setSliderRange, createToyDataset, deleteFile } = require('./helpers');
 const { PAGES } = require('./app-config');
 
 test.describe.serial('Workflow: Dataset and Model', () => {
@@ -66,6 +66,33 @@ test.describe.serial('Workflow: Dataset and Model', () => {
 
         // Check dataset name is shown in the explore page summary row
         await expect(sharedPage.locator('#explore-dataset_summary .dataset-name')).toContainText(datasetName);
+    });
+
+    test('data preview: row selection survives leaving and re-entering the slider range', async () => {
+        // Each preview row is a module kept for the whole dataset selection (initialize once, gate while
+        // hidden): a selected row that the range slider hides must come back selected.
+        const rows = sharedPage.locator('.preview-table tbody tr');
+        const caption = sharedPage.locator('#explore-preview-caption');
+        const rowCheckbox = (nth) => rows.nth(nth - 1).locator('input[type=checkbox]');
+
+        // The toy dataset has 6 rows: the default 1-10 range is clamped to 1-6
+        await expect(rows).toHaveCount(6);
+        await expect(caption).toContainText('Rows 1 to 6 of 6');
+        await expect(caption).toContainText('0 selected');
+
+        await rowCheckbox(2).check();
+        await expect(caption).toContainText('1 selected');
+
+        // Rows 4-6: row 2 leaves the DOM, its server and selection stay
+        await setSliderRange(sharedPage, 'sidebar-preview_rows', 4, 6);
+        await expect(rows).toHaveCount(3);
+        await expect(caption).toContainText('Rows 4 to 6 of 6');
+        await expect(caption).toContainText('1 selected');
+
+        await setSliderRange(sharedPage, 'sidebar-preview_rows', 1, 6);
+        await expect(rows).toHaveCount(6);
+        await expect(rowCheckbox(2)).toBeChecked();
+        await expect(rowCheckbox(1)).not.toBeChecked();
     });
 
     test('should fit a model (auto-saved)', async () => {

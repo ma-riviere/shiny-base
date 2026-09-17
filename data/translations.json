@@ -415,6 +415,34 @@
         {
             "en": "Your question and dataset values go to an external provider.",
             "fr": "Vos questions et données sont envoyées à un fournisseur externe."
+        },
+        {
+            "en": "Preview",
+            "fr": "Aperçu"
+        },
+        {
+            "en": "Rows to show",
+            "fr": "Lignes à afficher"
+        },
+        {
+            "en": "Rows %s to %s of %s",
+            "fr": "Lignes %s à %s sur %s"
+        },
+        {
+            "en": "Rows %s to %s of the first %s",
+            "fr": "Lignes %s à %s sur les %s premières"
+        },
+        {
+            "en": "No rows to show",
+            "fr": "Aucune ligne à afficher"
+        },
+        {
+            "en": "%s selected",
+            "fr": "%s sélectionnée(s)"
+        },
+        {
+            "en": "Select row",
+            "fr": "Sélectionner la ligne"
         }
     ]
 }

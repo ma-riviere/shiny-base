@@ -422,7 +422,9 @@ Free-form elements with no identity (an "add a row" button) need a per-session c
 
 ### Server lives for the session: initialize once, gate while hidden
 
-Solution for a low/fixed volume of elements (e.g. a dataset where each item is displayed with its own server) that are dynamically shown/hidden by the data (filter, tab, collapse). The servers are created once and never destroyed: when an element comes back, nothing is re-created, its internal state is still there, and it simply resumes. The cost is memory: it grows with the number of distinct ids seen during the session.
+Solution for a low/fixed volume of elements (e.g. a dataset where each item is displayed with its own server) that are dynamically shown/hidden by the data (filter, tab, collapse). The servers are created once and never destroyed: when an element comes back, nothing is re-created, its server-side state is still there, and it simply resumes. The cost is memory: it grows with the number of distinct ids seen during the session.
+
+App example: the Explore data preview. Each row is a module (`221_preview_row`). The parent (`220_data_preview`) creates one server per row the first time the sidebar's range slider brings it into view, and keeps it while the dataset stays selected (on a dataset switch it destroys them all, cf. previous section). A row's checkbox survives leaving and re-entering the range. Only the first 100 rows can be previewed: the pattern's cost is one server per distinct row ever shown, so the population has to be bounded.
 
 The approach separates server initialization (once per unique ID, independently of rendering) from UI rendering (creation and deletion). The server never disappears, and thus is never duplicated. **Gating** is what makes the kept servers harmless while their UI is gone: the parent's data says which elements are shown, and the child's observers exit early (`req()`) while their id is not in it.
 
@@ -488,6 +490,13 @@ observeEvent(items(), {
 ```
 
 PS: `lapply`, not a `for` loop. In a `for` loop, every argument the module only touches later (inside a reactive or an observer) is a promise that reads the loop variable when it finally runs, so every module sees the last value. `lapply` gives each iteration its own environment.
+
+**Gotcha: the browser inputs are rebuilt, and a rebuilt input sends its constructor value.** The server survives, the DOM does not: `renderUI()` builds `item_ui()` again every time the element comes back, and the new `numericInput(ns("qty"), "Quantity", 1)` sends `1`, overwriting the quantity the user had typed (verified: set to 5, hidden, shown again, back to 1). What survives is the server side: `input$qty` keeps the typed value while the element is gone (only `session$destroy()` drops a module's inputs), as does any `reactiveVal`. So the element has to be rebuilt FROM that retained value. Two ways:
+
+- The child renders its own inputs in an output, seeded from the retained value. This is what the preview rows do: the row's output builds the whole `<tr>`, checkbox included, with `checkboxInput(ns("selected"), value = isTRUE(isolate(input$selected)))`. `isolate()`, so that a click does not re-render the row.
+- The parent passes the retained value to the UI function (`item_ui(ns(id), qty = isolate(qty()))`, from a reactive the child returned).
+
+The same applies to state held in a `reactiveVal` and shown through an input: the input is rebuilt with its constructor value, only an output rebuilds from the state.
 
 ## Auth
 

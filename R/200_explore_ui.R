@@ -24,10 +24,7 @@ explore_ui <- function(id) {
             div(
                 class = "card",
                 h3(class = "i18n", `data-key` = "Data Preview", tr("Data Preview")),
-                div(
-                    class = "table-container",
-                    DT::dataTableOutput(ns("data_preview"))
-                )
+                data_preview_ui(ns("preview"))
             )
         ),
         # ----- DATASET ASSISTANT (floating launcher + offcanvas) ---------------
