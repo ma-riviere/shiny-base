@@ -119,7 +119,7 @@ observe({ shinyutils::watch("refresh_data"); ... })
 - **No payload:** The data must live somewhere every listener can read, and the sender must update it BEFORE firing. E.g. the DB (`refresh_datasets`: listeners re-query)
 - **Fired twice, handled once:** Two `trigger()` calls in the same observer bump the counter by two, but the listeners run once, at the next reactive flush. It's not a queue.
 
-**One listener, and it is the parent: return a reactive instead of a trigger.** `profile_modal_server()` returns `updated`, a counter bumped after each successful save (`reactive(updated())`, read-only proxy of a `reactiveVal`). The navbar reads it in the nickname output (like `watch()`) and in `observeEvent(profile_modal_module$updated(), ..., ignoreInit = TRUE)` (like `on()`). Same rule as triggers: the data (`session$userData$auth0_info`) is written BEFORE the bump, and the listener re-reads it.
+**If there is only one listener, and it is the parent: return a reactive instead of using a trigger.** `profile_modal_server()` returns `updated`, a counter bumped after each successful save (`reactive(updated())`, read-only proxy of a `reactiveVal`). Same rule as triggers: the data (`session$userData$auth0_info`) is written BEFORE the bump, and the listener re-reads it.
 
 **PS: Why not use gargoyle?**
 
