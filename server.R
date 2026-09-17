@@ -18,7 +18,7 @@ server <- function(input, output, session) {
     setup_session_error_emails(session)
 
     # ------ BOOKMARK EXCLUDES -------------------------------------------------
-    # Inputs to exclude from bookmarks (used by both setBookmarkExclude and save_bookmark_on_disconnect):
+    # Inputs to exclude from bookmarks (the disconnect save below adds the whole chat namespace):
     # - Auth0 params (code, state) to prevent token leakage
     # - Upload modal inputs (file, button) to prevent re-upload on restore
     # - Buttons that trigger modals
@@ -108,19 +108,26 @@ server <- function(input, output, session) {
                     error = \(e) log_warn("[SESSION] Failed to end session: {e$message}")
                 )
             }
-            save_bookmark_on_disconnect(
-                session,
-                input,
-                exclude = bookmark_exclude,
-                exclude_prefix = "explore-chat-"
-            )
+            # Save the state through Shiny's own bookmarking (serializers, excludes, onBookmark callbacks); the
+            # DB row is registered by onBookmarked() below. isolate() is required: the closed session has no
+            # reactive context, and a bare doBookmark() fails after creating the state folder. The whole chat
+            # namespace is excluded by prefix: shinychat's input names are not stable across versions.
+            input_names <- isolate(names(input))
+            setBookmarkExclude(c(bookmark_exclude, input_names[startsWith(input_names, "explore-chat-")]))
+            isolate(session$doBookmark())
         })
     }
 
     # ------ BOOKMARK TRACKING -------------------------------------------------
-    # Register bookmarks in DB and clean up previous ones for this user.
-    # Only runs when Auth0 is enabled (user identity required).
-    onBookmark(function(state) {
+    # Register bookmarks in DB and clean up previous ones for this user (sidebar button and disconnect save
+    # alike). onBookmarked runs once the state is on disk; onBookmark would run before input.rds is written,
+    # leaving a DB row without a file if the save fails. Only runs when Auth0 is enabled (user identity required).
+    onBookmarked(function(url) {
+        # Registering a callback replaces Shiny's default URL modal: keep it for the button (open session).
+        if (!session$isClosed()) {
+            showBookmarkUrlModal(url)
+        }
+
         if (auth0r::auth0_disabled()) {
             return()
         }
@@ -133,7 +140,7 @@ server <- function(input, output, session) {
 
         # Get or create user to get user_id
         user <- db_get_or_create_user(auth0_sub)
-        state_id <- basename(state$dir)
+        state_id <- parseQueryString(sub("^[^?]*\\?", "", url))[["_state_id_"]]
 
         register_user_bookmark(user$id, state_id)
     })
