@@ -153,7 +153,7 @@ model_server <- function(
             req(!identical(fit_task$status(), "running"))
 
             # SECURITY: formulas execute code during model.frame(), so the raw
-            # equation string never reaches as.formula()/lm() (see helpers_formula.R)
+            # equation string never reaches as.formula()/lm() (see validate_formula() in 300_model_fn.R)
             formula_obj <- tryCatch(
                 validate_formula(input$equation, colnames(values$data)),
                 error = \(e) {
