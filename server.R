@@ -451,6 +451,11 @@ server <- function(input, output, session) {
     )
 }
 
+# Shiny takes the value of the LAST expression of server.R as the server function. auth0_server()
+# returns a wrapper function(input, output, session) that completes the login (or denies the session)
+# and then calls `server`: this call must stay last. ui.R ends the same way with auth0_ui_with_cookies().
+# With AUTH0_DISABLE=true, auth0_server() returns `server` unchanged.
+#
 # Require a verified email after auth0r validates login (except when the dev bypass is active).
 # A denied session shows this reason without starting the app's server logic.
 auth0r::auth0_server(

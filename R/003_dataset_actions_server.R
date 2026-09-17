@@ -16,6 +16,11 @@ dataset_actions_server <- function(
     moduleServer(id, function(input, output, session) {
         ns <- session$ns
 
+        # One slot per two-step action. The row button carries the dataset id (input$delete,
+        # input$download); the second step (the modal's Confirm button, the hidden download link)
+        # carries nothing. We keep the validated, typed id here between the two steps, and clear
+        # it once used, so a replayed confirm does nothing (the browser is not trusted).
+        # Plain state, nothing reacts to it: reactiveValues is just the usual home for module state.
         values <- reactiveValues(
             pending_delete_id = NULL,
             download_id = NULL
@@ -97,8 +102,11 @@ dataset_actions_server <- function(
         })
 
         # ------ DOWNLOAD ------------------------------------------------------
-        # A downloadHandler needs a real download link: the per-row buttons set
-        # the target id, then we JS-click the single hidden link (dataset_actions_ui).
+        # Two JS hops, one per direction. Browser -> R: the row button only carries the dataset id;
+        # the click handler in www/js/app.js turns it into Shiny.setInputValue("<ns>-download", "<id>",
+        # {priority: "event"}), which lands here as a string. R -> browser: a downloadHandler needs a
+        # real <a> the browser navigates to, so we store the validated id, then click the ONE hidden
+        # link of this page (dataset_actions_ui) from R; its handler reads values$download_id.
         observeEvent(input$download, label = ns("download"), {
             dataset <- dataset_from_id(input$download)
             values$download_id <- dataset$id

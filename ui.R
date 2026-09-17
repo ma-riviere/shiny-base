@@ -61,4 +61,7 @@ ui <- function(request) {
     )
 }
 
+# Shiny serves the value of the LAST expression of ui.R. auth0_ui_with_cookies() wraps `ui` with the
+# login redirects: a redirect is an HTTP response, and only the UI side produces one (server.R runs
+# over the websocket), so the wrapper must be here and must stay last. Mirror of auth0_server() in server.R.
 auth0r::auth0_ui_with_cookies(ui, info = auth0_config)

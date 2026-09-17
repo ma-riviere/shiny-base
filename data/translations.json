@@ -205,6 +205,10 @@
             "fr": "Veuillez sélectionner au moins un fichier CSV"
         },
         {
+            "en": "Only CSV files are allowed",
+            "fr": "Seuls les fichiers CSV sont acceptés"
+        },
+        {
             "en": "Ready to upload %s file(s)",
             "fr": "Prêt à téléverser %s fichier(s)"
         },

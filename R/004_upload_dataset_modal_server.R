@@ -14,12 +14,17 @@ upload_dataset_modal_server <- function(id) {
 
         # Rebuild fileInput to clear it: shinyjs::reset() cannot reset file inputs.
         file_input_trigger <- reactiveVal(0)
-        validator_rules_added <- reactiveVal(FALSE)
-        validator_enabled <- reactiveVal(FALSE)
 
         # ------ VALIDATION ----------------------------------------------------
 
+        # Rules are added once. A rule is a function(value) returning the message or NULL, so we build
+        # the message when the rule runs, not here: the session language is resolved after this module
+        # is created, and tr() inside the validator's observer also follows later language switches.
+        # enable() shows the feedback in the browser, disable() clears it; both are no-ops when repeated.
         iv <- shinyvalidate::InputValidator$new()
+        iv$add_rule("file", \(value) sv_file_required(message = tr("Please select at least one CSV file"))(value))
+        iv$add_rule("file", \(value) sv_file_extension("csv", message = tr("Only CSV files are allowed"))(value))
+        iv$add_rule("file", sv_file_size(MAX_FILE_SIZE_MB))
 
         # ------ REACTIVE ------------------------------------------------------
 
@@ -31,8 +36,7 @@ upload_dataset_modal_server <- function(id) {
                 values$error <- NULL
                 values$status <- NULL
                 values$parsed_files <- list()
-                iv$disable()
-                validator_enabled(FALSE)
+                iv$disable() # No red "file required" feedback before the user picked anything
                 file_input_trigger(file_input_trigger() + 1) # Force re-render of fileInput
                 showModal(upload_dataset_modal_ui(ns))
             },
@@ -46,18 +50,7 @@ upload_dataset_modal_server <- function(id) {
         observeEvent(input$file, label = "upload_parse_file", {
             req(input$file)
 
-            if (!validator_rules_added()) {
-                iv$add_rule("file", sv_file_required(message = tr("Please select at least one CSV file")))
-                iv$add_rule("file", sv_file_extension(c("csv"), message = tr("Only CSV files are allowed")))
-                iv$add_rule("file", sv_file_size(MAX_FILE_SIZE_MB))
-                validator_rules_added(TRUE)
-            }
-
-            if (!validator_enabled()) {
-                iv$enable()
-                validator_enabled(TRUE)
-            }
-
+            iv$enable() # Feedback appears from the first selection on
             req(iv$is_valid())
 
             parsed_list <- list()

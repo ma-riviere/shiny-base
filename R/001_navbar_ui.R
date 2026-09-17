@@ -56,17 +56,16 @@ navbar_user_menu <- function(ns) {
             bsicons::bs_icon("list", class = "dropdown-hamburger ms-1")
         ),
         align = "right",
+        # "Clicked, no data": a plain actionLink (like the logout actionButton below), no inline JS.
+        # input_button() is for the many-rows-one-input case, where the click carries an id.
         bslib::nav_item(
-            tags$a(
-                id = ns("profile_link"),
-                class = "dropdown-item",
-                href = "#",
-                onclick = sprintf(
-                    "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-                    ns("open_profile")
+            actionLink(
+                ns("open_profile"),
+                label = tagList(
+                    bsicons::bs_icon("person"),
+                    tags$span(class = "i18n ms-2", `data-key` = "Profile", tr("Profile"))
                 ),
-                bsicons::bs_icon("person"),
-                tags$span(class = "i18n ms-2", `data-key` = "Profile", tr("Profile"))
+                class = "dropdown-item"
             )
         ),
         "----",

@@ -10,12 +10,14 @@ dataset_actions_ui <- function(id) {
 
 # Render one dataset row (name, age, size + action buttons).
 #
-# @param actions_ns Namespace function of the hosting page's dataset_actions
-#   instance (e.g. NS(ns("actions"))): buttons set its edit/download/delete
-#   event inputs.
+# @param actions_ns Namespace function of the page's dataset_actions instance, i.e. NS(ns("actions"))
+#   in the host: actions_ns("edit") gives "home-actions-edit", an input of that child module. A row
+#   is not a module and has no namespace of its own: its buttons point at the shared handler's inputs.
 # @param dataset One-row data.frame with id, name, created_at, row_count, col_count.
-# @param select_input_id Namespaced event input id set when the row body is
-#   clicked (NULL = row not clickable).
+# @param select_input_id Input set when the row body (name, age, size) is clicked, e.g. Home's
+#   ns("dataset_click"). It belongs to the HOST page, not to dataset_actions: the host decides what a
+#   selection does (Home selects the dataset and navigates to Explore). NULL = plain, non-clickable
+#   row (Explore's summary row: that dataset is already the selected one).
 # @param can_delete Include the delete button (RBAC-checked by the caller).
 dataset_row_ui <- function(actions_ns, dataset, select_input_id = NULL, can_delete = FALSE) {
     # ------ MAIN CONTENT ------------------------------------------------------
@@ -82,6 +84,10 @@ dataset_row_ui <- function(actions_ns, dataset, select_input_id = NULL, can_dele
     )
 
     # ------ UI ----------------------------------------------------------------
+    # Clickable flavour: a native <button> (focus, Enter/Space for free). event = TRUE although this
+    # is a selection: re-clicking the current dataset must still navigate, and a stable value would
+    # be deduplicated. Hence the host excludes this input from bookmarks; the selection itself
+    # persists through the sidebar dropdown.
     row_body <- if (!is.null(select_input_id)) {
         input_button(
             select_input_id,

@@ -108,8 +108,10 @@ home_server <- function(
                 )
             }
 
-            # Render each dataset row straight from data (no per-row module);
-            # actions target the shared dataset_actions instance
+            # Render each dataset row straight from data (no per-row module). The rows are built
+            # here, in the parent, but their action buttons target the child module's inputs:
+            # NS(ns("actions"))("edit") = "home-actions-edit". The row body targets our own
+            # dataset_click (a selection is the host's business, see dataset_row_ui()).
             can_delete <- can("delete:dataset")
             actions_ns <- NS(ns("actions"))
             dataset_rows <- purrr::map(

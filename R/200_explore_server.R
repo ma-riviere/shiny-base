@@ -94,6 +94,8 @@ explore_server <- function(
 
         output$dataset_summary <- renderUI({
             req(values$dataset)
+            # Buttons target the "explore-actions" child inputs; no select_input_id: the row shows the
+            # dataset that is already selected, so its body is not clickable (see dataset_row_ui())
             dataset_row_ui(
                 NS(ns("actions")),
                 values$dataset,
