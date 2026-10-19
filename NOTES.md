@@ -876,7 +876,7 @@ The app handles both anonymous visitors and logged-in users sending unexpected i
 
 Requests reach Cloudflare first, then Traefik on the server, then the app container. Traefik requires Cloudflare's client certificate for this hostname (Authenticated Origin Pulls), so a direct request without that certificate is rejected. The app publishes no port that bypasses Traefik.
 
-**Browser security headers:** configured by the `sb-sec-headers` labels in `deploy/compose.yml`. They require HTTPS on future visits (HSTS), prevent other sites from embedding the app in a frame, and disable unused browser features such as camera/microphone access. Cloudflare's HSTS setting takes precedence over the value in Compose.
+**Browser security headers:** configured by the `shiny-base-security-headers` middleware in `deploy/traefik.yml`. They require HTTPS on future visits (HSTS), prevent other sites from embedding the app in a frame, and disable unused browser features such as camera/microphone access. Cloudflare's HSTS setting takes precedence over the value in `deploy/traefik.yml`.
 
 The remaining headers limit referrer information, tell browsers to respect declared file types (`nosniff`), and ask crawlers not to index the app. Server/firewall configuration belongs to `deploy-main`.
 
@@ -905,7 +905,7 @@ Postgres is reached over the private Docker network using this app's DB login. I
 
 The env-file flow is described under Infrastructure: `db.env` is generated on the server; `app.env` comes from this repo's gitignored local master. Neither is copied into the app image. To change an app secret: update the local file, run Ansible to copy it, then recreate the container.
 
-On the server, `app.env` is readable by root and the deploy group (`0640`). Inside the container, the startup script writes `.Renviron` for Shiny Server, readable/writable only by its owner (`0600`). These are plain-text files protected by file permissions, not encrypted storage.
+On the server, `app.env` is readable by root only (`0600`). Inside the container, the startup script writes `.Renviron` for Shiny Server, readable/writable only by its owner (`0600`). These are plain-text files protected by file permissions, not encrypted storage.
 
 CI's GitHub PAT accesses private repositories/packages. Docker receives it as a BuildKit secret for the package-install step, rather than saving it in an image layer. The required GitHub repository secrets are listed in the CI/CD section.
 
