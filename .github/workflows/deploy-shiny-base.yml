@@ -1,7 +1,8 @@
 name: CI/CD Pipeline
 
 # PRs: check formatting and test app changes. Pushes to main: also build, push to GHCR and deploy.
-# Deployment uses a restricted SSH key: upload Compose, then run the server's deploy command.
+# Deployment uses a restricted SSH key that can only send the image digest to the server's deploy command.
+# The server's Compose file is installed by deploy-main's Ansible from the local checkout, not by CI.
 # The server checks container health with docker compose up --wait.
 
 on:
@@ -213,8 +214,28 @@ jobs:
         concurrency:
             group: deploy-shiny-base-prod
             cancel-in-progress: false
+        permissions:
+            contents: read
+            packages: read
         steps:
-            - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+            - name: Log in to GHCR
+              uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            # The server accepts only ghcr.io/ma-riviere/shiny-base@sha256:<digest>.
+            # Manual image_tag if supplied, otherwise this commit's SHA.
+            - name: Resolve image digest
+              env:
+                  INPUT_TAG: ${{ inputs.image_tag }}
+              run: |
+                  repository="ghcr.io/ma-riviere/shiny-base"
+                  tag="${INPUT_TAG:-${GITHUB_SHA}}"
+                  digest="$(docker buildx imagetools inspect "${repository}:${tag}" --format '{{json .Manifest}}' | jq -r .digest)"
+                  [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "No digest for ${repository}:${tag}" >&2; exit 1; }
+                  echo "SHINY_IMAGE=${repository}@${digest}" | tee "${RUNNER_TEMP}/images.env"
 
             # Trust the saved server host keys. Do not fetch them with ssh-keyscan during deployment:
             # that would trust whoever answers, without verifying the server's identity.
@@ -226,18 +247,7 @@ jobs:
                   printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
                   chmod 600 ~/.ssh/known_hosts
 
-            # Pin Compose's image tag before upload: manual image_tag if supplied, otherwise this commit's SHA.
-            # sed writes to stdout; the Compose file in the checkout stays unchanged.
-            # An older image tag still uses this workflow run's Compose file, not the old commit's file.
-            - name: Push compose file
-              env:
-                  INPUT_TAG: ${{ inputs.image_tag }}
-              run: |
-                  sed "s|\${IMAGE_TAG:-local}|${INPUT_TAG:-${GITHUB_SHA}}|g" deploy/compose.yml \
-                    | ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -p "${{ secrets.DEPLOY_PORT }}" \
-                      "deploy@${{ secrets.DEPLOY_HOST }}" push-compose
-
             - name: Deploy app
               run: |
                   ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -p "${{ secrets.DEPLOY_PORT }}" \
-                    "deploy@${{ secrets.DEPLOY_HOST }}" deploy
+                    "deploy@${{ secrets.DEPLOY_HOST }}" deploy < "${RUNNER_TEMP}/images.env"

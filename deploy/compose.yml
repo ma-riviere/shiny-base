@@ -1,10 +1,11 @@
-# CI pins IMAGE_TAG to the selected commit SHA, then copies this file to /srv/apps/shiny-base/compose.yml.
+# deploy-main's Ansible installs this file from the local checkout as /srv/apps/shiny-base/compose.yml (root-owned).
+# CI cannot change it: it only sends SHINY_IMAGE as ghcr.io/ma-riviere/shiny-base@sha256:<digest>.
 # The platform provides the env files, networks and data folders. The Dockerfile defines the healthcheck.
 name: shiny-base
 
 services:
   shiny:
-    image: ghcr.io/ma-riviere/shiny-base:${IMAGE_TAG:-local}
+    image: ${SHINY_IMAGE:-ghcr.io/ma-riviere/shiny-base:local}
     restart: unless-stopped
     init: true
     # Allow workers and bookmark-on-disconnect handlers to finish before a forced stop.
