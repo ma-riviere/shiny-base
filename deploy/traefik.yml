@@ -1,0 +1,51 @@
+# deploy-main's Ansible installs this file from the local checkout (apps[].traefik_file) into Traefik's file-provider
+# directory; CI cannot change it. Names start with the app name, rules use only apps[].hostnames, and the backend is
+# the edge alias set in compose.yml.
+http:
+  routers:
+    shiny-base:
+      rule: "Host(`shiny-base.ma-riviere.com`)"
+      entryPoints: [websecure]
+      service: shiny-base
+      middlewares: [shiny-base-security-headers]
+      tls:
+        certResolver: letsencrypt
+        # Require Cloudflare's client certificate at the origin (TLS option defined by the platform).
+        options: cloudflare-origin-pull@file
+
+  middlewares:
+    # Security headers added by Traefik. Cloudflare's HSTS setting overrides stsSeconds at the edge.
+    shiny-base-security-headers:
+      headers:
+        stsSeconds: 31536000
+        contentTypeNosniff: true
+        frameDeny: true
+        referrerPolicy: strict-origin-when-cross-origin
+        # Shiny needs inline JS/CSS; htmlwidgets need JS eval. This CSP cannot block inline script injection.
+        # It still restricts external sources, connections and embedding. See CLAUDE.md for allowed-origin details.
+        contentSecurityPolicy: >-
+          default-src 'self';
+          script-src 'self' 'unsafe-inline' 'unsafe-eval';
+          style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+          font-src 'self' https://fonts.gstatic.com;
+          img-src 'self' data: https://*.gravatar.com https://*.wp.com https://cdn.auth0.com https://*.googleusercontent.com;
+          connect-src 'self' wss://shiny-base.ma-riviere.com;
+          object-src 'none';
+          base-uri 'self';
+          form-action 'self';
+          frame-ancestors 'none'
+        # Disable browser features the app does not use.
+        permissionsPolicy: >-
+          accelerometer=(), camera=(), geolocation=(), gyroscope=(),
+          magnetometer=(), microphone=(), payment=(), usb=()
+        customResponseHeaders:
+          # Ask crawlers not to index this demo app.
+          X-Robots-Tag: "noindex, nofollow"
+          # An empty value tells Traefik to remove Shiny Server's X-Powered-By header.
+          X-Powered-By: ""
+
+  services:
+    shiny-base:
+      loadBalancer:
+        servers:
+          - url: "http://shiny-base:3838"

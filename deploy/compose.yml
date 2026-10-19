@@ -23,48 +23,13 @@ services:
     environment:
       # Main mirai pool in global.R. Chat adds one separate worker when enabled.
       MIRAI_WORKERS: "2"
-    # No published ports: Traefik reaches port 3838 over the edge network.
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.sb-shiny.rule: "Host(`shiny-base.ma-riviere.com`)"
-      traefik.http.routers.sb-shiny.entrypoints: websecure
-      traefik.http.routers.sb-shiny.tls: "true"
-      traefik.http.routers.sb-shiny.tls.certresolver: letsencrypt
-      # Require Cloudflare's client certificate at the origin (TLS option defined by the platform).
-      traefik.http.routers.sb-shiny.tls.options: cloudflare-origin-pull@file
-      traefik.http.routers.sb-shiny.middlewares: sb-sec-headers
-      traefik.http.services.sb-shiny.loadbalancer.server.port: "3838"
-      # Security headers added by Traefik. Cloudflare's HSTS setting overrides stsSeconds at the edge.
-      traefik.http.middlewares.sb-sec-headers.headers.stsSeconds: "31536000"
-      traefik.http.middlewares.sb-sec-headers.headers.contentTypeNosniff: "true"
-      traefik.http.middlewares.sb-sec-headers.headers.frameDeny: "true"
-      traefik.http.middlewares.sb-sec-headers.headers.referrerPolicy: strict-origin-when-cross-origin
-      # Shiny needs inline JS/CSS; htmlwidgets need JS eval. This CSP cannot block inline script injection.
-      # It still restricts external sources, connections and embedding. See CLAUDE.md for allowed-origin details.
-      traefik.http.middlewares.sb-sec-headers.headers.contentSecurityPolicy: >-
-        default-src 'self';
-        script-src 'self' 'unsafe-inline' 'unsafe-eval';
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        font-src 'self' https://fonts.gstatic.com;
-        img-src 'self' data: https://*.gravatar.com https://*.wp.com https://cdn.auth0.com https://*.googleusercontent.com;
-        connect-src 'self' wss://shiny-base.ma-riviere.com;
-        object-src 'none';
-        base-uri 'self';
-        form-action 'self';
-        frame-ancestors 'none'
-      # Ask crawlers not to index this demo app.
-      traefik.http.middlewares.sb-sec-headers.headers.customresponseheaders.X-Robots-Tag: "noindex, nofollow"
-      # Disable browser features the app does not use.
-      traefik.http.middlewares.sb-sec-headers.headers.permissionsPolicy: >-
-        accelerometer=(), camera=(), geolocation=(), gyroscope=(),
-        magnetometer=(), microphone=(), payment=(), usb=()
-      # An empty value tells Traefik to remove Shiny Server's X-Powered-By header.
-      traefik.http.middlewares.sb-sec-headers.headers.customresponseheaders.X-Powered-By: ""
+    # No published ports: Traefik routes (deploy/traefik.yml) reach port 3838 through the edge alias.
     networks:
-      - edge
-      - postgres
+      edge:
+        aliases: [shiny-base]
+      postgres: {}
       # Dataset assistant: http://llm:8080/v1, reached directly without Traefik or API authentication.
-      - llm
+      llm: {}
     volumes:
       # Server folders survive container replacement and are backed up by the platform (restic).
       # Create them with owner uid 997 (shiny) first; Docker would otherwise create root-owned folders.
